@@ -133,7 +133,14 @@ registerKiteRoutes(app, supabase);
 // NOT applied to /api/auth/* (the auth routes themselves) or /api/config
 // (clients need the supabase URL/anon-key BEFORE they can authenticate).
 const auth = requireAuth(supabase);
-const dhanMarketData = createDhanMarketData({ dbPool });
+const dhanMarketData = createDhanMarketData({
+  dbPool: {
+    query: async (...args) => {
+      const pool = await getRequiredDbPool();
+      return pool.query(...args);
+    },
+  },
+});
 
 registerDhanRoutes(app, {
   auth,

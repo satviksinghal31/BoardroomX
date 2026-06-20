@@ -4,7 +4,6 @@ import pg from 'pg';
 import WebSocket from 'ws';
 
 import { createDhanAuth, createSupabaseDhanAuthStateStore } from './dhan_auth.mjs';
-import { createDhanClient } from './scripts/lib/dhan-client.mjs';
 import { decodeFeedPacket } from './scripts/lib/dhan-feed-decoder.mjs';
 import { applyTick, serializeLiveState } from './scripts/lib/dhan-live-aggregate.mjs';
 import { todayIstDate } from './scripts/lib/dhan-time.mjs';
@@ -102,7 +101,6 @@ export async function runDhanLiveFeed({
     env,
     stateStore: createSupabaseDhanAuthStateStore(supabase),
   });
-  createDhanClient({ clientId: env.DHAN_CLIENT_ID, getAccessToken: auth.getAccessToken });
 
   const instruments = await loadInstruments(pool);
   if (!instruments.length) throw new Error('No active Dhan instruments found');
