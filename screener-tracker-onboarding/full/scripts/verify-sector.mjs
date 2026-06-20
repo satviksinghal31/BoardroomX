@@ -1,0 +1,10 @@
+import fs from 'fs';
+import pg from 'pg';
+const env = Object.fromEntries(fs.readFileSync('.env','utf8').split('\n').filter(l=>l && !l.startsWith('#')).map(l=>{const i=l.indexOf('=');return [l.slice(0,i), l.slice(i+1)];}));
+const c = new pg.Client({connectionString: env.SUPABASE_DB_URL, ssl:{rejectUnauthorized:false}});
+await c.connect();
+const r = await c.query(`SELECT count(*) as total, count(sector) as with_sector FROM stocks`);
+console.log(`Stocks: ${r.rows[0].total} total, ${r.rows[0].with_sector} have sector (${(r.rows[0].with_sector/r.rows[0].total*100).toFixed(1)}%)`);
+const s = await c.query(`SELECT sector, count(*) as n FROM stocks WHERE sector IS NOT NULL GROUP BY sector ORDER BY n DESC LIMIT 10`);
+console.log('Top sectors:'); s.rows.forEach(x => console.log(`  ${x.sector}: ${x.n}`));
+await c.end();

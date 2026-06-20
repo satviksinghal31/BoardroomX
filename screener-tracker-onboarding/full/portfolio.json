@@ -1,0 +1,16 @@
+[
+  { "name": "Gold BeES",               "symbol": "GOLDBEES",    "sector": "Gold",                  "screenerId": "1272690", "url": "https://www.screener.in/company/GOLDBEES/" },
+  { "name": "Bajaj Finance",           "symbol": "BAJFINANCE",  "sector": "Finance",               "screenerId": "372",     "url": "https://www.screener.in/company/BAJFINANCE/" },
+  { "name": "Acutaas Chemicals",       "symbol": "ACUTAAS",     "sector": "Pharma",                "screenerId": "1274921", "url": "https://www.screener.in/company/ACUTAAS/" },
+  { "name": "Laurus Labs",             "symbol": "LAURUSLABS",  "sector": "Pharma",                "screenerId": "1273603", "url": "https://www.screener.in/company/LAURUSLABS/" },
+  { "name": "Sai Life Sciences",       "symbol": "SAILIFE",     "sector": "Pharma",                "screenerId": "1285187", "url": "https://www.screener.in/company/SAILIFE/" },
+  { "name": "Apar Industries",         "symbol": "APARINDS",    "sector": "Power & Transmission",  "screenerId": "211",     "url": "https://www.screener.in/company/APARINDS/" },
+  { "name": "Transformers & Rectifiers India", "symbol": "TARIL", "sector": "Power & Transmission", "screenerId": "3458",  "url": "https://www.screener.in/company/TARIL/" },
+  { "name": "Transrail Lighting",      "symbol": "TRANSRAILL",  "sector": "Power & Transmission",  "screenerId": "1285196", "url": "https://www.screener.in/company/TRANSRAILL/" },
+  { "name": "Tata Motors PV",          "symbol": "TMPV",        "sector": "Automobile",            "screenerId": "3370",    "url": "https://www.screener.in/company/TMPV/" },
+  { "name": "TD Power Systems",        "symbol": "TDPOWERSYS",  "sector": "Capital Goods",         "screenerId": "3385",    "url": "https://www.screener.in/company/TDPOWERSYS/" },
+  { "name": "Premier Energies",        "symbol": "PREMIERENE",  "sector": "Capital Goods",         "screenerId": "1284943", "url": "https://www.screener.in/company/PREMIERENE/" },
+  { "name": "Apollo Micro Systems",    "symbol": "APOLLOMICRO", "sector": "Defense",               "screenerId": "1274254", "yahooSymbol": "APOLLO", "url": "https://www.screener.in/company/APOLLO/" },
+  { "name": "Balu Forge Industries",   "symbol": "BALUFORGE",   "sector": "Auto Components",       "screenerId": "472222",  "url": "https://www.screener.in/company/BALUFORGE/" },
+  { "name": "PG Electroplast",         "symbol": "PGEL",        "sector": "Electronics",           "screenerId": "2464",    "url": "https://www.screener.in/company/PGEL/" }
+]
