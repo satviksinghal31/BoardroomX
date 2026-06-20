@@ -5,15 +5,15 @@ import { execFile } from "child_process";
 import { readFileSync } from "fs";
 import { createClient } from "@supabase/supabase-js";
 import pg from "pg";
-import YahooFinance from "yahoo-finance2";
 import "dotenv/config";
 import { registerAuthRoutes } from "./auth_routes.js";
 import { registerKiteRoutes } from "./kite_routes.js";
 import { requireAuth } from "./auth_middleware.js";
 import { scrapeAndStore } from "./scraper.js";
 import { getCronJobs } from "./scripts/run-cron.mjs";
+import { createDhanMarketData } from "./dhan_market_data.js";
+import { registerDhanRoutes } from "./dhan_routes.js";
 
-const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const MAX_PORTFOLIO_SIZE = 30;
@@ -28,99 +28,10 @@ if (_portfolio.length > MAX_PORTFOLIO_SIZE) {
 console.log(`Portfolio: ${_portfolio.length}/${MAX_PORTFOLIO_SIZE} stocks loaded.`);
 
 const sectorMap   = Object.fromEntries(_portfolio.map(c => [c.symbol, c.sector      ?? null]));
-const yahooSymMap = Object.fromEntries(_portfolio.map(c => [c.symbol, c.yahooSymbol ?? c.symbol]));
-
-function toYahooTicker(nseSymbol) {
-  return (yahooSymMap[nseSymbol] ?? nseSymbol) + ".NS";
-}
+const _portfolioSymbols = _portfolio.map(c => c.symbol);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
-// ── Server-side chart cache ────────────────────────────────────────────────
-// Stores full 5Y candle data per symbol so chart opens are instant.
-// Background job refreshes all portfolio stocks every 15 min.
-
-const CHART_CACHE_TTL_MS = 15 * 60 * 1000; // 15 min
-const chartCache = new Map(); // symbol → { candles, displayFrom, cachedAt }
-
-// ── Server-side market data cache ─────────────────────────────────────────
-// Avoids firing 20-30 concurrent Yahoo quote() calls on every /api/portfolio
-// request. Each symbol's quote is cached for MARKET_CACHE_TTL_MS; background
-// job refreshes all portfolio quotes every 2 minutes.
-
-const MARKET_CACHE_TTL_MS = 2 * 60 * 1000; // 2 min
-const marketCache = new Map(); // symbol → { data, cachedAt }
-
-async function refreshMarketCache(symbol) {
-  try {
-    const data = await getMarketData(symbol);
-    marketCache.set(symbol, { data, cachedAt: Date.now() });
-  } catch (e) {
-    console.warn(`[mktcache] failed ${symbol}: ${e.message}`);
-  }
-}
-
-async function refreshAllMarketCache() {
-  for (const symbol of _portfolioSymbols) {
-    await refreshMarketCache(symbol);
-    await new Promise(r => setTimeout(r, 150));
-  }
-}
-
-function getCachedMarketData(symbol) {
-  const cached = marketCache.get(symbol);
-  if (cached && Date.now() - cached.cachedAt < MARKET_CACHE_TTL_MS) return cached.data;
-  return null;
-}
-
-const _portfolioSymbols = _portfolio.map(c => c.symbol);
-
-async function fetchChartData(symbol, warmupYears = 5) {
-  const period1 = new Date();
-  period1.setFullYear(period1.getFullYear() - warmupYears);
-
-  const displayFrom = new Date();
-  displayFrom.setFullYear(displayFrom.getFullYear() - 1);
-  const displayFromStr = displayFrom.toISOString().split("T")[0];
-
-  const result = await yahooFinance.chart(toYahooTicker(symbol), { period1, interval: "1d" });
-  const candles = (result.quotes || [])
-    .filter(d => d.open != null && d.high != null && d.low != null && d.close != null)
-    .map(d => ({
-      time:   new Date(d.date).toISOString().split("T")[0],
-      open:   +d.open.toFixed(2),
-      high:   +d.high.toFixed(2),
-      low:    +d.low.toFixed(2),
-      close:  +d.close.toFixed(2),
-      volume: d.volume ?? 0,
-    }))
-    .sort((a, b) => a.time.localeCompare(b.time));
-
-  return { candles, displayFrom: displayFromStr };
-}
-
-async function refreshChartCache(symbol) {
-  try {
-    const data = await fetchChartData(symbol);
-    chartCache.set(symbol, { ...data, cachedAt: Date.now() });
-    console.log(`[cache] refreshed ${symbol} (${data.candles.length} candles)`);
-  } catch (e) {
-    console.warn(`[cache] failed to refresh ${symbol}: ${e.message}`);
-  }
-}
-
-async function refreshAllChartCache() {
-  console.log("[cache] refreshing all portfolio stocks…");
-  for (const symbol of _portfolioSymbols) {
-    await refreshChartCache(symbol);
-    await new Promise(r => setTimeout(r, 200)); // small delay between Yahoo calls
-  }
-  console.log("[cache] refresh complete");
-}
-
-// Cache warmup is deferred to app.listen() so the server can accept
-// requests immediately on deploy — see below.
 
 // `supabase` is the SERVER-SIDE ADMIN client. It uses the service_role key
 // and MUST NEVER call signInWithPassword / setSession — that would pollute
@@ -222,6 +133,26 @@ registerKiteRoutes(app, supabase);
 // NOT applied to /api/auth/* (the auth routes themselves) or /api/config
 // (clients need the supabase URL/anon-key BEFORE they can authenticate).
 const auth = requireAuth(supabase);
+const dhanMarketData = createDhanMarketData({
+  dbPool: {
+    query: async (...args) => {
+      const pool = await getRequiredDbPool();
+      return pool.query(...args);
+    },
+  },
+});
+
+registerDhanRoutes(app, {
+  auth,
+  marketData: dhanMarketData,
+  getVisiblePriceSymbols: req => {
+    const extra = String(req.query?.symbols ?? '')
+      .split(',')
+      .map(s => s.trim().toUpperCase())
+      .filter(Boolean);
+    return [...new Set([..._portfolioSymbols, ...extra])];
+  },
+});
 
 // ── SPA page routes ────────────────────────────────────────────────────────
 app.get("/auth", (_req, res) =>
@@ -300,25 +231,6 @@ function quarterStatus(resultRows) {
   };
 }
 
-async function getMarketData(symbol) {
-  try {
-    const quote = await yahooFinance.quote(toYahooTicker(symbol));
-    const q = quote ?? {};
-    return {
-      price:         q.regularMarketPrice ?? null,
-      change:        q.regularMarketChange != null ? +q.regularMarketChange.toFixed(2) : null,
-      changePercent: q.regularMarketChangePercent != null ? +q.regularMarketChangePercent.toFixed(2) : null,
-      mcap:          q.marketCap ?? null,
-      pe:            q.trailingPE  != null ? +q.trailingPE.toFixed(1)  : null,
-      forwardPE:     q.forwardPE   != null ? +q.forwardPE.toFixed(1)   : null,
-      week52High:    q.fiftyTwoWeekHigh ?? null,
-      week52Low:     q.fiftyTwoWeekLow  ?? null,
-    };
-  } catch {
-    return {};
-  }
-}
-
 // ── API ────────────────────────────────────────────────────────────────────
 
 app.get("/api/config", (req, res) => {
@@ -380,8 +292,7 @@ app.get("/api/portfolio", auth, async (req, res) => {
       const fin        = finMap[stock.symbol] ?? null;
       const rows       = resultMap[stock.symbol] ?? [];
       const withData   = rows.filter(r => r.data && Object.keys(r.data).length > 0);
-      // Use cached market data (refreshed every 2 min) to avoid per-request Yahoo calls
-      const marketData = getCachedMarketData(stock.symbol) ?? await getMarketData(stock.symbol);
+      const marketData = await dhanMarketData.getQuote(stock.symbol).catch(() => ({}));
 
       const isBanking = stock.is_banking ?? false;
       const revKey    = isBanking ? "Revenue"            : "Sales";
@@ -468,8 +379,7 @@ app.get("/api/portfolio", auth, async (req, res) => {
       return {
         symbol:           stock.symbol,
         name:             stock.name,
-        // sector lives on the stocks row now (populated from data/nse_universe.json
-        // during seed). Falling back to sectorMap covers the legacy 14 in
+        // sector lives on the stocks row now. Falling back to sectorMap covers the legacy 14 in
         // portfolio.json whose stocks rows pre-date the column.
         sector:           stock.sector ?? sectorMap[stock.symbol] ?? null,
         isBanking,
@@ -652,87 +562,6 @@ app.patch("/api/watchlist/reorder", auth, async (req, res) => {
   } catch (err) {
     console.error("[PATCH /api/watchlist/reorder] unexpected:", err);
     return res.status(500).json({ error: err?.message || "Server error" });
-  }
-});
-
-app.get("/api/chart/:symbol", auth, async (req, res) => {
-  try {
-    const { symbol } = req.params;
-    const years = Math.max(0.01, Math.min(10, parseFloat(req.query.years) || 1));
-
-    // Serve from cache if available (portfolio stocks are pre-warmed)
-    let cached = chartCache.get(symbol);
-    if (!cached) {
-      // Non-portfolio symbol or cold start — fetch on demand and cache
-      await refreshChartCache(symbol);
-      cached = chartCache.get(symbol);
-    }
-    if (!cached) return res.status(500).json({ error: "Failed to fetch chart data" });
-
-    // displayFrom is dynamic per the requested years window
-    const displayFrom = new Date();
-    displayFrom.setFullYear(displayFrom.getFullYear() - years);
-    const displayFromStr = displayFrom.toISOString().split("T")[0];
-
-    res.json({ candles: cached.candles, displayFrom: displayFromStr });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ── Lightweight prices endpoint (used for 60s portfolio refresh) ───────────
-app.get("/api/prices", auth, async (req, res) => {
-  try {
-    const quotes = await Promise.all(
-      _portfolioSymbols.map(async symbol => {
-        try {
-          const q = await yahooFinance.quote(toYahooTicker(symbol));
-          // Also derive today's candle from quote for chart patching
-          const today = new Date().toISOString().split("T")[0];
-          return {
-            symbol,
-            price:         q.regularMarketPrice         ?? null,
-            change:        q.regularMarketChange        != null ? +q.regularMarketChange.toFixed(2)        : null,
-            changePercent: q.regularMarketChangePercent != null ? +q.regularMarketChangePercent.toFixed(2) : null,
-            // Today's candle fields (for chart last-candle patch)
-            candle: {
-              time:  today,
-              open:  q.regularMarketOpen          != null ? +q.regularMarketOpen.toFixed(2)  : null,
-              high:  q.regularMarketDayHigh        != null ? +q.regularMarketDayHigh.toFixed(2) : null,
-              low:   q.regularMarketDayLow         != null ? +q.regularMarketDayLow.toFixed(2)  : null,
-              close: q.regularMarketPrice          != null ? +q.regularMarketPrice.toFixed(2)   : null,
-            },
-          };
-        } catch {
-          return { symbol, price: null, change: null, changePercent: null, candle: null };
-        }
-      })
-    );
-    res.json(quotes);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get("/api/quote/:symbol", auth, async (req, res) => {
-  try {
-    const { symbol } = req.params;
-    const quote = await yahooFinance.quote(toYahooTicker(symbol));
-    const q = quote ?? {};
-    res.json({
-      symbol,
-      name:          q.longName ?? q.shortName ?? symbol,
-      price:         q.regularMarketPrice ?? null,
-      change:        q.regularMarketChange != null ? +q.regularMarketChange.toFixed(2) : null,
-      changePercent: q.regularMarketChangePercent != null ? +q.regularMarketChangePercent.toFixed(2) : null,
-      mcap:          q.marketCap ?? null,
-      pe:            q.trailingPE != null ? +q.trailingPE.toFixed(1) : null,
-      forwardPE:     q.forwardPE  != null ? +q.forwardPE.toFixed(1)  : null,
-      week52High:    q.fiftyTwoWeekHigh ?? null,
-      week52Low:     q.fiftyTwoWeekLow  ?? null,
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
   }
 });
 
@@ -1089,10 +918,9 @@ app.get('/api/events/grouped', requireAuth(supabase), async (req, res) => {
 
 // /api/bm/status removed — nse_bm_runs table dropped in migration 013
 
-// ── NSE Universe ──────────────────────────────────────────────────────────────
-// In-memory cache of nse_universe rows — loaded from DB on startup.
-// mcap column refreshed nightly at midnight IST via bhavcopy ZIP.
-// Symbol list (EQUITY_L) is a one-time / manual operation — not auto-refreshed.
+// ── Market Universe ───────────────────────────────────────────────────────────
+// In-memory cache of active Dhan instruments joined with latest EOD market cap.
+// The symbol list comes from Dhan; market cap remains a dated NSE EOD fact.
 
 let _universeCache   = [];
 let _universeCacheAt = 0;
@@ -1102,7 +930,10 @@ async function _loadUniverseCache() {
     // Direct SQL — throws on failure so the caller sees the real error.
     // Do NOT catch here — a silent REST fallback would silently truncate at 1000 rows.
     const { rows } = await dbPool.query(
-      `SELECT symbol, company_name, market_cap FROM nse_universe ORDER BY symbol`
+      `SELECT symbol, company_name, market_cap
+       FROM market_universe
+       WHERE is_active IS DISTINCT FROM false
+       ORDER BY symbol`
     );
     _universeCache   = rows;
     _universeCacheAt = Date.now();
@@ -1114,8 +945,9 @@ async function _loadUniverseCache() {
     let   from = 0;
     while (true) {
       const { data, error } = await supabase
-        .from('nse_universe')
+        .from('market_universe')
         .select('symbol,company_name,market_cap')
+        .neq('is_active', false)
         .order('symbol')
         .range(from, from + PAGE - 1);
       if (error) { console.warn('[universe] cache load error:', error.message); break; }
@@ -1170,7 +1002,7 @@ app.get('/api/universe', (_req, res) => {
 
 // ── Annual Results APIs ──────────────────────────────────────────────────────
 // DB-backed Screener annuals. The UI never scrapes; the Railway worker fills
-// these tables progressively from nse_universe.
+// these tables progressively from the active Dhan market universe.
 
 function _annualNoStore(res) {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -1184,7 +1016,9 @@ app.get('/api/annuals/status', auth, async (_req, res) => {
     const annualsDb = await getRequiredDbPool();
     const { rows } = await annualsDb.query(`
       WITH totals AS (
-        SELECT count(*)::int AS total FROM nse_universe
+        SELECT count(*)::int AS total
+        FROM market_universe
+        WHERE is_active IS DISTINCT FROM false
       ),
       fetched AS (
         SELECT count(DISTINCT symbol)::int AS fetched FROM annual_fundamentals
@@ -1243,9 +1077,10 @@ app.get('/api/annuals/symbols', auth, async (_req, res) => {
         q.last_attempt_at,
         q.next_attempt_at,
         q.last_error
-      FROM nse_universe u
+      FROM market_universe u
       LEFT JOIN screener_fetch_queue q ON q.symbol = u.symbol
       LEFT JOIN annual_counts ac ON ac.symbol = u.symbol
+      WHERE u.is_active IS DISTINCT FROM false
       ORDER BY u.symbol
     `);
     return res.json(rows);
@@ -1324,7 +1159,7 @@ app.get('/api/annuals/:symbol', auth, async (req, res) => {
       { data: queue, error: qErr },
       { data: runs, error: runErr },
     ] = await Promise.all([
-      supabase.from('nse_universe').select('symbol,company_name,market_cap').eq('symbol', symbol).maybeSingle(),
+      supabase.from('market_universe').select('symbol,company_name,market_cap').eq('symbol', symbol).maybeSingle(),
       supabase.from('annual_fundamentals').select('*').eq('symbol', symbol).order('period_order'),
       supabase.from('annual_ratios').select('*').eq('symbol', symbol).order('period_order'),
       supabase.from('annual_balance_sheet').select('*').eq('symbol', symbol).order('period_order'),
@@ -1361,20 +1196,7 @@ app.get('/api/scheduler/log', requireAuth(supabase), (_req, res) => {
 app.listen(PORT, () => {
   console.log(`BoardroomX → http://localhost:${PORT}`);
 
-  // Defer cache warmup so the server handles the first wave of requests
-  // before hammering Yahoo Finance with 30+ serial calls.
-  // Market data (prices) warms after 5s; chart candles (heavier) after 15s.
-  setTimeout(() => {
-    refreshAllMarketCache();
-    setInterval(refreshAllMarketCache, MARKET_CACHE_TTL_MS);
-  }, 5_000);
-
-  setTimeout(() => {
-    refreshAllChartCache();
-    setInterval(refreshAllChartCache, CHART_CACHE_TTL_MS);
-  }, 15_000);
-
-  // Verify pg pool connectivity first, then load caches.
+  // Verify pg pool connectivity first, then load universe/search cache.
   // Direct-SQL-only routes call getRequiredDbPool() and fail loudly if the
   // required database URL is missing or unavailable.
   // Awaited inside an async IIFE so app.listen callback stays synchronous.

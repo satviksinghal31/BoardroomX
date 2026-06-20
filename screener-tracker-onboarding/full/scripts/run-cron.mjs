@@ -2,15 +2,17 @@
 //
 // Usage:
 //   node scripts/run-cron.mjs events-cron
-//   node scripts/run-cron.mjs universe-mcap
+//   node scripts/run-cron.mjs eod-market-cap
 
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import pg from 'pg';
 
 import { runEventsCron } from '../nse_events_cron.js';
-import { refreshMcapOnly } from './refresh-universe.mjs';
+import { runEodMarketCap } from './eod-market-cap.mjs';
 import { main as runScreenerAnnualsWorker } from './screener-worker.mjs';
+import { runDhanInstrumentSync } from './dhan-instrument-sync.mjs';
+import { runDhanEodUpdate } from './dhan-eod-update.mjs';
 
 const HARD_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -20,7 +22,7 @@ export const JOB_DEFS = {
     cronUtc: '30 2,14 * * *',
     times: [{ h: 8, m: 0 }, { h: 20, m: 0 }],
   },
-  'universe-mcap': {
+  'eod-market-cap': {
     scheduleIst: '18:30 IST',
     cronUtc: '0 13 * * *',
     times: [{ h: 18, m: 30 }],
@@ -29,6 +31,16 @@ export const JOB_DEFS = {
     scheduleIst: 'Every minute',
     cronUtc: '* * * * *',
     times: [],
+  },
+  'dhan-instrument-sync': {
+    scheduleIst: '07:30 IST',
+    cronUtc: '0 2 * * *',
+    times: [{ h: 7, m: 30 }],
+  },
+  'dhan-eod-update': {
+    scheduleIst: '16:00 IST',
+    cronUtc: '30 10 * * *',
+    times: [{ h: 16, m: 0 }],
   },
 };
 
@@ -137,7 +149,9 @@ async function runJob(job) {
         if (exitCode !== 0) throw new Error(`screener-annuals worker exited ${exitCode}`);
         return { exitCode };
       }
-      return refreshMcapOnly();
+      if (job === 'dhan-instrument-sync') return runDhanInstrumentSync({ supabase });
+      if (job === 'dhan-eod-update') return runDhanEodUpdate({ supabase });
+      return runEodMarketCap({ supabase });
     });
 
     if (lockedRun.status === 'skipped') {

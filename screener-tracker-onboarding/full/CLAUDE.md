@@ -23,7 +23,7 @@ Browser (public/)              Server (server.js ~1085 lines)
   index.html                    /api/financials       (screener data)
   style.css                     /api/candles          (yahoo chart data)
   auth.html                     /api/quotes           (live price)
-  godmode.html                  /api/universe         (2144 NSE stocks, public)
+  godmode.html                  /api/universe         (active market universe, public)
                                 /api/events/*         (NSE event-calendar feed)
                                 /api/scheduler/log    (cron health + log stream)
                           ←→   Supabase DB (tables below)
@@ -42,7 +42,9 @@ Browser (public/)              Server (server.js ~1085 lines)
 | `nse_board_meetings` | **DEPRECATED** — kept for backward compat; not written by cron anymore |
 | `nse_bm_runs` | BM cron health state (id=1); still read by `/api/bm/status` |
 | `nse_events` | NSE event-calendar data — 11K+ rows, 2329 symbols, all board meetings |
-| `nse_universe` | NSE equity universe — 2144 EQ-series stocks with market cap |
+| `dhan_instruments` | Canonical Dhan NSE equity instrument universe |
+| `nse_eod_market_caps` | Dated NSE EOD market-cap facts from bhavcopy |
+| `market_universe` | View joining active Dhan instruments to latest EOD market cap |
 
 **RLS is ON** for watchlists. Service role bypasses RLS for server-side ops.
 
@@ -111,7 +113,7 @@ setTimeout(() => {
 1. Finds symbol with oldest `financials.fetched_at` (or null)
 2. Calls `scrapeAndStore(symbol, {}, supabase)`
 3. Calls `syncBoardMeetings(symbol, supabase)` best-effort (writes to `results` + `nse_board_meetings`)
-4. Covers all 2144 NSE stocks from `nse_universe` DB table (paginated, not the deleted JSON file)
+4. Covers active symbols from `market_universe` (Dhan instruments plus latest EOD market cap)
 
 **On first deploy**, worker bootstraps the entire catalog. After that, it keeps data fresh on a rolling basis.
 
@@ -129,18 +131,17 @@ When user adds a symbol:
 
 ---
 
-## NSE Universe — Live DB
+## Market Universe — Live DB
 
-**nse_universe table**: 2144 EQ-series stocks with `symbol, company_name, isin, face_value, date_of_listing, market_cap, updated_at`.
+**`dhan_instruments` table**: source of truth for tradable NSE equity instruments from Dhan scrip master.
 
-- **Symbol list (EQUITY_L.csv)**: manual refresh only (`node scripts/refresh-universe.mjs`)
-- **Market cap**: auto-refreshed nightly at 4:30pm IST from bhavcopy ZIP (`PR{DDMMYY}.zip`)
+**`nse_eod_market_caps` table**: dated market-cap facts from NSE bhavcopy ZIP (`PR{DDMMYY}.zip`). This table is enrichment only; it is not the stock universe.
 
-**In-memory cache**: `_universeCache[]` in server.js — loaded on startup, 1000-row paginated fetch.
+**`market_universe` view**: active Dhan instruments left-joined to latest market cap.
 
-`/api/universe` (GET, no auth): returns `[{symbol, company_name, market_cap}]` for all 2144 stocks.
+`/api/universe` (GET, no auth): returns `[{symbol, company_name, market_cap}]` for active market-universe rows.
 
-**Client-side search**: `app.js` calls `/api/universe` once on load, stores in `NSE_UNIVERSE[]`, does local filtering. No `/api/search` endpoint exists.
+**Client-side search**: `app.js` calls `/api/universe` once on load, stores in `MARKET_UNIVERSE[]`, does local filtering. No `/api/search` endpoint exists.
 
 ---
 
@@ -237,7 +238,7 @@ Always return JSON — never let Express send an HTML error page.
 | Job | Schedule | Source | Target |
 |-----|----------|--------|--------|
 | `events-cron` | 08:00 + 20:00 IST (`30 2,14 * * *` UTC) | `npm run cron:events` | `nse_events` table |
-| `universe-mcap` | 18:30 IST (`0 13 * * *` UTC) | `npm run cron:universe-mcap` | `nse_universe.market_cap` |
+| `eod-market-cap` | 18:30 IST (`0 13 * * *` UTC) | `npm run cron:eod-market-cap` | `nse_eod_market_caps` |
 
 The Express web process must not start cron timers. Railway Cron starts one-off
 containers, and `scripts/run-cron.mjs` writes `scheduler_log` rows:
@@ -250,9 +251,9 @@ Create two separate Railway cron services from the same repo and environment:
 1. `events-cron`
    - Cron schedule: `30 2,14 * * *`
    - Start command: `npm run cron:events`
-2. `universe-mcap`
+2. `eod-market-cap`
    - Cron schedule: `0 13 * * *`
-   - Start command: `npm run cron:universe-mcap`
+   - Start command: `npm run cron:eod-market-cap`
 
 Railway evaluates cron expressions in UTC. These cron services should not expose
 HTTP ports and should exit after the command finishes.
@@ -277,7 +278,8 @@ DELETE FROM scheduler_log WHERE status IN ('scheduled', 'running', 'warn');
 | `nse_events_cron.js` | `runEventsCron(supabase)` — bulk event-calendar cron logic |
 | `scripts/run-cron.mjs` | One-off Railway Cron runner with scheduler logging + advisory lock |
 | `kite_routes.js` | Zerodha Kite Connect integration (secondary feature) |
-| `scripts/refresh-universe.mjs` | `refreshUniverse()` (full) / `refreshMcapOnly()` (mcap-only nightly) |
+| `scripts/dhan-instrument-sync.mjs` | Downloads Dhan scrip master and upserts active NSE EQ instruments |
+| `scripts/eod-market-cap.mjs` | Fetches latest NSE bhavcopy market-cap CSV and upserts dated facts |
 | `scripts/backfill-events.mjs` | One-time: 12-month backfill of nse_events from event-calendar API |
 | `public/app.js` | Main SPA frontend (~2500 lines) |
 | `public/auth.js` | Auth + `bxFetch` wrapper (~433 lines) |
@@ -309,7 +311,7 @@ Set in Railway for production. `.env` for local dev.
 ## Common Gotchas
 
 1. **`portfolio.json` is NOT the user's portfolio** — it's a legacy seed / yahoo symbol override map. User portfolios live in `watchlists` table.
-2. **Sector data** comes from `stocks.sector` column. `data/nse_universe.json` was deleted — use `nse_universe` DB table.
+2. **Sector data** comes from `stocks.sector` column. Dhan and NSE bhavcopy do not provide sector; use Screener-backed enrichment for sector coverage.
 3. **Yahoo Finance tickers** need `.NS` suffix for NSE stocks: `toYahooTicker("BAJFINANCE")` → `"BAJFINANCE.NS"`. Override via `yahooSymbol` field in `portfolio.json`.
 4. **ScreenerScraperPro** fetches from Screener.in. Symbol must be uppercase NSE symbol. Scraping takes 5-10s — never call synchronously in a request handler.
 5. **NSE API** needs a cookie warm-up GET before the actual data fetch. See `nse_events_cron.js` for the warm-up pattern.
@@ -331,9 +333,9 @@ npm start                    # starts server on :3001
 node scripts/qa-full.mjs     # 36-test full QA (creates + cleans throwaway user)
 node scripts/verify-nonblock.mjs SYMBOL   # test non-blocking add
 
-# Universe management
-node scripts/refresh-universe.mjs          # full refresh (EQUITY_L + mcap)
-node scripts/refresh-universe.mjs --mcap-only  # mcap only
+# Universe and market-cap jobs
+node scripts/dhan-instrument-sync.mjs      # Dhan source-of-truth instrument sync
+node scripts/eod-market-cap.mjs            # latest NSE EOD market-cap facts
 
 # Events backfill (one-time / disaster recovery)
 node scripts/backfill-events.mjs           # 12-month backfill
@@ -358,4 +360,4 @@ node scripts/run-migration.mjs migrations/00X_name.sql
 
 ---
 
-*Last updated: 2026-05-24 (Phases 0–7 complete: event-calendar migration, nse_universe, God Mode scheduler) | Maintained by: Claude Code*
+*Last updated: 2026-06-20 (Dhan market universe + EOD market-cap refactor) | Maintained by: Codex*

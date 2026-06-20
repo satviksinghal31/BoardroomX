@@ -98,14 +98,14 @@ const AGENTS = [
   {
     id: 'chart-agent',
     name: 'Chart Intelligence Agent',
-    tagline: 'yahoo-finance2.chart() → 5Y daily OHLCV → lightweight-charts. EMA, RSI, gap zones on every load.',
+    tagline: 'Dhan daily OHLCV + live candle updates → lightweight-charts. EMA, RSI, gap zones on every load.',
     skills: [
       {
         label: 'Data fetch',
         items: [
-          'yahooFinance.chart(SYMBOL.NS) — always 5Y fetched for indicator warmup',
-          'displayFrom slice for 1Y / 3Y view; full 5Y used for all calculations',
-          'yahooFinance.quote() for live price, PE, MCap, 52W high/low',
+          'Dhan daily candles — full available history fetched once per symbol',
+          'Client-side visible range for 1Y / 3Y / 5Y / MAX; full history used for calculations',
+          'Dhan live table for price and current-day candle patching; market cap from NSE universe',
           'Any NSE symbol via search — not just portfolio stocks',
         ],
       },
@@ -159,7 +159,7 @@ const AGENTS = [
   {
     id: 'qr-agent',
     name: 'Quarterly Results Agent',
-    tagline: 'screener.in + Yahoo Finance → 8-quarter financials table + upcoming board meeting date.',
+    tagline: 'screener.in + Dhan market data → 8-quarter financials table + upcoming board meeting date.',
     skills: [
       {
         label: 'Step 1: node fetch.js [SYMBOL]',
@@ -554,9 +554,10 @@ function buildCharts(priceWrap, rsiWrap, allCandles, displayFrom, isMobile, mark
   updateEmaLegend(null);
   priceChart.subscribeCrosshairMove(p => updateEmaLegend(p.time ?? null));
 
-  // Set initial viewport (not fitContent — we want a specific date range)
+  // Set initial viewport. MAX uses full loaded history; fixed ranges use a bounded window.
   const todayStr = allCandles.at(-1)?.time ?? new Date().toISOString().split('T')[0];
-  priceChart.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
+  if (displayFrom) priceChart.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
+  else priceChart.timeScale().fitContent();
 
   // Earnings overlay — CSS circles, drawn after setVisibleRange
   const removeOverlay = drawEarningsOverlay(priceWrap, priceChart, markers, displayFrom);
@@ -581,7 +582,8 @@ function buildCharts(priceWrap, rsiWrap, allCandles, displayFrom, isMobile, mark
     color: lvl === 70 ? 'rgba(239,68,68,.45)' : 'rgba(34,197,94,.45)',
     title: lvl === 70 ? 'OB' : 'OS',
   }));
-  rsiChart.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
+  if (displayFrom) rsiChart.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
+  else rsiChart.timeScale().fitContent();
 
   // ── Sync ──
   let syncing = false;
@@ -662,6 +664,7 @@ async function _updateChartHeader(symbol) {
 // ── Display window helper ─────────────────────────────────────────────────
 // Always uses millisecond arithmetic so fractional years (0.008 = ~3d) work.
 function computeDisplayFrom(years) {
+  if (years == null) return null;
   return new Date(Date.now() - years * 365.25 * 24 * 60 * 60 * 1000)
     .toISOString().split('T')[0];
 }
@@ -686,8 +689,13 @@ async function loadDesktopChart(symbol, years) {
     // Refresh header — it may have been left stale by a Financials-tab stock switch.
     _updateChartHeader(symbol);
     const todayStr = desktopCharts.todayStr;
-    desktopCharts.price.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
-    desktopCharts.rsi.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
+    if (displayFrom) {
+      desktopCharts.price.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
+      desktopCharts.rsi.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
+    } else {
+      desktopCharts.price.timeScale().fitContent();
+      desktopCharts.rsi.timeScale().fitContent();
+    }
     // Resize charts in case the container size changed while hidden
     requestAnimationFrame(() => {
       const priceW = document.getElementById('priceWrap');
@@ -748,7 +756,7 @@ async function loadDesktopChart(symbol, years) {
   }
 }
 
-const TF_YEARS = { '1H': 0.008, '1D': 0.019, '1W': 0.077, '1Y': 1, '3Y': 3, '5Y': 5 };
+const TF_YEARS = { '1H': 0.008, '1D': 0.019, '1W': 0.077, '1Y': 1, '3Y': 3, '5Y': 5, 'MAX': null };
 
 function switchTf(tf) {
   currentTf    = tf;
@@ -1043,8 +1051,13 @@ async function loadMobileChart(symbol, years) {
   // Fast path: same symbol, charts built → just pan viewport
   if (mobileSymbol === symbol && mobileCharts?.price && chartDataCache[symbol]) {
     const todayStr = mobileCharts.todayStr;
-    mobileCharts.price.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
-    mobileCharts.rsi.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
+    if (displayFrom) {
+      mobileCharts.price.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
+      mobileCharts.rsi.timeScale().setVisibleRange({ from: displayFrom, to: todayStr });
+    } else {
+      mobileCharts.price.timeScale().fitContent();
+      mobileCharts.rsi.timeScale().fitContent();
+    }
     renderGapLegend(legend, mobileCharts.gaps, mobileCharts.lastClose, true, displayFrom);
     return;
   }
@@ -1100,20 +1113,20 @@ async function getQuoteInfo(symbol) {
 }
 
 // ─────────────────────────────────────────────
-//  NSE STOCK UNIVERSE  (Nifty 500 + popular extras)
-//  Loaded dynamically from /api/universe (NSE EQUITY_L.csv + bhavcopy mcap)
+//  MARKET UNIVERSE
+//  Loaded dynamically from /api/universe (Dhan instruments + latest EOD market cap)
 //  Format: [symbol, company_name, market_cap]  — fetched once on page load
 // ─────────────────────────────────────────────
-let NSE_UNIVERSE = [];   // populated by _loadUniverse() below
+let MARKET_UNIVERSE = [];   // populated by _loadUniverse() below
 
 async function _loadUniverse() {
   try {
     const res  = await bxFetch('/api/universe');
     if (!res.ok) return;
     const data = await res.json();
-    // Normalise to [symbol, company_name, ''] tuple so search code is unchanged
-    NSE_UNIVERSE = data.map(r => [r.symbol, r.company_name ?? '', '']);
-    console.log('[universe] loaded', NSE_UNIVERSE.length, 'stocks');
+    // Normalise to [symbol, company_name, market_cap] tuple so search code is unchanged.
+    MARKET_UNIVERSE = data.map(r => [r.symbol, r.company_name ?? '', r.market_cap ?? null]);
+    console.log('[universe] loaded', MARKET_UNIVERSE.length, 'stocks');
   } catch (e) {
     console.warn('[universe] load failed:', e.message);
   }
@@ -1373,7 +1386,7 @@ function _renderSearchDropdown(q, context) {
   const dropdown = _getDropdownEl(context);
   if (!dropdown) return;
 
-  const scored = NSE_UNIVERSE
+  const scored = MARKET_UNIVERSE
     .map(entry => ({ entry, score: _scoreMatch(entry, q) }))
     .filter(x => x.score > 0)
     .sort((a, b) => b.score - a.score || a.entry[0].localeCompare(b.entry[0]));
@@ -1777,9 +1790,7 @@ async function renderDetailsPanel(symbol) {
   // ── Key Statistics 2×2 grid ──────────────────────────────────────
   const keyStats = [];
   if (md?.mcap   != null) keyStats.push({ label: 'Mkt Cap',  value: fmtMcap(md.mcap) });
-  if (md?.pe     != null) keyStats.push({ label: 'P/E Ratio',value: String(md.pe) });
   if (lq?.eps    != null) keyStats.push({ label: 'EPS',      value: '₹' + lq.eps });
-  if (md?.forwardPE != null) keyStats.push({ label: 'Fwd P/E', value: String(md.forwardPE) + '×' });
 
   const keyStatsHtml = keyStats.length
     ? `<div class="det-key-stats-grid">${keyStats.map(s =>
@@ -2361,8 +2372,6 @@ function renderDetailSheet(stock) {
   const chips = [
     { label: 'Market Cap', value: fmtMcap(md?.mcap) },
     { label: 'Price',      value: fmtPrice(md?.price) },
-    { label: 'Trailing PE',value: md?.pe        ? md.pe        + '×' : '—' },
-    { label: 'Forward PE', value: md?.forwardPE ? md.forwardPE + '×' : '—' },
     { label: '52W High',   value: fmtPrice(md?.week52High) },
     { label: '52W Low',    value: fmtPrice(md?.week52Low)  },
   ];
@@ -2494,7 +2503,7 @@ function toggleDetails() {
 }
 
 loadPortfolio().then(startPriceRefresh);
-_loadUniverse();   // async — populates NSE_UNIVERSE for search dropdown
+_loadUniverse();   // async — populates MARKET_UNIVERSE for search dropdown
 
 // ─────────────────────────────────────────────
 //  LIVE PRICE REFRESH (every 60s)
@@ -2510,7 +2519,10 @@ function startPriceRefresh() {
 
 async function refreshPrices() {
   try {
-    const quotes = await bxFetch('/api/prices').then(r => r.json());
+    const liveSymbols = [...new Set([selectedSymbol, mobileSymbol].filter(Boolean))];
+    const params = new URLSearchParams();
+    if (liveSymbols.length) params.set('symbols', liveSymbols.join(','));
+    const quotes = await bxFetch(`/api/prices?${params.toString()}`).then(r => r.json());
     if (!Array.isArray(quotes)) return;
 
     for (const q of quotes) {

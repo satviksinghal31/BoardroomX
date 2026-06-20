@@ -1,7 +1,7 @@
 // One-symbol Screener annuals worker.
 //
 // Intended Railway cron cadence: once per minute.
-// Behavior: seed missing NSE universe symbols, take advisory lock, process one
+// Behavior: seed missing Dhan universe symbols, take advisory lock, process one
 // eligible queue row, write annual financials, update status, exit.
 
 import 'dotenv/config';
@@ -68,7 +68,8 @@ async function seedQueue(client) {
   const result = await client.query(`
     INSERT INTO screener_fetch_queue (symbol, company_name, status, priority, created_at, updated_at)
     SELECT u.symbol, u.company_name, 'pending', 0, now(), now()
-    FROM nse_universe u
+    FROM market_universe u
+    WHERE u.is_active IS DISTINCT FROM false
     ON CONFLICT (symbol) DO UPDATE
       SET company_name = COALESCE(EXCLUDED.company_name, screener_fetch_queue.company_name),
           updated_at = screener_fetch_queue.updated_at
