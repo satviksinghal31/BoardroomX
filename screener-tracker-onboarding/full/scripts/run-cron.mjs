@@ -11,6 +11,8 @@ import pg from 'pg';
 import { runEventsCron } from '../nse_events_cron.js';
 import { refreshMcapOnly } from './refresh-universe.mjs';
 import { main as runScreenerAnnualsWorker } from './screener-worker.mjs';
+import { runDhanInstrumentSync } from './dhan-instrument-sync.mjs';
+import { runDhanEodUpdate } from './dhan-eod-update.mjs';
 
 const HARD_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -29,6 +31,16 @@ export const JOB_DEFS = {
     scheduleIst: 'Every minute',
     cronUtc: '* * * * *',
     times: [],
+  },
+  'dhan-instrument-sync': {
+    scheduleIst: '07:30 IST',
+    cronUtc: '0 2 * * *',
+    times: [{ h: 7, m: 30 }],
+  },
+  'dhan-eod-update': {
+    scheduleIst: '16:00 IST',
+    cronUtc: '30 10 * * *',
+    times: [{ h: 16, m: 0 }],
   },
 };
 
@@ -137,6 +149,8 @@ async function runJob(job) {
         if (exitCode !== 0) throw new Error(`screener-annuals worker exited ${exitCode}`);
         return { exitCode };
       }
+      if (job === 'dhan-instrument-sync') return runDhanInstrumentSync({ supabase });
+      if (job === 'dhan-eod-update') return runDhanEodUpdate({ supabase });
       return refreshMcapOnly();
     });
 
