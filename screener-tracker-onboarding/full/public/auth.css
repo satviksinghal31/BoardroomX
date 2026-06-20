@@ -1,0 +1,416 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   BoardroomX — Auth page styles
+   Depends on :root CSS variables defined in style.css
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Page shell ────────────────────────────────────────────────────────────── */
+.auth-body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 24px 16px env(safe-area-inset-bottom);
+}
+
+.auth-page {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+/* ── Brand block ───────────────────────────────────────────────────────────── */
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.auth-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(124, 111, 247, .30);
+}
+
+.auth-logo svg {
+  width: 32px;
+  height: 32px;
+}
+
+.auth-brand-name {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -.5px;
+  color: var(--text);
+}
+
+.auth-brand-tagline {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: -.1px;
+}
+
+/* ── Card ──────────────────────────────────────────────────────────────────── */
+.auth-card {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, .06);
+}
+
+/* ── Tab switcher ──────────────────────────────────────────────────────────── */
+.auth-tabs {
+  display: flex;
+  position: relative;
+  border-bottom: 1px solid var(--card-border);
+  background: var(--surface);
+  padding: 4px;
+  gap: 2px;
+}
+
+.auth-tab {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  border: none;
+  padding: 9px 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 10px;
+  transition: color .2s;
+  outline-offset: 2px;
+}
+
+.auth-tab.active {
+  color: var(--text);
+}
+
+/* Sliding pill indicator */
+.auth-tab-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  background: var(--card);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  transition: transform .25s cubic-bezier(.4, 0, .2, 1);
+  pointer-events: none;
+}
+
+.auth-tab-indicator.right {
+  transform: translateX(calc(100% + 2px));
+}
+
+/* ── Panels ────────────────────────────────────────────────────────────────── */
+.auth-panel {
+  display: none;
+  padding: 28px 28px 24px;
+  animation: fadeInUp .22s ease;
+}
+
+.auth-panel.active {
+  display: block;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* ── Form elements ─────────────────────────────────────────────────────────── */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+.input-wrap {
+  position: relative;
+}
+
+.form-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--rs);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color .18s, box-shadow .18s;
+  -webkit-appearance: none;
+}
+
+.input-wrap .form-input {
+  padding-right: 44px;
+}
+
+.form-input::placeholder {
+  color: var(--muted);
+  opacity: .6;
+}
+
+.form-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 111, 247, .14);
+}
+
+.form-input.error {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, .10);
+}
+
+/* Show-password toggle */
+.input-toggle-pw {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color .15s;
+}
+.input-toggle-pw:hover { color: var(--text); }
+.eye-icon { width: 18px; height: 18px; }
+
+/* Password strength */
+.pw-strength {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.pw-strength-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--surface);
+  border-radius: 99px;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+}
+
+#pw-strength-fill {
+  height: 100%;
+  border-radius: 99px;
+  width: 0%;
+  transition: width .3s ease, background .3s ease;
+}
+
+#pw-strength-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: .2px;
+  min-width: 36px;
+}
+
+/* ── Error & success messages ──────────────────────────────────────────────── */
+.form-error,
+.form-success {
+  font-size: 12px;
+  border-radius: var(--rs);
+  padding: 9px 12px;
+  display: none;
+  line-height: 1.45;
+}
+
+.form-error {
+  background: var(--red-dim);
+  color: var(--red);
+  border: 1px solid rgba(220, 38, 38, .18);
+}
+
+.form-success {
+  background: var(--green-dim);
+  color: var(--green);
+  border: 1px solid rgba(22, 163, 74, .18);
+}
+
+.form-error.visible,
+.form-success.visible {
+  display: block;
+}
+
+/* ── Submit button ─────────────────────────────────────────────────────────── */
+.auth-submit {
+  width: 100%;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--rs);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 13px 0;
+  cursor: pointer;
+  letter-spacing: -.1px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity .18s, transform .12s;
+  margin-top: 2px;
+  -webkit-appearance: none;
+}
+
+.auth-submit:hover:not(:disabled) {
+  opacity: .92;
+}
+
+.auth-submit:active:not(:disabled) {
+  transform: scale(.98);
+}
+
+.auth-submit:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+}
+
+/* Loading spinner inside button */
+.btn-spinner {
+  display: none;
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid rgba(255, 255, 255, .4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+
+.auth-submit.loading .btn-text {
+  opacity: .7;
+}
+
+.auth-submit.loading .btn-spinner {
+  display: block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────────── */
+.auth-footer {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  text-align: center;
+  opacity: .7;
+}
+
+/* ── User pill (injected into main app header by app.js) ───────────────────── */
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: 99px;
+  padding: 4px 10px 4px 6px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  max-width: 160px;
+  overflow: hidden;
+}
+
+.user-pill-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.user-pill-email {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-weight: 400;
+}
+
+.signout-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-left: 2px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  transition: color .15s;
+  flex-shrink: 0;
+}
+.signout-btn:hover { color: var(--red); }
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .auth-panel {
+    padding: 22px 18px 20px;
+  }
+
+  .auth-card {
+    border-radius: 16px;
+  }
+
+  .auth-brand-name {
+    font-size: 18px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  /* honour OS dark mode if site adds dark-theme support later */
+}

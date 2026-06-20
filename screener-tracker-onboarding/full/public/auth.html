@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>BoardroomX — Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="auth.css" />
+</head>
+<body class="auth-body">
+
+  <div class="auth-page">
+
+    <!-- Brand -->
+    <div class="auth-brand">
+      <div class="auth-logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <rect width="28" height="28" rx="8" fill="#7c6ff7"/>
+          <path d="M7 20V10l7-3 7 3v10" stroke="#fff" stroke-width="1.8" stroke-linejoin="round" fill="none"/>
+          <rect x="11" y="14" width="6" height="6" rx="1" fill="#fff" opacity=".9"/>
+          <rect x="8" y="13" width="3" height="3" rx=".5" fill="#fff" opacity=".6"/>
+          <rect x="17" y="13" width="3" height="3" rx=".5" fill="#fff" opacity=".6"/>
+        </svg>
+      </div>
+      <h1 class="auth-brand-name">BoardroomX</h1>
+      <p class="auth-brand-tagline">Your AI-powered stock portfolio tracker</p>
+    </div>
+
+    <!-- Card -->
+    <div class="auth-card">
+
+      <!-- Tab switcher -->
+      <div class="auth-tabs" role="tablist" aria-label="Sign in or sign up">
+        <button class="auth-tab active" id="tab-signin" role="tab" aria-selected="true" aria-controls="panel-signin" onclick="switchTab('signin')">Sign In</button>
+        <button class="auth-tab"        id="tab-signup" role="tab" aria-selected="false" aria-controls="panel-signup" onclick="switchTab('signup')">Create Account</button>
+        <span class="auth-tab-indicator" id="tabIndicator"></span>
+      </div>
+
+      <!-- Sign In panel -->
+      <div class="auth-panel active" id="panel-signin" role="tabpanel" aria-labelledby="tab-signin">
+        <form class="auth-form" id="signinForm" novalidate onsubmit="handleSignIn(event)">
+          <div class="form-group">
+            <label class="form-label" for="signin-email">Email</label>
+            <input
+              class="form-input"
+              id="signin-email"
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              autocomplete="email"
+              inputmode="email"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signin-password">Password</label>
+            <div class="input-wrap">
+              <input
+                class="form-input"
+                id="signin-password"
+                type="password"
+                name="password"
+                placeholder="••••••••"
+                autocomplete="current-password"
+                required
+              />
+              <button type="button" class="input-toggle-pw" onclick="togglePw('signin-password', this)" aria-label="Show password">
+                <svg class="eye-icon" viewBox="0 0 20 20" fill="none"><path d="M1 10s3.6-6 9-6 9 6 9 6-3.6 6-9 6-9-6-9-6z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-error" id="signin-error" role="alert" aria-live="polite"></div>
+
+          <button class="auth-submit" id="signin-btn" type="submit">
+            <span class="btn-text">Sign In</span>
+            <span class="btn-spinner" aria-hidden="true"></span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Sign Up panel -->
+      <div class="auth-panel" id="panel-signup" role="tabpanel" aria-labelledby="tab-signup">
+        <form class="auth-form" id="signupForm" novalidate onsubmit="handleSignUp(event)">
+          <div class="form-group">
+            <label class="form-label" for="signup-name">Display Name</label>
+            <input
+              class="form-input"
+              id="signup-name"
+              type="text"
+              name="name"
+              placeholder="Your name"
+              autocomplete="name"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-email">Email</label>
+            <input
+              class="form-input"
+              id="signup-email"
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              autocomplete="email"
+              inputmode="email"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signup-password">Password</label>
+            <div class="input-wrap">
+              <input
+                class="form-input"
+                id="signup-password"
+                type="password"
+                name="password"
+                placeholder="Min. 8 characters"
+                autocomplete="new-password"
+                minlength="8"
+                required
+              />
+              <button type="button" class="input-toggle-pw" onclick="togglePw('signup-password', this)" aria-label="Show password">
+                <svg class="eye-icon" viewBox="0 0 20 20" fill="none"><path d="M1 10s3.6-6 9-6 9 6 9 6-3.6 6-9 6-9-6-9-6z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+              </button>
+            </div>
+            <div class="pw-strength" id="pw-strength" aria-hidden="true">
+              <div class="pw-strength-bar"><div id="pw-strength-fill"></div></div>
+              <span id="pw-strength-label"></span>
+            </div>
+          </div>
+
+          <div class="form-error" id="signup-error" role="alert" aria-live="polite"></div>
+          <div class="form-success" id="signup-success" role="status" aria-live="polite"></div>
+
+          <button class="auth-submit" id="signup-btn" type="submit">
+            <span class="btn-text">Create Account</span>
+            <span class="btn-spinner" aria-hidden="true"></span>
+          </button>
+        </form>
+      </div>
+
+    </div><!-- /auth-card -->
+
+    <p class="auth-footer">
+      &copy; <span id="year"></span> BoardroomX. All rights reserved.
+    </p>
+
+  </div><!-- /auth-page -->
+
+  <script src="auth.js"></script>
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

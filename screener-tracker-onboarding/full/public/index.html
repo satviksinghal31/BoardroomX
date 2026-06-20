@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>BoardroomX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="auth.css" />
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+
+  <!-- ── STICKY HEADER ─────────────────────────────────────────────── -->
+  <header>
+    <!-- Brand -->
+    <a class="hdr-brand" href="/">
+      <div class="hdr-logo">BX</div>
+      <div class="hdr-name">BoardroomX</div>
+    </a>
+
+    <!-- Nav (desktop) -->
+    <nav class="hdr-nav">
+      <a class="hdr-nav-item active" href="/">
+        <span class="material-symbols-outlined">bar_chart</span>Portfolio
+      </a>
+      <a class="hdr-nav-item" href="/annuals.html">
+        <span class="material-symbols-outlined">table_chart</span>Annuals
+      </a>
+      <button class="hdr-nav-item" onclick="openSidebar()">
+        <span class="material-symbols-outlined">smart_toy</span>AI Agents
+      </button>
+    </nav>
+
+    <div class="hdr-spacer"></div>
+
+    <!-- Search (desktop) -->
+    <div class="hdr-search" id="desktopSearch" style="display:none">
+      <div class="hdr-search-wrap">
+        <span class="material-symbols-outlined">search</span>
+        <input id="searchInput" type="text" placeholder="Search NSE symbol or name…"
+          autocomplete="off" autocapitalize="off"
+          oninput="onSearchInput(this.value,'desktop')"
+          onkeydown="onSearchKeydown(event,'desktop')" />
+        <div class="search-dropdown" id="searchDropdown" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="hdr-actions" id="headerActions">
+      <a class="hdr-godmode-btn" href="/godmode" target="_blank" title="God Mode — ops dashboard">
+        <span class="gm-icon">⚡</span><span class="gm-label">God Mode</span>
+      </a>
+      <button class="icon-btn" id="refreshAllBtn" onclick="refreshAll()" title="Refresh">
+        <span class="material-symbols-outlined">refresh</span>
+      </button>
+      <!-- Mobile agents menu -->
+      <button class="icon-btn" onclick="openSidebar()" title="AI Agents" id="mobileMenuBtn" style="display:none">
+        <span class="material-symbols-outlined">smart_toy</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── APP LAYOUT  (4-column cockpit) ───────────────────────────── -->
+  <div class="app-layout">
+
+    <!-- Watchlist expand tab (visible when WL is collapsed, stays at top) -->
+    <button class="wl-expand-btn" id="wlExpandBtn" onclick="toggleWatchlist()">
+      <span class="material-symbols-outlined">bookmark</span>
+    </button>
+
+    <!-- ── Column 1: Watchlist ──────────────────────────────────── -->
+    <aside class="watchlist-panel">
+      <!-- Inner sizer prevents content reflow during collapse animation -->
+      <div class="wl-sizer">
+
+      <!-- Watchlist header -->
+      <div class="wl-header">
+        <div class="wl-title">
+          <span class="material-symbols-outlined wl-title-icon">bookmark</span>
+          Watchlist
+        </div>
+        <button class="wl-collapse-btn" id="wlCollapseBtn" onclick="toggleWatchlist()">
+          <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+      </div>
+
+      <!-- Mobile search -->
+      <div class="search-bar" id="mobileSearch">
+        <div class="search-icon-wrap" style="position:relative;display:flex;align-items:center;flex:1">
+          <span class="material-symbols-outlined" style="position:absolute;left:10px;font-size:14px;color:var(--muted);pointer-events:none;z-index:1">search</span>
+          <input id="searchInputMobile" type="text" placeholder="Search NSE symbol or name…"
+            style="padding-left:34px;width:100%"
+            autocomplete="off" autocapitalize="off"
+            oninput="onSearchInput(this.value,'mobile')"
+            onkeydown="onSearchKeydown(event,'mobile')" />
+          <div class="search-dropdown" id="searchDropdownMobile" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Sector filter chips -->
+      <div class="sector-tabs" id="sectorTabs"></div>
+
+      <!-- Stock rows -->
+      <div class="stock-list" id="stockList">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      </div>
+
+      </div><!-- /wl-sizer -->
+    </aside>
+
+    <!-- ── Column 2: Chart ──────────────────────────────────────── -->
+    <main class="chart-main">
+      <div class="chart-panel" id="chartPanel">
+        <div class="chart-empty" id="chartEmpty">
+          <span class="material-symbols-outlined">ssid_chart</span>
+          <p>Select a stock or search any NSE symbol</p>
+        </div>
+        <div class="chart-panel-inner" id="chartPanelInner" style="display:none">
+          <!-- Stock name + price -->
+          <div class="chart-top-bar">
+            <div class="chart-header" id="chartHeader"></div>
+          </div>
+          <!-- Combined nav row: tabs left, timeframe right -->
+          <div class="chart-nav-row" id="chartNavRow">
+            <nav class="chart-tab-bar" id="chartTabBar">
+              <button class="chart-tab active" onclick="switchChartTab('overview')">Overview</button>
+              <button class="chart-tab" onclick="switchChartTab('financials')">Financials</button>
+              <button class="chart-tab" onclick="switchChartTab('holders')">Holders</button>
+              <button class="chart-tab" onclick="switchChartTab('analysis')">Analysis</button>
+            </nav>
+            <div class="chart-tf-row" id="chartTfRow">
+              <button class="gap-toggle" id="gapToggle" onclick="toggleGaps()">Gaps</button>
+              <div class="tf-switcher">
+                <button class="tf-btn" id="tf1h" onclick="switchTf('1H')">1H</button>
+                <button class="tf-btn" id="tf1d" onclick="switchTf('1D')">1D</button>
+                <button class="tf-btn" id="tf1w" onclick="switchTf('1W')">1W</button>
+                <button class="tf-btn active" id="tf1y" onclick="switchTf('1Y')">1Y</button>
+                <button class="tf-btn" id="tf3y" onclick="switchTf('3Y')">3Y</button>
+                <button class="tf-btn" id="tf5y" onclick="switchTf('5Y')">5Y</button>
+              </div>
+            </div>
+          </div>
+          <div class="gap-legend" id="gapLegend" style="display:none"></div>
+          <div class="chart-loading" id="chartLoading" style="display:none">
+            <div class="chart-spinner"></div>
+            <span>Loading chart…</span>
+          </div>
+          <div class="chart-area" id="chartArea" style="display:none">
+            <div class="price-chart-wrap" id="priceWrap"></div>
+            <div class="rsi-chart-wrap"   id="rsiWrap"></div>
+          </div>
+          <!-- Live tab content (financials / earnings) -->
+          <div class="chart-tab-content" id="chartTabContent" style="display:none"></div>
+          <!-- Non-overview tab placeholder -->
+          <div class="chart-tab-placeholder" id="chartTabPlaceholder" style="display:none">
+            <span class="material-symbols-outlined">construction</span>
+            <div id="chartTabPlaceholderLabel">Coming soon</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ── Column 3: Details panel ─────────────────────────────── -->
+    <aside class="details-panel" id="detailsPanel">
+      <!-- Collapse button — absolute, floats inside first card -->
+      <button class="det-collapse-btn" id="detCollapseBtn" onclick="toggleDetails()">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+      <!-- Inner sizer: fixed width so content never reflows during collapse -->
+      <div class="det-sizer">
+        <div class="det-empty" id="detEmpty">
+          <span class="material-symbols-outlined">query_stats</span>
+          Select a stock to view key statistics
+        </div>
+        <div id="detContent" style="display:none;flex-direction:column;gap:16px"></div>
+      </div>
+    </aside>
+
+    <!-- Details expand tab (top-anchored, visible when collapsed) -->
+    <button class="det-expand-btn" id="detExpandBtn" onclick="toggleDetails()">
+      <span class="material-symbols-outlined">chevron_left</span>
+    </button>
+
+    <!-- ── Column 4: Utility sidebar ───────────────────────────── -->
+    <aside class="utility-sidebar">
+      <button class="util-btn active" title="Portfolio" onclick="window.location='/'">
+        <span class="material-symbols-outlined">bar_chart</span>
+      </button>
+      <button class="util-btn" title="Annual results" onclick="window.location='/annuals.html'">
+        <span class="material-symbols-outlined">table_chart</span>
+      </button>
+      <div class="util-spacer"></div>
+      <button class="util-btn" title="Refresh" onclick="refreshAll()">
+        <span class="material-symbols-outlined">refresh</span>
+      </button>
+    </aside>
+
+  </div><!-- end app-layout -->
+
+  <!-- ── Sheet overlay ─────────────────────────────────────────── -->
+  <div class="overlay" id="overlay" onclick="closeSheet()"></div>
+
+  <!-- ── Detail sheet (mobile) ────────────────────────────────── -->
+  <div class="sheet" id="detailSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-content" id="detailContent"></div>
+  </div>
+
+  <!-- ── Chart sheet (mobile) ─────────────────────────────────── -->
+  <div class="sheet sheet-tall" id="chartSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-content">
+      <div class="chart-top-bar" style="margin-bottom:0">
+        <div class="chart-header" id="mobileChartHeader"></div>
+      </div>
+      <div class="chart-tf-row" style="margin-bottom:8px">
+        <button class="gap-toggle" id="mobileGapToggle" onclick="toggleGaps()">Gaps</button>
+        <div class="tf-switcher">
+          <button class="tf-btn" id="mtf1h" onclick="switchMobileTf('1H')">1H</button>
+          <button class="tf-btn" id="mtf1d" onclick="switchMobileTf('1D')">1D</button>
+          <button class="tf-btn" id="mtf1w" onclick="switchMobileTf('1W')">1W</button>
+          <button class="tf-btn active" id="mtf1y" onclick="switchMobileTf('1Y')">1Y</button>
+          <button class="tf-btn" id="mtf3y" onclick="switchMobileTf('3Y')">3Y</button>
+          <button class="tf-btn" id="mtf5y" onclick="switchMobileTf('5Y')">5Y</button>
+        </div>
+      </div>
+      <div class="gap-legend" id="mobileGapLegend" style="display:none"></div>
+      <div class="chart-loading" id="mobileChartLoading" style="display:none">
+        <div class="chart-spinner"></div>
+        <span>Loading chart…</span>
+      </div>
+      <div class="mobile-chart-area" id="mobileChartArea">
+        <div class="mobile-price-wrap" id="mobilePriceWrap"></div>
+        <div class="mobile-rsi-wrap"   id="mobileRsiWrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sidebar overlay ──────────────────────────────────────── -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- ── Agents sidebar ───────────────────────────────────────── -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div>
+        <div class="sidebar-title">AI Agents</div>
+        <div class="sidebar-sub">Analyse, chart and act on your portfolio data.</div>
+      </div>
+      <button class="icon-btn" onclick="closeSidebar()" style="flex-shrink:0">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="sidebar-label">ACTIVE AGENTS</div>
+    <div id="agentList"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
+
+  <script>
+    // ── Desktop: show header search, hide mobile search ──────────
+    (function () {
+      const mq = window.matchMedia('(min-width: 768px)');
+      function applyLayout(matches) {
+        const ds  = document.getElementById('desktopSearch');
+        const ms  = document.getElementById('mobileSearch');
+        const mmb = document.getElementById('mobileMenuBtn');
+        if (matches) {
+          if (ds)  ds.style.display  = 'flex';
+          if (ms)  ms.style.display  = 'none';
+          if (mmb) mmb.style.display = 'none';
+        } else {
+          if (ds)  ds.style.display  = 'none';
+          if (ms)  ms.style.display  = 'flex';
+          if (mmb) mmb.style.display = 'flex';
+        }
+      }
+      applyLayout(mq.matches);
+      mq.addEventListener('change', e => applyLayout(e.matches));
+    })();
+
+    // ── Inject user pill into header actions ──────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+      if (typeof renderUserPill !== 'function') return;
+      const html = renderUserPill();
+      if (!html) return;
+      const actions = document.getElementById('headerActions');
+      if (actions) {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html;
+        const pill = wrapper.firstElementChild;
+        if (pill) actions.insertBefore(pill, actions.firstChild);
+      }
+    });
+  </script>
+</body>
+</html>

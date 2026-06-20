@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Annual Results — BoardroomX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="auth.css" />
+  <link rel="stylesheet" href="annuals.css?v=20260617-annuals-qa2" />
+</head>
+<body class="annuals-page">
+  <header>
+    <a class="hdr-brand" href="/">
+      <div class="hdr-logo">BX</div>
+      <div class="hdr-name">BoardroomX</div>
+    </a>
+
+    <nav class="hdr-nav">
+      <a class="hdr-nav-item" href="/">
+        <span class="material-symbols-outlined">bar_chart</span>Portfolio
+      </a>
+      <a class="hdr-nav-item active" href="/annuals.html">
+        <span class="material-symbols-outlined">table_chart</span>Annuals
+      </a>
+    </nav>
+
+    <div class="hdr-spacer"></div>
+
+    <div class="hdr-actions" id="annualHeaderActions">
+      <a class="hdr-godmode-btn" href="/godmode" target="_blank" title="God Mode — ops dashboard">
+        <span class="gm-icon">⚡</span><span class="gm-label">God Mode</span>
+      </a>
+      <button class="icon-btn" id="annualRefreshBtn" title="Refresh">
+        <span class="material-symbols-outlined">refresh</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="annual-shell">
+    <aside class="annual-sidebar">
+      <div class="annual-side-head">
+        <div>
+          <h1>Annual Results</h1>
+          <p id="annualProgressText">Loading universe…</p>
+        </div>
+      </div>
+
+      <div class="annual-search">
+        <span class="material-symbols-outlined">search</span>
+        <input id="annualSearchInput" type="text" placeholder="Search symbol or company" autocomplete="off" />
+      </div>
+
+      <div class="annual-filters" id="annualFilters">
+        <button class="annual-filter active" data-filter="all">All</button>
+        <button class="annual-filter" data-filter="complete">Fetched</button>
+        <button class="annual-filter" data-filter="retry">Retry</button>
+        <button class="annual-filter" data-filter="pending">Pending</button>
+        <button class="annual-filter" data-filter="failed">Issues</button>
+      </div>
+
+      <div class="annual-status-grid" id="annualStatusGrid"></div>
+      <div class="annual-stock-list" id="annualStockList"></div>
+    </aside>
+
+    <section class="annual-main">
+      <div class="annual-empty" id="annualEmpty">
+        <span class="material-symbols-outlined">table_view</span>
+        <p>Select a stock to view annual financials.</p>
+      </div>
+
+      <div class="annual-detail" id="annualDetail" style="display:none">
+        <div class="annual-detail-head">
+          <div>
+            <div class="annual-symbol-row">
+              <h2 id="annualSymbol">—</h2>
+              <span class="annual-status-pill" id="annualStatusPill">pending</span>
+            </div>
+            <p id="annualCompany">—</p>
+          </div>
+          <div class="annual-meta" id="annualMeta"></div>
+        </div>
+
+        <div class="annual-section">
+          <div class="annual-section-head">
+            <h3>Annual P&L + Ratios</h3>
+            <span id="annualYearsCount">—</span>
+          </div>
+          <div class="annual-table-wrap">
+            <table class="annual-table" id="annualFinancialTable"></table>
+          </div>
+        </div>
+
+        <div class="annual-grid-two">
+          <div class="annual-section">
+            <div class="annual-section-head">
+              <h3>Shareholding</h3>
+              <span id="annualShareholdingCount">—</span>
+            </div>
+            <div class="annual-table-wrap small">
+              <table class="annual-table" id="annualShareholdingTable"></table>
+            </div>
+          </div>
+
+          <div class="annual-section">
+            <div class="annual-section-head">
+              <h3>Fetch Status</h3>
+              <span id="annualRunCount">—</span>
+            </div>
+            <div class="annual-run-log" id="annualRunLog"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="auth.js"></script>
+  <script src="annuals.js?v=20260617-annuals-qa2"></script>
+</body>
+</html>

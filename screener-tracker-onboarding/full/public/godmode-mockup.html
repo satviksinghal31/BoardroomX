@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ God Mode (MOCKUP) — BoardroomX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #f2f3f5;
+      --surface:   #ffffff;
+      --border:    #e3e5e8;
+      --border2:   #d0d2d6;
+      --text:      #1a1d23;
+      --muted:     #6b7280;
+      --faint:     #9ca3af;
+      --accent:    #4f46e5;
+      --success:   #059669;
+      --warning:   #d97706;
+      --danger:    #dc2626;
+
+      --nse:        #0052cc;
+      --screener:   #047857;
+      --worker:     #6d28d9;
+      --upcoming:   #0284c7;
+
+      --nse-bg:      #dbeafe;
+      --screener-bg: #d1fae5;
+      --worker-bg:   #ede9fe;
+      --error-bg:    #fee2e2;
+      --upcoming-bg: #e0f2fe;
+      --earnings-bg: #fef9c3;
+      --dividend-bg: #fce7f3;
+      --agm-bg:      #f5f3ff;
+
+      --add-bg:    #dcfce7;
+      --add-fg:    #14532d;
+      --upd-bg:    #fef3c7;
+      --upd-fg:    #78350f;
+      --noop-bg:   #f3f4f6;
+      --noop-fg:   #6b7280;
+
+      --mono: 'JetBrains Mono', 'Courier New', monospace;
+      --sans: 'Inter', system-ui, sans-serif;
+    }
+
+    html { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 14px; }
+    body { min-height: 100vh; }
+    .gm-wrap   { max-width: 1500px; margin: 0 auto; padding: 20px 24px 60px; }
+
+    /* ─── Header ─── */
+    .gm-header  { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+    .gm-title   { font-size: 20px; font-weight: 700; letter-spacing: -.3px; }
+    .gm-title span { color: var(--accent); }
+    .gm-sub     { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+    .gm-back    { font-size: 12px; color: var(--muted); text-decoration: none; padding: 5px 10px;
+                  border: 1px solid var(--border2); border-radius: 6px; }
+    .gm-spacer  { flex: 1; }
+    .mockup-tag { background: #fef3c7; color: #92400e; padding: 3px 9px; border-radius: 5px;
+                  font-size: 11px; font-weight: 700; font-family: var(--mono); }
+    .live-dot   { display: inline-flex; align-items: center; gap: 6px; font-size: 11px;
+                  font-family: var(--mono); color: var(--success); font-weight: 600; }
+    .live-dot::before { content: ''; width: 7px; height: 7px; border-radius: 50%;
+                        background: var(--success); animation: pulse 1.8s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)} }
+
+    /* ─── Agent status panel (NEW) ─── */
+    .agent-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+
+    .agent-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+                  padding: 16px 18px; position: relative; overflow: hidden; }
+    .agent-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+    .agent-card.screener::before { background: var(--screener); }
+    .agent-card.nse::before      { background: var(--nse); }
+
+    .agent-head    { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .agent-name    { font-size: 13px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
+    .agent-name .ico { font-size: 16px; margin-right: 4px; }
+    .agent-status  { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-family: var(--mono); }
+    .agent-status.healthy { background: #dcfce7; color: var(--success); }
+    .agent-status.busy    { background: #fef9c3; color: #92400e; }
+    .agent-status.paused  { background: var(--error-bg); color: var(--danger); }
+    .agent-meta    { font-size: 11px; color: var(--faint); font-family: var(--mono); margin-left: auto; }
+
+    .agent-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+    .agent-field   { font-size: 11px; }
+    .agent-field-k { color: var(--muted); text-transform: uppercase; letter-spacing: .3px; font-size: 9.5px;
+                     font-weight: 600; }
+    .agent-field-v { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text);
+                     margin-top: 2px; line-height: 1.3; }
+    .agent-field-v.big { font-size: 14px; font-weight: 700; }
+
+    .agent-summary { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+                     font-size: 11.5px; font-family: var(--mono); color: var(--muted); line-height: 1.55; }
+    .agent-summary b { color: var(--text); font-weight: 600; }
+    .num-add  { color: var(--success); font-weight: 600; }
+    .num-upd  { color: var(--warning); font-weight: 600; }
+    .num-noop { color: var(--faint); }
+
+    .agent-queue   { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .q-chip { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--noop-bg);
+              color: var(--muted); font-family: var(--mono); font-weight: 600; }
+    .q-chip.hot   { background: var(--error-bg); color: var(--danger); }
+    .q-chip.warm  { background: var(--upd-bg); color: var(--warning); }
+
+    /* ─── Stats row ─── */
+    .stat-row   { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .stat-card  { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+                  padding: 12px 16px; flex: 1; min-width: 130px; }
+    .stat-val   { font-size: 22px; font-weight: 700; letter-spacing: -.5px; line-height: 1; }
+    .stat-lbl   { font-size: 10.5px; color: var(--muted); margin-top: 4px; text-transform: uppercase;
+                  letter-spacing: .3px; }
+    .stat-sub   { font-size: 10px; color: var(--faint); font-family: var(--mono); margin-top: 3px; }
+    .stat-health.ok     { border-color: #a7f3d0; }
+    .stat-health.ok .stat-val { color: var(--success); }
+    .stat-health.danger { border-color: #fca5a5; background: #fff5f5; }
+    .stat-health.danger .stat-val { color: var(--danger); }
+
+    /* ─── Two-column: filter + feed ─── */
+    .gm-body    { display: grid; grid-template-columns: 280px 1fr; gap: 16px; align-items: start; }
+    .filter-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+                    padding: 16px; position: sticky; top: 20px; }
+    .panel-title  { font-size: 11px; font-weight: 700; text-transform: uppercase;
+                    letter-spacing: .6px; color: var(--muted); margin-bottom: 12px; }
+    .filter-input { width: 100%; border: 1px solid var(--border); border-radius: 7px;
+                    padding: 8px 10px; font-size: 13px; background: var(--bg); }
+
+    /* ─── Feed ─── */
+    .feed-panel  { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+                   overflow: hidden; }
+    .feed-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+                   border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .feed-title  { font-size: 11px; font-weight: 700; text-transform: uppercase;
+                   letter-spacing: .6px; color: var(--muted); }
+
+    /* Primary 3-way tabs */
+    .feed-tabs-primary { display: flex; gap: 0; border: 1px solid var(--border2); border-radius: 8px;
+                         overflow: hidden; padding: 0; }
+    .feed-tab-primary  { font-size: 12px; font-weight: 600; padding: 7px 12px; cursor: pointer;
+                         background: var(--surface); color: var(--muted); border: none;
+                         border-right: 1px solid var(--border2); font-family: var(--sans);
+                         display: inline-flex; align-items: center; gap: 6px; }
+    .feed-tab-primary:last-child { border-right: none; }
+    .feed-tab-primary:hover  { background: var(--bg); color: var(--text); }
+    .feed-tab-primary.active { background: var(--accent); color: #fff; }
+    .feed-tab-primary.active .tab-badge { background: rgba(255,255,255,.25); color: #fff; }
+    .tab-badge   { font-family: var(--mono); font-size: 10px; padding: 1px 6px; border-radius: 9px;
+                   background: var(--bg); color: var(--muted); font-weight: 700; }
+
+    /* Sub-toggle for NSE Events */
+    .feed-sub-row { display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+                    border-bottom: 1px solid var(--border); background: #fafbfc; }
+    .feed-sub-label { font-size: 10.5px; color: var(--muted); text-transform: uppercase;
+                      letter-spacing: .4px; font-weight: 600; }
+    .sub-tab     { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 5px;
+                   border: 1px solid var(--border2); cursor: pointer; background: none; color: var(--muted); }
+    .sub-tab:hover  { border-color: var(--accent); color: var(--accent); }
+    .sub-tab.active { background: var(--upcoming); color: #fff; border-color: var(--upcoming); }
+    .sub-tab.active.recent { background: var(--success); border-color: var(--success); }
+    .pending-chip { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 5px;
+                    border-radius: 3px; background: #fef3c7; color: #92400e;
+                    margin-left: 5px; letter-spacing: .2px; }
+
+    .feed-count  { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-left: auto; }
+    .feed-pause  { font-size: 11px; padding: 4px 10px; border: 1px solid var(--border2);
+                   border-radius: 6px; color: var(--muted); cursor: pointer; background: none; }
+
+    /* Column headers — Fetched At first, Event Date second (SWAPPED) */
+    .feed-cols { display: grid; grid-template-columns: 105px 105px 60px 90px 1fr;
+                 padding: 6px 16px; border-bottom: 1px solid var(--border2); background: var(--bg); }
+    .feed-col-hdr { font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+                    letter-spacing: .5px; color: var(--faint); }
+
+    .feed-body  { max-height: 720px; overflow-y: auto; }
+
+    .feed-entry { display: grid; grid-template-columns: 105px 105px 60px 90px 1fr; gap: 0;
+                  padding: 9px 16px; border-bottom: 1px solid var(--border);
+                  align-items: start; transition: background .15s; }
+    .feed-entry:hover { background: var(--bg); }
+    .feed-entry.tick-summary { background: linear-gradient(90deg, #fafafa 0%, transparent 100%); }
+    .feed-entry.tick-summary:hover { background: #f3f4f6; }
+
+    .fe-fetched      { font-size: 10.5px; font-family: var(--mono); line-height: 1.4; padding-top: 2px; }
+    .fe-fetched-time { color: var(--text); font-weight: 600; }
+    .fe-fetched-rel  { font-size: 9.5px; color: var(--faint); display: block; }
+    .fe-fetched-rel.fresh  { color: var(--success); font-weight: 600; }
+
+    .fe-edate        { font-size: 10.5px; font-family: var(--mono); line-height: 1.4; padding-top: 2px; }
+    .fe-edate-main   { color: var(--text); font-weight: 500; }
+    .fe-edate-rel    { font-size: 9.5px; color: var(--faint); display: block; }
+    .fe-edate-rel.fresh  { color: var(--success); font-weight: 600; }
+    .fe-edate-rel.future { color: var(--upcoming); font-weight: 600; }
+
+    .fe-src  { font-size: 10px; font-weight: 700; font-family: var(--mono);
+               text-transform: uppercase; letter-spacing: .3px;
+               padding: 2px 6px; border-radius: 4px; width: fit-content;
+               margin-top: 1px; white-space: nowrap; }
+    .fe-src.NSE       { background: var(--nse-bg);       color: var(--nse); }
+    .fe-src.SCREENER  { background: var(--screener-bg);  color: var(--screener); }
+    .fe-src.TICK      { background: #ede9fe;             color: #6d28d9; }
+
+    .fe-sym  { font-size: 11.5px; font-weight: 700; font-family: var(--mono); padding-top: 2px; color: var(--text); }
+    .fe-sym.empty { color: var(--faint); font-weight: 500; }
+
+    .fe-msg  { font-size: 12.5px; font-weight: 500; line-height: 1.45; color: var(--text); }
+    .fe-msg .delta { color: var(--muted); font-family: var(--mono); font-size: 11px; }
+
+    /* Change action badges */
+    .fe-action { display: inline-block; font-size: 9.5px; font-weight: 700; padding: 1px 6px;
+                 border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+    .fe-action.add  { background: var(--add-bg);  color: var(--add-fg); }
+    .fe-action.upd  { background: var(--upd-bg);  color: var(--upd-fg); }
+    .fe-action.noop { background: var(--noop-bg); color: var(--noop-fg); }
+    .fe-action.err  { background: var(--error-bg); color: var(--danger); }
+
+    /* Type badge after message */
+    .fe-type { display: inline-block; font-size: 9.5px; font-weight: 700; padding: 1px 5px;
+               border-radius: 3px; margin-left: 6px; vertical-align: middle;
+               text-transform: uppercase; letter-spacing: .3px; }
+    .fe-type.EARNINGS        { background: var(--earnings-bg); color: #854d0e; }
+    .fe-type.DIVIDEND        { background: var(--dividend-bg); color: #9d174d; }
+    .fe-type.AGM             { background: var(--agm-bg);      color: #5b21b6; }
+    .fe-type.SCRAPED         { background: var(--screener-bg); color: var(--screener); }
+    .fe-type.SUMMARY         { background: #ede9fe;            color: #6d28d9; }
+    .fe-type.ERROR           { background: var(--error-bg);    color: var(--danger); }
+
+    /* Scheduled chip */
+    .fe-sched { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 5px;
+                border-radius: 3px; background: var(--upcoming-bg); color: #0369a1;
+                margin-left: 5px; letter-spacing: .2px; }
+
+    /* Raw row */
+    .fe-raw  { font-size: 10.5px; font-family: var(--mono); color: var(--faint);
+               margin-top: 3px; line-height: 1.45; }
+
+    /* Tick summary special row */
+    .tick-stats { display: flex; gap: 14px; font-family: var(--mono); font-size: 11.5px; margin-top: 3px; }
+    .tick-stat-add  { color: var(--success); font-weight: 600; }
+    .tick-stat-upd  { color: var(--warning); font-weight: 600; }
+    .tick-stat-noop { color: var(--faint); }
+
+    .legend { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+              padding: 14px; margin-top: 20px; font-size: 11.5px; color: var(--muted); }
+    .legend h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+                 color: var(--text); margin-bottom: 8px; }
+    .legend p  { margin-bottom: 4px; }
+    .legend code { font-family: var(--mono); background: var(--bg); padding: 1px 5px; border-radius: 3px;
+                   font-size: 11px; }
+  </style>
+</head>
+<body>
+
+<div class="gm-wrap">
+
+  <!-- Header -->
+  <div class="gm-header">
+    <a class="gm-back" href="/godmode">← Real God Mode</a>
+    <div>
+      <div class="gm-title">⚡ <span>God Mode</span> · Mockup</div>
+      <div class="gm-sub">Preview: 2-agent architecture · bulk + per-stock</div>
+    </div>
+    <div class="gm-spacer"></div>
+    <span class="mockup-tag">DESIGN MOCKUP</span>
+    <span class="live-dot">LIVE</span>
+  </div>
+
+  <!-- ────── AGENT STATUS PANELS (NEW) ────── -->
+  <div class="agent-row">
+
+    <!-- SCREENER agent card -->
+    <div class="agent-card screener">
+      <div class="agent-head">
+        <div class="agent-name"><span class="ico">📊</span> SCREENER AGENT</div>
+        <div class="agent-status busy">running</div>
+        <div class="agent-meta">tick #1842 · 60s cycle</div>
+      </div>
+
+      <div class="agent-grid">
+        <div class="agent-field">
+          <div class="agent-field-k">Last run</div>
+          <div class="agent-field-v big">47s ago</div>
+        </div>
+        <div class="agent-field">
+          <div class="agent-field-k">Next pick in</div>
+          <div class="agent-field-v big">13s</div>
+        </div>
+        <div class="agent-field">
+          <div class="agent-field-k">Just processed</div>
+          <div class="agent-field-v">ANANTRAJ</div>
+        </div>
+        <div class="agent-field">
+          <div class="agent-field-k">Why</div>
+          <div class="agent-field-v">bootstrap (never scraped)</div>
+        </div>
+      </div>
+
+      <div class="agent-summary">
+        <b>Last result:</b> +8 quarters new in <b>1.4s</b>
+        · Revenue=485, EPS=2.4 (Mar2026)
+      </div>
+
+      <div class="agent-queue">
+        <span class="q-chip hot">🔥 bootstrap: 1640</span>
+        <span class="q-chip warm">⚠ behind: 3</span>
+        <span class="q-chip">default: 577</span>
+      </div>
+      <div class="agent-summary" style="border:0; padding-top:8px; margin-top:6px;">
+        Full pass ETA: <b>~27h</b> · Avg scrape time: <b>1.1s</b>
+      </div>
+    </div>
+
+    <!-- NSE BULK agent card -->
+    <div class="agent-card nse">
+      <div class="agent-head">
+        <div class="agent-name"><span class="ico">📡</span> NSE BULK AGENT</div>
+        <div class="agent-status healthy">idle</div>
+        <div class="agent-meta">tick #142 · 2m cycle</div>
+      </div>
+
+      <div class="agent-grid">
+        <div class="agent-field">
+          <div class="agent-field-k">Last tick</div>
+          <div class="agent-field-v big">1m 12s ago</div>
+        </div>
+        <div class="agent-field">
+          <div class="agent-field-k">Next tick in</div>
+          <div class="agent-field-v big">48s</div>
+        </div>
+        <div class="agent-field">
+          <div class="agent-field-k">Window fetched</div>
+          <div class="agent-field-v">last 7m (5m overlap)</div>
+        </div>
+        <div class="agent-field">
+          <div class="agent-field-k">Calls / tick</div>
+          <div class="agent-field-v">3 (BM + Ann + CA)</div>
+        </div>
+      </div>
+
+      <div class="agent-summary">
+        <b>Last tick #142:</b>
+        <div class="tick-stats">
+          <span>📥 <b>2412</b> scanned</span>
+          <span class="tick-stat-add">✚ 5 added</span>
+          <span class="tick-stat-upd">✎ 2 updated</span>
+          <span class="tick-stat-noop">2405 unchanged</span>
+          <span style="margin-left:auto">⏱ 1.2s</span>
+        </div>
+      </div>
+
+      <div class="agent-queue">
+        <span class="q-chip" style="background:#dcfce7;color:#14532d">✓ failures: 0/3</span>
+        <span class="q-chip">catch-up: ok</span>
+        <span class="q-chip">cookie: fresh (4m old)</span>
+      </div>
+      <div class="agent-summary" style="border:0; padding-top:8px; margin-top:6px;">
+        Status: <b style="color:var(--success)">healthy</b>
+        · Rate budget used: <b>3.3%</b> (90/2700 calls/hr)
+      </div>
+    </div>
+  </div>
+
+  <!-- ────── Stats row ────── -->
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-val">2,220</div>
+      <div class="stat-lbl">Total Stocks</div>
+      <div class="stat-sub">NSE catalog</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">580</div>
+      <div class="stat-lbl">Scraped</div>
+      <div class="stat-sub">26% of catalog</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">6,084</div>
+      <div class="stat-lbl">Ann. Rows</div>
+      <div class="stat-sub">3,603 with date</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">12</div>
+      <div class="stat-lbl">Earnings Today</div>
+      <div class="stat-sub">results reported today</div>
+    </div>
+    <div class="stat-card stat-health ok">
+      <div class="stat-val">47</div>
+      <div class="stat-lbl">Updated Last 1h</div>
+      <div class="stat-sub">42 NSE · 5 Screener</div>
+    </div>
+  </div>
+
+  <!-- ────── Body: filter + feed ────── -->
+  <div class="gm-body">
+
+    <!-- Filter panel + logic reference -->
+    <div class="filter-panel">
+      <div class="panel-title">Filter by stock</div>
+      <input class="filter-input" type="text" placeholder="Symbol e.g. BAJFINANCE" />
+      <div style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px;">
+        <div class="panel-title">Quick filters</div>
+        <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+          <button style="text-align:left; font-size:11px; padding:5px 8px; border:1px solid var(--border); border-radius:5px; background:#fff; cursor:pointer; color:var(--text);">Show only changes (hide noops)</button>
+          <button style="text-align:left; font-size:11px; padding:5px 8px; border:1px solid var(--border); border-radius:5px; background:#fff; cursor:pointer; color:var(--text);">Hide tick summaries</button>
+          <button style="text-align:left; font-size:11px; padding:5px 8px; border:1px solid var(--border); border-radius:5px; background:#fff; cursor:pointer; color:var(--text);">Errors only</button>
+        </div>
+      </div>
+
+      <!-- ─── Agent logic reference ─── -->
+      <div style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px;">
+        <div class="panel-title" style="display:flex; align-items:center; gap:6px;">
+          <span style="color:var(--screener)">📊</span> Screener logic
+        </div>
+        <div style="font-size:11px; color:var(--muted); line-height:1.6; margin-top:6px;">
+          <div style="margin-bottom:6px;">
+            <span style="display:inline-block; width:14px; color:var(--danger); font-weight:700;">S1</span>
+            <b style="color:var(--text)">Bootstrap</b> — no financials row<br>
+            <span style="margin-left:14px; font-family:var(--mono); font-size:10px;">→ scrape NOW</span>
+          </div>
+          <div style="margin-bottom:6px;">
+            <span style="display:inline-block; width:14px; color:var(--warning); font-weight:700;">S2</span>
+            <b style="color:var(--text)">Behind</b> — NSE reported, our data missing<br>
+            <span style="margin-left:14px; font-family:var(--mono); font-size:10px;">→ scrape NOW</span>
+          </div>
+          <div>
+            <span style="display:inline-block; width:14px; color:var(--muted); font-weight:700;">S3</span>
+            <b style="color:var(--text)">Default</b> — everything else<br>
+            <span style="margin-left:14px; font-family:var(--mono); font-size:10px;">→ scrape every 24h</span>
+          </div>
+        </div>
+        <div style="font-size:10px; color:var(--faint); font-family:var(--mono); margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">
+          Tick: 60s · 1 stock/min<br>
+          Diff: quarter-by-quarter compare<br>
+          Noops don't touch DB
+        </div>
+      </div>
+
+      <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:14px;">
+        <div class="panel-title" style="display:flex; align-items:center; gap:6px;">
+          <span style="color:var(--nse)">📡</span> NSE Bulk logic
+        </div>
+        <div style="font-size:11px; color:var(--muted); line-height:1.55; margin-top:6px;">
+          <div style="margin-bottom:8px;">
+            <b style="color:var(--text)">3 bulk calls per tick:</b>
+            <div style="margin-top:3px; font-family:var(--mono); font-size:10px;">
+              <div>① board-meetings (today→+60d)</div>
+              <div>② announcements (window)</div>
+              <div>③ corporate-actions (next 20)</div>
+            </div>
+          </div>
+          <div style="margin-bottom:8px;">
+            <b style="color:var(--text)">Window calc:</b>
+            <div style="margin-top:3px; font-family:var(--mono); font-size:10px;">
+              from = lastRun - 5min<br>
+              <span style="color:var(--faint)">(cap 7d on long outage)</span>
+            </div>
+          </div>
+          <div style="margin-bottom:8px;">
+            <b style="color:var(--text)">Atomic:</b>
+            <div style="margin-top:3px; font-size:10.5px;">
+              All 3 calls must succeed OR no DB write (preserves catch-up window).
+            </div>
+          </div>
+          <div>
+            <b style="color:var(--text)">Circuit breaker:</b>
+            <div style="margin-top:3px; font-size:10.5px;">
+              3 consecutive fails → pause 15 min.
+            </div>
+          </div>
+        </div>
+        <div style="font-size:10px; color:var(--faint); font-family:var(--mono); margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">
+          Tick: 2 min · 90 calls/hr<br>
+          Rate budget: 3.3% used<br>
+          Diff: per-row before upsert
+        </div>
+      </div>
+
+      <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:14px;">
+        <div class="panel-title" style="display:flex; align-items:center; gap:6px;">
+          <span>🗂️</span> Tab → data mapping
+        </div>
+        <div style="font-size:10.5px; color:var(--muted); line-height:1.55; margin-top:6px; font-family:var(--mono);">
+          <div><b style="color:var(--text); font-family:var(--sans);">Ticks</b> = agent_state.nse log</div>
+          <div><b style="color:var(--text); font-family:var(--sans);">Events Recent</b> = results.reported_at NOT NULL</div>
+          <div style="margin-left:8px; font-size:10px;">+ expected_at &lt; today &amp; no reported_at</div>
+          <div><b style="color:var(--text); font-family:var(--sans);">Events Upcoming</b> = expected_at ≥ today &amp; reported_at IS NULL</div>
+          <div><b style="color:var(--text); font-family:var(--sans);">Screener</b> = agent_state.screener log</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feed panel -->
+    <div class="feed-panel">
+      <div class="feed-header">
+        <div class="feed-title">Live Monitor</div>
+        <div class="feed-tabs-primary">
+          <button class="feed-tab-primary active" data-tab="ticks">
+            📡 NSE Ticks <span class="tab-badge">142</span>
+          </button>
+          <button class="feed-tab-primary" data-tab="events">
+            ⚡ NSE Events <span class="tab-badge">2,847</span>
+          </button>
+          <button class="feed-tab-primary" data-tab="screener">
+            📊 Screener <span class="tab-badge">580</span>
+          </button>
+        </div>
+        <span class="feed-count" id="feedCount">142 entries</span>
+        <button class="feed-pause">⏸ Pause</button>
+      </div>
+
+      <!-- Sub-toggle (only shown when Events tab is active) -->
+      <div class="feed-sub-row" id="eventsSubRow" style="display:none">
+        <span class="feed-sub-label">Events view:</span>
+        <button class="sub-tab active recent" data-sub="recent">Recent / Past</button>
+        <button class="sub-tab" data-sub="upcoming">Upcoming / Scheduled</button>
+        <span style="margin-left:auto; font-size:10.5px; color:var(--faint); font-family:var(--mono)">
+          <span class="pending-chip">⏳ OUTCOME PENDING</span> = expected date passed, NSE outcome not yet received
+        </span>
+      </div>
+
+      <div class="feed-cols">
+        <div class="feed-col-hdr">Fetched At</div>
+        <div class="feed-col-hdr">Event Date</div>
+        <div class="feed-col-hdr">Source</div>
+        <div class="feed-col-hdr">Stock</div>
+        <div class="feed-col-hdr">Detail</div>
+      </div>
+
+      <!-- ──────── VIEW 1: NSE TICKS ──────── -->
+      <div class="feed-body view-body" data-view="ticks">
+
+        <!-- ── NSE Tick #142 (just now) — found changes -->
+        <div class="feed-entry tick-summary">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:18:42</span>
+            <span class="fe-fetched-rel fresh">just now</span>
+          </div>
+          <div class="fe-edate"><span class="fe-edate-main" style="color:var(--faint)">—</span></div>
+          <div class="fe-src TICK">TICK</div>
+          <div class="fe-sym empty">#142</div>
+          <div>
+            <div class="fe-msg">2,412 events scanned · catch-up window 5m<span class="fe-type SUMMARY">SUMMARY</span></div>
+            <div class="tick-stats">
+              <span class="tick-stat-add">✚ 5 added</span>
+              <span class="tick-stat-upd">✎ 2 updated</span>
+              <span class="tick-stat-noop">2405 unchanged</span>
+              <span style="color:var(--faint); margin-left:auto">1.2s · 3 calls · cookie ok</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Tick #141 — pure noop -->
+        <div class="feed-entry tick-summary">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:16:42</span>
+            <span class="fe-fetched-rel">2m ago</span>
+          </div>
+          <div class="fe-edate"><span class="fe-edate-main" style="color:var(--faint)">—</span></div>
+          <div class="fe-src TICK">TICK</div>
+          <div class="fe-sym empty">#141</div>
+          <div>
+            <div class="fe-msg">2,398 events scanned · catch-up window 5m<span class="fe-type SUMMARY">SUMMARY</span></div>
+            <div class="tick-stats">
+              <span class="tick-stat-noop">2398 unchanged (no-op tick)</span>
+              <span style="color:var(--faint); margin-left:auto">0.9s · 3 calls</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Tick #140 — small change -->
+        <div class="feed-entry tick-summary">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:14:42</span>
+            <span class="fe-fetched-rel">4m ago</span>
+          </div>
+          <div class="fe-edate"><span class="fe-edate-main" style="color:var(--faint)">—</span></div>
+          <div class="fe-src TICK">TICK</div>
+          <div class="fe-sym empty">#140</div>
+          <div>
+            <div class="fe-msg">2,401 events scanned<span class="fe-type SUMMARY">SUMMARY</span></div>
+            <div class="tick-stats">
+              <span class="tick-stat-add">✚ 1 added</span>
+              <span class="tick-stat-noop">2400 unchanged</span>
+              <span style="color:var(--faint); margin-left:auto">1.0s · 3 calls</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Tick #139 — failure (circuit breaker close) -->
+        <div class="feed-entry tick-summary" style="background: linear-gradient(90deg, #fee2e2 0%, transparent 100%);">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:12:42</span>
+            <span class="fe-fetched-rel">6m ago</span>
+          </div>
+          <div class="fe-edate"><span class="fe-edate-main" style="color:var(--faint)">—</span></div>
+          <div class="fe-src TICK">TICK</div>
+          <div class="fe-sym empty">#139</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action err">✗ FAILED</span>
+              announcements endpoint timed out — tick skipped<span class="fe-type ERROR">NETWORK</span>
+            </div>
+            <div class="fe-raw">consecutive failures: 1/3 · catch-up window preserved · next retry in 2m</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ──────── VIEW 2: NSE EVENTS (Recent sub-tab default) ──────── -->
+      <div class="feed-body view-body" data-view="events" data-sub="recent" style="display:none">
+
+        <!-- ── DOLLAR — dividend declared today -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:18:42</span>
+            <span class="fe-fetched-rel fresh">just now</span>
+          </div>
+          <div class="fe-edate">
+            <span class="fe-edate-main">28 Jul 2026</span>
+            <span class="fe-edate-rel future">in 66d</span>
+          </div>
+          <div class="fe-src NSE">NSE</div>
+          <div class="fe-sym">DOLLAR</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action add">✚ ADDED</span>
+              Dividend declared — record date 2026-07-28<span class="fe-type DIVIDEND">DIVIDEND</span>
+            </div>
+            <div class="fe-raw">amount=Rs 5/share · ex_date=2026-07-25 · source=corp-actions+announcements</div>
+          </div>
+        </div>
+
+        <!-- ── STUDDS — results announced -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:18:42</span>
+            <span class="fe-fetched-rel fresh">just now</span>
+          </div>
+          <div class="fe-edate">
+            <span class="fe-edate-main">23 May 2026</span>
+            <span class="fe-edate-rel fresh">today</span>
+          </div>
+          <div class="fe-src NSE">NSE</div>
+          <div class="fe-sym">STUDDS</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action add">✚ ADDED</span>
+              Results announced — Mar 2026<span class="fe-type EARNINGS">EARNINGS</span>
+            </div>
+            <div class="fe-raw">source=announcements · purpose="Outcome of Board Meeting"</div>
+          </div>
+        </div>
+
+        <!-- ── TCS dividend (past few days) -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:14:42</span>
+            <span class="fe-fetched-rel">4m ago</span>
+          </div>
+          <div class="fe-edate">
+            <span class="fe-edate-main">25 May 2026</span>
+            <span class="fe-edate-rel future">in 2d</span>
+          </div>
+          <div class="fe-src NSE">NSE</div>
+          <div class="fe-sym">TCS</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action add">✚ ADDED</span>
+              Dividend Rs 31/share — record 25 May<span class="fe-type DIVIDEND">DIVIDEND</span>
+            </div>
+            <div class="fe-raw">source=corp-actions · ex_date=2026-05-25</div>
+          </div>
+        </div>
+
+        <!-- ── OUTCOME PENDING example (date passed, no outcome yet) -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">21:42:15</span>
+            <span class="fe-fetched-rel">36m ago</span>
+          </div>
+          <div class="fe-edate">
+            <span class="fe-edate-main">22 May 2026</span>
+            <span class="fe-edate-rel">yesterday</span>
+          </div>
+          <div class="fe-src NSE">NSE</div>
+          <div class="fe-sym">SUPRAJIT</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action upd">✎ UPDATED</span>
+              Board meeting completed<span class="pending-chip">⏳ OUTCOME PENDING</span><span class="fe-type EARNINGS">EARNINGS</span>
+            </div>
+            <div class="fe-raw">expected_at: 22-May-2026 (passed) · awaiting NSE "Outcome of Board Meeting" announcement</div>
+          </div>
+        </div>
+
+        <!-- ── BAJFINANCE — older but recent result -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">02 May 2026</span>
+            <span class="fe-fetched-rel">21d ago</span>
+          </div>
+          <div class="fe-edate">
+            <span class="fe-edate-main">28 Apr 2026</span>
+            <span class="fe-edate-rel">25d ago</span>
+          </div>
+          <div class="fe-src NSE">NSE</div>
+          <div class="fe-sym">BAJFINANCE</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action add">✚ ADDED</span>
+              Results announced — Mar 2026<span class="fe-type EARNINGS">EARNINGS</span>
+            </div>
+            <div class="fe-raw">reported_at=2026-04-28 · purpose="Outcome of Board Meeting"</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ──────── VIEW 2: NSE EVENTS (Upcoming sub-tab) ──────── -->
+      <div class="feed-body view-body" data-view="events" data-sub="upcoming" style="display:none">
+
+        <!-- ── Soonest upcoming first (ascending by expected_at) -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:18:42</span>
+            <span class="fe-fetched-rel fresh">just now</span>
+          </div>
+          <div class="fe-edate">
+            <span class="fe-edate-main">24 May 2026</span>
+            <span class="fe-edate-rel future">tomorrow</span>
+          </div>
+          <div class="fe-src NSE">NSE</div>
+          <div class="fe-sym">ASIAN PAINTS</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action add">✚ ADDED</span>
+              Earnings expected — Mar 2026<span class="fe-sched">→ SCHED</span><span class="fe-type EARNINGS">EARNINGS</span>
+            </div>
+            <div class="fe-raw">expected_at=2026-05-24 · purpose="Financial Results"</div>
+          </div>
+        </div>
+
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:18:42</span>
+            <span class="fe-fetched-rel fresh">just now</span>
+          </div>
+          <div class="fe-edate">
+            <span class="fe-edate-main">30 May 2026</span>
+            <span class="fe-edate-rel future">in 7d</span>
+          </div>
+          <div class="fe-src NSE">NSE</div>
+          <div class="fe-sym">AAATECH</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action upd">✎ UPDATED</span>
+              Meeting rescheduled<span class="fe-sched">→ SCHED</span><span class="fe-type EARNINGS">EARNINGS</span>
+            </div>
+            <div class="fe-raw">expected_at: 28-May-2026 → 30-May-2026 · purpose updated</div>
+          </div>
+        </div>
+
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:16:42</span>
+            <span class="fe-fetched-rel">2m ago</span>
+          </div>
+          <div class="fe-edate">
+            <span class="fe-edate-main">12 Jun 2026</span>
+            <span class="fe-edate-rel future">in 20d</span>
+          </div>
+          <div class="fe-src NSE">NSE</div>
+          <div class="fe-sym">HDFC BANK</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action add">✚ ADDED</span>
+              AGM scheduled<span class="fe-sched">→ SCHED</span><span class="fe-type AGM">AGM</span>
+            </div>
+            <div class="fe-raw">expected_at=2026-06-12 · purpose="Annual General Meeting"</div>
+          </div>
+        </div>
+
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:14:42</span>
+            <span class="fe-fetched-rel">4m ago</span>
+          </div>
+          <div class="fe-edate">
+            <span class="fe-edate-main">15 Jul 2026</span>
+            <span class="fe-edate-rel future">in 53d</span>
+          </div>
+          <div class="fe-src NSE">NSE</div>
+          <div class="fe-sym">RELIANCE</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action add">✚ ADDED</span>
+              Board meeting intimation<span class="fe-sched">→ SCHED</span><span class="fe-type BOARD_MEETING">BOARD_MEETING</span>
+            </div>
+            <div class="fe-raw">expected_at=2026-07-15 · purpose="To consider Q1 results and dividend"</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ──────── VIEW 3: SCREENER ──────── -->
+      <div class="feed-body view-body" data-view="screener" style="display:none">
+
+        <!-- ── ANANTRAJ bootstrap -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:17:58</span>
+            <span class="fe-fetched-rel fresh">44s ago</span>
+          </div>
+          <div class="fe-edate"><span class="fe-edate-main" style="color:var(--faint)">—</span></div>
+          <div class="fe-src SCREENER">SCREENER</div>
+          <div class="fe-sym">ANANTRAJ</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action add">✚ NEW</span>
+              Bootstrap — 8 quarters added<span class="fe-type SCRAPED">SCRAPED</span>
+            </div>
+            <div class="fe-raw">latest Q: Mar2026 · Revenue=485, EPS=2.4 · CAGRs computed · 1.4s</div>
+          </div>
+        </div>
+
+        <!-- ── BAJFINANCE — numbers changed -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:16:55</span>
+            <span class="fe-fetched-rel fresh">1m 47s ago</span>
+          </div>
+          <div class="fe-edate"><span class="fe-edate-main" style="color:var(--faint)">—</span></div>
+          <div class="fe-src SCREENER">SCREENER</div>
+          <div class="fe-sym">BAJFINANCE</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action upd">✎ UPDATED</span>
+              Dec 2025 numbers revised<span class="fe-type SCRAPED">SCRAPED</span>
+            </div>
+            <div class="fe-raw">Revenue: 11,200→11,250 · EPS: 8.4→8.5 · 7Q unchanged · 412ms</div>
+          </div>
+        </div>
+
+        <!-- ── RELIANCE — checked, nothing changed -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:15:31</span>
+            <span class="fe-fetched-rel">3m ago</span>
+          </div>
+          <div class="fe-edate"><span class="fe-edate-main" style="color:var(--faint)">—</span></div>
+          <div class="fe-src SCREENER">SCREENER</div>
+          <div class="fe-sym">RELIANCE</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action noop">✓ NOOP</span>
+              Checked, 8 quarters unchanged<span class="fe-type SCRAPED">SCRAPED</span>
+            </div>
+            <div class="fe-raw">latest Q in DB: Mar2026 · 24h refresh cycle · 387ms</div>
+          </div>
+        </div>
+
+        <!-- ── INFY — checked recently -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:14:18</span>
+            <span class="fe-fetched-rel">4m ago</span>
+          </div>
+          <div class="fe-edate"><span class="fe-edate-main" style="color:var(--faint)">—</span></div>
+          <div class="fe-src SCREENER">SCREENER</div>
+          <div class="fe-sym">INFY</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action noop">✓ NOOP</span>
+              Checked, 8 quarters unchanged<span class="fe-type SCRAPED">SCRAPED</span>
+            </div>
+            <div class="fe-raw">latest Q in DB: Mar2026 · 24h refresh cycle · 401ms</div>
+          </div>
+        </div>
+
+        <!-- ── TIMEX — error case -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:13:05</span>
+            <span class="fe-fetched-rel">5m ago</span>
+          </div>
+          <div class="fe-edate"><span class="fe-edate-main" style="color:var(--faint)">—</span></div>
+          <div class="fe-src SCREENER">SCREENER</div>
+          <div class="fe-sym">TIMEX</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action err">✗ FAILED</span>
+              No quarterly results table on Screener.in<span class="fe-type ERROR">NO_DATA</span>
+            </div>
+            <div class="fe-raw">page exists but no published quarters · likely recent listing · retry in 24h</div>
+          </div>
+        </div>
+
+        <!-- ── XYZ — behind case (NSE reported, we lacked data) -->
+        <div class="feed-entry">
+          <div class="fe-fetched">
+            <span class="fe-fetched-time">22:11:42</span>
+            <span class="fe-fetched-rel">7m ago</span>
+          </div>
+          <div class="fe-edate"><span class="fe-edate-main" style="color:var(--faint)">—</span></div>
+          <div class="fe-src SCREENER">SCREENER</div>
+          <div class="fe-sym">STUDDS</div>
+          <div>
+            <div class="fe-msg">
+              <span class="fe-action add">✚ NEW</span>
+              Behind — Mar 2026 quarter added<span class="fe-type SCRAPED">SCRAPED</span>
+            </div>
+            <div class="fe-raw">trigger: NSE reported_at exists but our data was missing · Revenue=320, EPS=4.1 · 1.1s</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend explaining the 3-tab structure -->
+  <div class="legend">
+    <h4>Three monitoring dimensions — switch tabs to see each</h4>
+    <p>
+      <code>📡 NSE Ticks</code> — system heartbeat. Each tick = one cycle of the NSE bulk agent (2-min interval). Tells the admin "the agent IS alive" with aggregate counts. If you see no Tick rows for >5 min → something's broken.
+    </p>
+    <p>
+      <code>⚡ NSE Events</code> — actual signal. Per-company corporate events (dividends, earnings, AGMs, etc.). Has two sub-views:
+      <br><b>Recent / Past:</b> events that already happened (or are happening today) + <span class="pending-chip">⏳ OUTCOME PENDING</span> rows where the meeting date passed but NSE hasn't published the outcome yet.
+      <br><b>Upcoming / Scheduled:</b> future events sorted by soonest first.
+    </p>
+    <p>
+      <code>📊 Screener</code> — financial-numbers freshness. Each row = one Screener.in scrape. Shows whether numbers actually changed, were bootstrapped fresh, were unchanged (no-op), or failed (with reason).
+    </p>
+    <p>
+      <b>Daily shift mechanic:</b> A row sits in Upcoming while <code>expected_at >= today</code>. When that date arrives + NSE publishes the outcome → the row gets <code>reported_at</code> stamped → it disappears from Upcoming and shows in Recent. If the date passes but no outcome lands yet, it shows in Recent with the <span class="pending-chip">⏳ OUTCOME PENDING</span> chip until the bulk agent catches the outcome.
+    </p>
+    <p>
+      <b>Action badges:</b>
+      <span class="fe-action add">✚ ADDED</span> new DB row ·
+      <span class="fe-action upd">✎ UPDATED</span> existing field changed (diff shown) ·
+      <span class="fe-action noop">✓ NOOP</span> checked, no change ·
+      <span class="fe-action err">✗ FAILED</span> error (with type badge)
+    </p>
+  </div>
+
+</div>
+
+<script>
+  // Tab switching for the mockup
+  const primary = document.querySelectorAll('.feed-tab-primary');
+  const subTabs = document.querySelectorAll('.sub-tab');
+  const eventsSubRow = document.getElementById('eventsSubRow');
+  const feedCount = document.getElementById('feedCount');
+
+  function show(view, sub) {
+    document.querySelectorAll('.view-body').forEach(b => {
+      const v = b.dataset.view;
+      const s = b.dataset.sub;
+      const match = v === view && (!s || s === sub);
+      b.style.display = match ? 'block' : 'none';
+    });
+    eventsSubRow.style.display = (view === 'events') ? 'flex' : 'none';
+
+    // Update count
+    const counts = {
+      'ticks':            '142 ticks (last 24h)',
+      'events-recent':    '1,847 events (past 6mo + pending)',
+      'events-upcoming':  '1,247 scheduled events',
+      'screener':         '580 scrapes (last 24h)'
+    };
+    const key = view === 'events' ? `events-${sub}` : view;
+    feedCount.textContent = counts[key] || '';
+  }
+
+  primary.forEach(btn => btn.addEventListener('click', () => {
+    primary.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.tab;
+    const activeSub = document.querySelector('.sub-tab.active')?.dataset.sub || 'recent';
+    show(view, activeSub);
+  }));
+
+  subTabs.forEach(btn => btn.addEventListener('click', () => {
+    subTabs.forEach(b => b.classList.remove('active', 'recent'));
+    btn.classList.add('active');
+    if (btn.dataset.sub === 'recent') btn.classList.add('recent');
+    show('events', btn.dataset.sub);
+  }));
+
+  // initial
+  show('ticks', 'recent');
+</script>
+
+</body>
+</html>

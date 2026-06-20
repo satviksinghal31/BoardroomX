@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Earnings Markers — Design Options</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #f5f5f8; color: #111; padding: 32px; }
+
+  h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #6b7280; font-size: 13px; margin-bottom: 36px; }
+
+  .option { background: #fff; border-radius: 14px; border: 1px solid #e4e4e9;
+            padding: 24px 28px; margin-bottom: 28px; }
+  .option-label { font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+                  color: #6b7280; text-transform: uppercase; margin-bottom: 14px; }
+  .option-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .option-desc  { font-size: 12px; color: #6b7280; margin-bottom: 20px; line-height: 1.5; }
+
+  /* ── FAKE CHART CANVAS ── */
+  .chart-wrap {
+    position: relative;
+    background: #fff;
+    border: 1px solid #e4e4e9;
+    border-radius: 10px;
+    height: 220px;
+    overflow: hidden;
+  }
+
+  /* candle sticks drawn with CSS */
+  .candles {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    padding: 20px 10px 40px 10px;
+    height: 100%;
+  }
+  .bar-group { display: flex; flex-direction: column; align-items: center; gap: 0; position: relative; }
+  .wick { width: 1.5px; background: #aaa; }
+  .body { width: 7px; border-radius: 1px; }
+  .body.up   { background: #22c55e; }
+  .body.down { background: #ef4444; }
+
+  /* ── OPTION A: subtle dot below candle ── */
+  .marker-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7px; font-weight: 700; color: #fff;
+    position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
+    cursor: pointer;
+  }
+  .marker-dot.pos { background: #22c55e; }
+  .marker-dot.neg { background: #ef4444; }
+  .marker-dot.neu { background: #94a3b8; }
+
+  /* ── OPTION B: flag pin ── */
+  .marker-flag {
+    position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; cursor: pointer;
+  }
+  .marker-flag .flag-line { width: 1.5px; height: 14px; background: #94a3b8; }
+  .marker-flag .flag-chip {
+    font-size: 7px; font-weight: 800; letter-spacing: 0.3px;
+    padding: 1px 4px; border-radius: 3px; color: #fff; white-space: nowrap;
+  }
+  .marker-flag .flag-chip.pos { background: #22c55e; }
+  .marker-flag .flag-chip.neg { background: #ef4444; }
+
+  /* ── OPTION C: vertical dashed line + label ── */
+  .result-vline {
+    position: absolute; top: 0; bottom: 0; width: 1px;
+    border-left: 1.5px dashed rgba(99,102,241,.45);
+    pointer-events: none;
+  }
+  .result-vline-label {
+    position: absolute; top: 6px; left: 3px;
+    font-size: 8px; font-weight: 700; color: #6366f1;
+    background: rgba(99,102,241,.08); padding: 1px 4px; border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  /* ── POPUP ── */
+  .popup-demo {
+    margin-top: 16px;
+    display: flex; gap: 14px; flex-wrap: wrap;
+  }
+  .popup {
+    background: #fff; border: 1px solid #e4e4e9;
+    border-radius: 10px; padding: 11px 14px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.10);
+    min-width: 160px;
+  }
+  .pop-q   { font-size: 11px; font-weight: 800; color: #111; margin-bottom: 8px;
+             padding-bottom: 6px; border-bottom: 1px solid #f0f0f4; }
+  .pop-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 5px; }
+  .pop-lbl { font-size: 10px; color: #6b7280; }
+  .pop-val { font-size: 10px; font-weight: 700; color: #111; }
+  .pop-chg { font-size: 10px; font-weight: 700; }
+  .up   { color: #16a34a; }
+  .down { color: #dc2626; }
+
+  .popup-compact {
+    background: #111; color: #fff;
+    border-radius: 8px; padding: 9px 12px;
+    min-width: 140px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.25);
+  }
+  .pop-q-dark  { font-size: 10px; font-weight: 800; color: rgba(255,255,255,.7);
+                 margin-bottom: 6px; }
+  .pop-row-dark { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; font-size: 10px; }
+  .pop-lbl-dark { color: rgba(255,255,255,.5); }
+  .pop-val-dark { font-weight: 700; }
+  .up-dark   { color: #4ade80; }
+  .down-dark { color: #f87171; }
+
+  .popup-inline {
+    background: rgba(99,102,241,.06);
+    border: 1px solid rgba(99,102,241,.2);
+    border-radius: 8px; padding: 9px 13px; min-width: 152px;
+  }
+  .pop-q-ind  { font-size: 10px; font-weight: 800; color: #4f46e5; margin-bottom: 6px; }
+  .pop-row-ind { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; font-size: 10px; }
+
+  .demo-row { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+  .demo-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .demo-label { font-size: 10px; color: #9ca3af; text-align: center; }
+
+  /* ── EMA LEGEND REF ── */
+  .ema-ref { position: absolute; top: 10px; left: 12px; display: flex; gap: 6px; }
+  .ema-pill { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; background: #f0f0f4; }
+  .ema-50  { color: #d97706; }
+  .ema-200 { color: #0284c7; }
+
+  /* bottom x-axis */
+  .x-axis { position: absolute; bottom: 0; left: 0; right: 0; height: 28px;
+             display: flex; align-items: center; padding: 0 10px; gap: 0;
+             border-top: 1px solid #f0f0f4; background: #fafafa; }
+  .x-tick { flex: 1; font-size: 9px; color: #aaa; text-align: center; }
+
+  /* badges */
+  .badge { display: inline-block; font-size: 10px; font-weight: 700;
+           padding: 2px 8px; border-radius: 20px; }
+  .badge-recommended { background: #ecfdf5; color: #16a34a; border: 1px solid #bbf7d0; }
+  .badge-option      { background: #f5f5f8; color: #6b7280; border: 1px solid #e4e4e9; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>Earnings Markers — Design Proposal</h1>
+<div class="subtitle">Three marker styles × two popup styles. Pick what feels right.</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  OPTION A — Small dot below bar                       -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="option">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+    <div class="option-label">Option A</div>
+    <span class="badge badge-recommended">Recommended</span>
+  </div>
+  <div class="option-title">Dot below candle</div>
+  <div class="option-desc">Small coloured circle sits below each result-day candle.<br>
+    Green = net profit grew YoY · Red = fell · Grey = first year (no comparison).<br>
+    Click the candle to see the popup. Clean, minimal, doesn't clutter chart.</div>
+
+  <div class="two-col">
+    <!-- chart mockup -->
+    <div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:6px">On chart</div>
+      <div class="chart-wrap" style="height:160px">
+        <div class="ema-ref">
+          <span class="ema-pill ema-50">EMA 50 &nbsp;463</span>
+          <span class="ema-pill ema-200">EMA 200 &nbsp;411</span>
+        </div>
+        <div class="candles" style="padding:30px 16px 36px">
+          <!-- fake candles -->
+          <div class="bar-group"><div class="wick" style="height:18px"></div><div class="body down" style="height:22px"></div><div class="wick" style="height:8px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:12px"></div><div class="body up" style="height:18px"></div><div class="wick" style="height:6px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:20px"></div><div class="body up" style="height:26px"></div><div class="wick" style="height:10px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:8px"></div><div class="body down" style="height:14px"></div><div class="wick" style="height:12px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:10px"></div><div class="body up" style="height:30px"></div><div class="wick" style="height:8px"></div></div>
+          <!-- EARNINGS CANDLE — positive -->
+          <div class="bar-group" style="position:relative">
+            <div class="wick" style="height:14px"></div>
+            <div class="body up" style="height:32px;outline:2px solid rgba(34,197,94,.3);outline-offset:2px"></div>
+            <div class="wick" style="height:8px"></div>
+            <div class="marker-dot pos">E</div>
+          </div>
+          <div class="bar-group"><div class="wick" style="height:16px"></div><div class="body up" style="height:28px"></div><div class="wick" style="height:10px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:10px"></div><div class="body down" style="height:18px"></div><div class="wick" style="height:14px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:8px"></div><div class="body up" style="height:22px"></div><div class="wick" style="height:6px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:22px"></div><div class="body down" style="height:20px"></div><div class="wick" style="height:8px"></div></div>
+          <!-- EARNINGS CANDLE — negative -->
+          <div class="bar-group" style="position:relative">
+            <div class="wick" style="height:12px"></div>
+            <div class="body down" style="height:28px;outline:2px solid rgba(239,68,68,.3);outline-offset:2px"></div>
+            <div class="wick" style="height:18px"></div>
+            <div class="marker-dot neg">E</div>
+          </div>
+          <div class="bar-group"><div class="wick" style="height:10px"></div><div class="body up" style="height:20px"></div><div class="wick" style="height:8px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:14px"></div><div class="body up" style="height:34px"></div><div class="wick" style="height:6px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:8px"></div><div class="body up" style="height:40px"></div><div class="wick" style="height:10px"></div></div>
+        </div>
+        <div class="x-axis">
+          <div class="x-tick">Aug</div><div class="x-tick">Sep</div>
+          <div class="x-tick">Oct</div><div class="x-tick">Nov</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- popup variants -->
+    <div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:8px">Popup on click</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <!-- Light popup -->
+        <div>
+          <div style="font-size:9px;color:#9ca3af;margin-bottom:4px">A1 · Light (matches app)</div>
+          <div class="popup">
+            <div class="pop-q">Jun 2025 Results</div>
+            <div class="pop-row"><span class="pop-lbl">Revenue</span><span class="pop-val">372 Cr</span><span class="pop-chg up">+69%</span></div>
+            <div class="pop-row"><span class="pop-lbl">Net Profit</span><span class="pop-val">50 Cr</span><span class="pop-chg up">+85%</span></div>
+          </div>
+        </div>
+        <!-- Dark popup -->
+        <div>
+          <div style="font-size:9px;color:#9ca3af;margin-bottom:4px">A2 · Dark tooltip</div>
+          <div class="popup-compact">
+            <div class="pop-q-dark">Jun 2025 Results</div>
+            <div class="pop-row-dark"><span class="pop-lbl-dark">Revenue</span><span class="pop-val-dark up-dark">+69%</span></div>
+            <div class="pop-row-dark"><span class="pop-lbl-dark">Net Profit</span><span class="pop-val-dark up-dark">+85%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  OPTION B — Flag pin                                  -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="option">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+    <div class="option-label">Option B</div>
+    <span class="badge badge-option">Alternative</span>
+  </div>
+  <div class="option-title">Vertical line + quarter label</div>
+  <div class="option-desc">A thin vertical dashed line spans the full chart height at each result date, with a small quarter label at the top. Indigo colour keeps it distinct from price action.<br>
+    Click anywhere on the line to open popup.</div>
+
+  <div class="two-col">
+    <div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:6px">On chart</div>
+      <div class="chart-wrap" style="height:160px">
+        <div class="ema-ref">
+          <span class="ema-pill ema-50">EMA 50 &nbsp;463</span>
+        </div>
+        <!-- result lines -->
+        <div class="result-vline" style="left:28%">
+          <div class="result-vline-label">Jun'25</div>
+        </div>
+        <div class="result-vline" style="left:58%">
+          <div class="result-vline-label">Sep'25</div>
+        </div>
+        <div class="candles" style="padding:30px 16px 36px">
+          <div class="bar-group"><div class="wick" style="height:18px"></div><div class="body down" style="height:22px"></div><div class="wick" style="height:8px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:12px"></div><div class="body up" style="height:18px"></div><div class="wick" style="height:6px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:20px"></div><div class="body up" style="height:26px"></div><div class="wick" style="height:10px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:8px"></div><div class="body down" style="height:14px"></div><div class="wick" style="height:12px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:10px"></div><div class="body up" style="height:30px"></div><div class="wick" style="height:8px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:14px"></div><div class="body up" style="height:32px"></div><div class="wick" style="height:8px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:16px"></div><div class="body up" style="height:28px"></div><div class="wick" style="height:10px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:10px"></div><div class="body down" style="height:18px"></div><div class="wick" style="height:14px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:8px"></div><div class="body up" style="height:22px"></div><div class="wick" style="height:6px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:22px"></div><div class="body down" style="height:20px"></div><div class="wick" style="height:8px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:12px"></div><div class="body down" style="height:28px"></div><div class="wick" style="height:18px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:10px"></div><div class="body up" style="height:20px"></div><div class="wick" style="height:8px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:14px"></div><div class="body up" style="height:34px"></div><div class="wick" style="height:6px"></div></div>
+          <div class="bar-group"><div class="wick" style="height:8px"></div><div class="body up" style="height:40px"></div><div class="wick" style="height:10px"></div></div>
+        </div>
+        <div class="x-axis">
+          <div class="x-tick">Aug</div><div class="x-tick">Sep</div>
+          <div class="x-tick">Oct</div><div class="x-tick">Nov</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#9ca3af;margin-bottom:8px">Popup on click</div>
+      <div class="popup-inline">
+        <div class="pop-q-ind">Jun 2025 Results</div>
+        <div class="pop-row-ind"><span style="color:#6b7280;font-size:10px">Revenue</span><span style="font-size:10px;font-weight:700">372 Cr</span><span style="font-size:10px;font-weight:700;color:#16a34a">+69%</span></div>
+        <div class="pop-row-ind"><span style="color:#6b7280;font-size:10px">Net Profit</span><span style="font-size:10px;font-weight:700">50 Cr</span><span style="font-size:10px;font-weight:700;color:#16a34a">+85%</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  SUMMARY TABLE                                        -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="option" style="padding:20px 24px">
+  <div class="option-label">Summary</div>
+  <table style="width:100%;font-size:12px;border-collapse:collapse">
+    <thead>
+      <tr style="border-bottom:1px solid #f0f0f4">
+        <th style="text-align:left;padding:8px 0;color:#6b7280;font-weight:600">Style</th>
+        <th style="text-align:left;padding:8px 0;color:#6b7280;font-weight:600">Pros</th>
+        <th style="text-align:left;padding:8px 0;color:#6b7280;font-weight:600">Cons</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #f5f5f8">
+        <td style="padding:9px 0;font-weight:700">A1 · Dot + Light popup</td>
+        <td style="padding:9px 0;color:#6b7280">Minimal, doesn't clutter. Green/red at a glance.</td>
+        <td style="padding:9px 0;color:#6b7280">Dot can be tiny on zoomed-out chart.</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f5f5f8">
+        <td style="padding:9px 0;font-weight:700">A2 · Dot + Dark tooltip</td>
+        <td style="padding:9px 0;color:#6b7280">Popup stands out against white chart.</td>
+        <td style="padding:9px 0;color:#6b7280">Slightly heavier feel.</td>
+      </tr>
+      <tr>
+        <td style="padding:9px 0;font-weight:700">B · Vertical line</td>
+        <td style="padding:9px 0;color:#6b7280">Unmissable, shows the exact result date clearly.</td>
+        <td style="padding:9px 0;color:#6b7280">Can clutter chart if 8+ lines visible.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:16px;padding:12px 16px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:12px;color:#166534">
+    <strong>My recommendation:</strong> Option A2 (dot + dark popup). Clean on chart, popup pops visually. Easy to implement reliably without LightweightCharts marker quirks — use CSS absolute-positioned dots instead.
+  </div>
+</div>
+
+</body>
+</html>

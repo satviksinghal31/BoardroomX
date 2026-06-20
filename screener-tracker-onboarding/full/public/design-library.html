@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BoardroomX — Design Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Tokens (mirror of style.css) ── */
+    :root {
+      --primary:        #00685f;
+      --primary-light:  rgba(0,104,95,.10);
+      --secondary:      #4b41e1;
+      --secondary-dim:  rgba(75,65,225,.10);
+      --bg:             #f0f2f3;
+      --card:           #ffffff;
+      --card-border:    #dde3e2;
+      --surface:        #edeef0;
+      --text:           #191c1d;
+      --muted:          #6d7a77;
+      --green:          #16a34a;
+      --green-dim:      rgba(22,163,74,.10);
+      --red:            #dc2626;
+      --red-dim:        rgba(220,38,38,.10);
+      --yellow:         #d97706;
+      --r:              12px;
+      --rs:             8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Hanken Grotesk', -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Page Layout ── */
+    .dl-page { max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    /* ── Page header ── */
+    .dl-masthead {
+      display: flex; align-items: center; gap: 16px;
+      margin-bottom: 48px; padding-bottom: 24px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .dl-logo {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--primary); color: #fff;
+      font-size: 14px; font-weight: 800; letter-spacing: .5px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px rgba(0,104,95,.30);
+      flex-shrink: 0;
+    }
+    .dl-masthead-text h1 { font-size: 24px; font-weight: 800; letter-spacing: -.5px; color: var(--primary); }
+    .dl-masthead-text p  { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .dl-version {
+      margin-left: auto; flex-shrink: 0;
+      font-size: 11px; font-weight: 700; padding: 3px 9px;
+      border-radius: 999px; background: var(--surface);
+      color: var(--muted); border: 1px solid var(--card-border);
+    }
+
+    /* ── Section ── */
+    .dl-section { margin-bottom: 48px; }
+    .dl-section-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 20px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    /* ── Card ── */
+    .dl-card {
+      background: var(--card); border: 1px solid var(--card-border);
+      border-radius: var(--r); padding: 24px; margin-bottom: 16px;
+    }
+    .dl-card-title { font-size: 13px; font-weight: 700; margin-bottom: 16px; color: var(--text); }
+
+    /* ── Row grid ── */
+    .dl-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .dl-col { display: flex; flex-direction: column; gap: 8px; }
+
+    /* ── Token swatch ── */
+    .token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+    .token-swatch {
+      border-radius: var(--rs); overflow: hidden;
+      border: 1px solid var(--card-border);
+    }
+    .token-color { height: 52px; }
+    .token-info  { padding: 8px 10px; background: var(--card); }
+    .token-name  { font-size: 11px; font-weight: 700; color: var(--text); }
+    .token-hex   { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+    /* ── Type scale ── */
+    .type-row {
+      display: flex; align-items: baseline; gap: 16px;
+      padding: 12px 0; border-bottom: 1px solid var(--card-border);
+    }
+    .type-row:last-child { border-bottom: none; }
+    .type-meta { font-size: 10px; color: var(--muted); width: 120px; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
+    .type-sample { flex: 1; }
+
+    /* ── Spacing scale ── */
+    .spacing-grid { display: flex; flex-direction: column; gap: 8px; }
+    .spacing-row  { display: flex; align-items: center; gap: 12px; }
+    .spacing-bar  { background: var(--primary); height: 10px; border-radius: 2px; }
+    .spacing-label { font-size: 11px; color: var(--muted); width: 80px; font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: var(--rs);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      font-family: inherit; border: none; transition: all .15s;
+      text-decoration: none;
+    }
+    .btn-primary   { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(0,104,95,.25); }
+    .btn-primary:hover   { opacity: .88; }
+    .btn-secondary { background: var(--secondary); color: #fff; box-shadow: 0 2px 8px rgba(75,65,225,.25); }
+    .btn-secondary:hover { opacity: .88; }
+    .btn-outline   { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+    .btn-outline:hover   { background: var(--primary-light); }
+    .btn-ghost     { background: var(--surface); color: var(--text); border: 1px solid var(--card-border); }
+    .btn-ghost:hover     { background: #fff; color: var(--primary); }
+    .btn-danger    { background: var(--red-dim); color: var(--red); border: 1px solid rgba(220,38,38,.2); }
+    .btn-sm { padding: 5px 11px; font-size: 12px; }
+    .btn-lg { padding: 11px 22px; font-size: 14px; }
+    .btn-icon {
+      width: 34px; height: 34px; padding: 0;
+      border-radius: 50%; background: var(--surface);
+      border: 1px solid var(--card-border); color: var(--muted);
+    }
+    .btn-icon:hover { background: #fff; color: var(--primary); }
+
+    /* ── Badges / Chips ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 700; padding: 2px 7px;
+      border-radius: 4px; letter-spacing: .04em; white-space: nowrap;
+    }
+    .badge-green   { background: var(--green-dim);   color: var(--green); }
+    .badge-red     { background: var(--red-dim);     color: var(--red); }
+    .badge-yellow  { background: rgba(217,119,6,.12); color: #b45309; }
+    .badge-indigo  { background: var(--secondary-dim); color: var(--secondary); }
+    .badge-neutral { background: var(--surface); color: var(--muted); border: 1px solid var(--card-border); }
+    .badge-outline-green { background: transparent; color: var(--green); border: 1px solid var(--green); }
+    .badge-outline-red   { background: transparent; color: var(--red);   border: 1px solid var(--red); }
+
+    .chip {
+      display: inline-flex; align-items: center;
+      padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: all .14s; border: 1px solid var(--card-border);
+      background: var(--card); color: var(--muted);
+    }
+    .chip:hover { color: var(--text); border-color: var(--muted); }
+    .chip.chip-active { background: var(--secondary); color: #fff; border-color: var(--secondary); box-shadow: 0 2px 6px rgba(75,65,225,.20); }
+
+    /* ── Inputs ── */
+    .input {
+      padding: 9px 14px; background: var(--surface); border: 1px solid var(--card-border);
+      border-radius: var(--rs); font-size: 13px; color: var(--text); font-family: inherit; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,104,95,.12); }
+    .input::placeholder { color: var(--muted); }
+    .input-search {
+      padding-left: 34px; border-radius: 999px;
+    }
+
+    /* ── Stat chip ── */
+    .stat-chip {
+      background: var(--surface); border-radius: var(--rs); padding: 10px 14px;
+      min-width: 100px;
+    }
+    .stat-chip-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; margin-bottom: 4px; }
+    .stat-chip-value { font-size: 16px; font-weight: 700; color: var(--text); }
+    .stat-chip-value.up   { color: var(--green); }
+    .stat-chip-value.down { color: var(--red); }
+
+    /* ── Stock row (preview) ── */
+    .preview-row {
+      display: grid; grid-template-columns: 3px 1fr 50px 50px 72px;
+      align-items: center; min-height: 54px;
+      border: 1px solid var(--card-border); border-radius: var(--rs);
+      background: var(--card); overflow: hidden;
+    }
+    .preview-bar-teal { background: var(--primary); align-self: stretch; }
+    .preview-bar-none { background: transparent; align-self: stretch; }
+    .preview-bar-amber { background: var(--yellow); align-self: stretch; }
+    .preview-bar-red   { background: var(--red);    align-self: stretch; }
+    .preview-col-stock { padding: 10px 6px 10px 10px; }
+    .preview-sym  { font-size: 13px; font-weight: 700; }
+    .preview-name { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .preview-col-num {
+      text-align: right; padding-right: 5px;
+      display: flex; flex-direction: column; align-items: flex-end; justify-content: center;
+    }
+    .preview-col-price { text-align: right; padding-right: 10px; }
+    .preview-price { font-size: 13px; font-weight: 700; }
+    .preview-delta { font-size: 10px; font-weight: 600; margin-top: 2px; }
+
+    /* ── Code block ── */
+    .code {
+      background: #1a1a2e; border-radius: var(--rs);
+      padding: 14px 16px; font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; line-height: 1.65; color: rgba(255,255,255,.8);
+      overflow-x: auto;
+    }
+    .code .kw  { color: #7dd3fc; }   /* keyword / var name */
+    .code .str { color: #86efac; }   /* string / value */
+    .code .cmt { color: rgba(255,255,255,.3); }
+
+    /* ── Freshness dot ── */
+    .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    .dot-live   { background: var(--green); box-shadow: 0 0 4px var(--green); }
+    .dot-recent { background: var(--yellow); }
+    .dot-stale  { background: var(--red); }
+
+    /* ── Layout diagram ── */
+    .layout-diagram {
+      display: flex; height: 200px; border: 1px solid var(--card-border);
+      border-radius: var(--r); overflow: hidden; font-size: 11px; font-weight: 600;
+    }
+    .ld-col {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; padding: 8px; text-align: center; border-right: 1px solid var(--card-border);
+      color: var(--muted);
+    }
+    .ld-col:last-child { border-right: none; }
+    .ld-col .material-symbols-outlined { font-size: 20px; opacity: .5; }
+    .ld-wl   { width: 100px; background: #fff; }
+    .ld-chart { flex: 1; background: var(--bg); }
+    .ld-det  { width: 90px; background: #fff; }
+    .ld-util { width: 40px; background: #fff; }
+    .ld-tag  { font-size: 9px; color: var(--muted); opacity: .6; }
+
+    .ld-header {
+      height: 36px; background: #fff;
+      border-bottom: 1px solid var(--card-border);
+      border-radius: var(--r) var(--r) 0 0;
+      display: flex; align-items: center; padding: 0 12px;
+      font-size: 11px; font-weight: 700; color: var(--primary);
+      gap: 8px; margin-bottom: 1px;
+    }
+    .ld-wrap {
+      border: 1px solid var(--card-border);
+      border-radius: var(--r); overflow: hidden;
+    }
+    .ld-body { display: flex; height: 160px; }
+  </style>
+</head>
+<body>
+<div class="dl-page">
+
+  <!-- ── Masthead ───────────────────────────────────────── -->
+  <div class="dl-masthead">
+    <div class="dl-logo">BX</div>
+    <div class="dl-masthead-text">
+      <h1>BoardroomX Design Library</h1>
+      <p>Single source of truth for all UI tokens, components and layout patterns.</p>
+    </div>
+    <div class="dl-version">v3.0 · AlphaTrade Lumina</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 1 — COLOR TOKENS
+       ═══════════════════════════════════════════════════════ -->
+  <div class="dl-section">
+    <div class="dl-section-title">Color Tokens</div>
+    <div class="dl-card">
+      <div class="dl-card-title">Brand</div>
+      <div class="token-grid">
+        <div class="token-swatch">
+          <div class="token-color" style="background:#00685f"></div>
+          <div class="token-info"><div class="token-name">--primary</div><div class="token-hex">#00685f · teal-700</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:rgba(0,104,95,.10)"></div>
+          <div class="token-info"><div class="token-name">--primary-light</div><div class="token-hex">rgba(0,104,95,.10)</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:#4b41e1"></div>
+          <div class="token-info"><div class="token-name">--secondary</div><div class="token-hex">#4b41e1 · indigo-500</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:rgba(75,65,225,.10)"></div>
+          <div class="token-info"><div class="token-name">--secondary-dim</div><div class="token-hex">rgba(75,65,225,.10)</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dl-card">
+      <div class="dl-card-title">Surfaces</div>
+      <div class="token-grid">
+        <div class="token-swatch">
+          <div class="token-color" style="background:#f0f2f3;border-bottom:1px solid #dde3e2"></div>
+          <div class="token-info"><div class="token-name">--bg</div><div class="token-hex">#f0f2f3 · page bg</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:#ffffff;border-bottom:1px solid #dde3e2"></div>
+          <div class="token-info"><div class="token-name">--card</div><div class="token-hex">#ffffff · panels</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:#edeef0;border-bottom:1px solid #dde3e2"></div>
+          <div class="token-info"><div class="token-name">--surface</div><div class="token-hex">#edeef0 · inputs</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:#dde3e2"></div>
+          <div class="token-info"><div class="token-name">--card-border</div><div class="token-hex">#dde3e2 · dividers</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dl-card">
+      <div class="dl-card-title">Semantic</div>
+      <div class="token-grid">
+        <div class="token-swatch">
+          <div class="token-color" style="background:#16a34a"></div>
+          <div class="token-info"><div class="token-name">--green</div><div class="token-hex">#16a34a · positive</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:rgba(22,163,74,.10)"></div>
+          <div class="token-info"><div class="token-name">--green-dim</div><div class="token-hex">rgba(22,163,74,.10)</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:#dc2626"></div>
+          <div class="token-info"><div class="token-name">--red</div><div class="token-hex">#dc2626 · negative</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:rgba(220,38,38,.10)"></div>
+          <div class="token-info"><div class="token-name">--red-dim</div><div class="token-hex">rgba(220,38,38,.10)</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:#d97706"></div>
+          <div class="token-info"><div class="token-name">--yellow</div><div class="token-hex">#d97706 · pending</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:#191c1d"></div>
+          <div class="token-info"><div class="token-name">--text</div><div class="token-hex">#191c1d · body</div></div>
+        </div>
+        <div class="token-swatch">
+          <div class="token-color" style="background:#6d7a77"></div>
+          <div class="token-info"><div class="token-name">--muted</div><div class="token-hex">#6d7a77 · secondary text</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 2 — TYPOGRAPHY
+       ═══════════════════════════════════════════════════════ -->
+  <div class="dl-section">
+    <div class="dl-section-title">Typography — Hanken Grotesk</div>
+    <div class="dl-card">
+      <div class="type-row">
+        <div class="type-meta">28px / 800<br>letter-spacing: -.5px</div>
+        <div class="type-sample" style="font-size:28px;font-weight:800;letter-spacing:-.5px">Stock Name Heading</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">20px / 800<br>letter-spacing: -.3px</div>
+        <div class="type-sample" style="font-size:20px;font-weight:800;letter-spacing:-.3px">Panel Title</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">17px / 800</div>
+        <div class="type-sample" style="font-size:17px;font-weight:800">Sheet Stock Name</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">15px / 800<br>color: --primary</div>
+        <div class="type-sample" style="font-size:15px;font-weight:800;color:var(--primary)">BoardroomX Brand</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">13.5px / 700</div>
+        <div class="type-sample" style="font-size:13.5px;font-weight:700">Watchlist &amp; Nav Items</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">13px / 700</div>
+        <div class="type-sample" style="font-size:13px;font-weight:700">RELIANCE · ₹2,847</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">12px / 500</div>
+        <div class="type-sample" style="font-size:12px;font-weight:500;color:var(--muted)">Reliance Industries Ltd</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">10px / 600<br>UPPERCASE · letter-spacing: .6px</div>
+        <div class="type-sample" style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)">Section Label</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta">9px / 700<br>UPPERCASE · letter-spacing: 1px</div>
+        <div class="type-sample" style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Sector Group Header</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 3 — SPACING & RADIUS
+       ═══════════════════════════════════════════════════════ -->
+  <div class="dl-section">
+    <div class="dl-section-title">Spacing Scale</div>
+    <div class="dl-card">
+      <div class="spacing-grid">
+        <div class="spacing-row"><span class="spacing-label">4px</span><div class="spacing-bar" style="width:4px"></div></div>
+        <div class="spacing-row"><span class="spacing-label">6px</span><div class="spacing-bar" style="width:6px"></div></div>
+        <div class="spacing-row"><span class="spacing-label">8px</span><div class="spacing-bar" style="width:8px"></div></div>
+        <div class="spacing-row"><span class="spacing-label">10px</span><div class="spacing-bar" style="width:10px"></div></div>
+        <div class="spacing-row"><span class="spacing-label">12px</span><div class="spacing-bar" style="width:12px"></div></div>
+        <div class="spacing-row"><span class="spacing-label">14px</span><div class="spacing-bar" style="width:14px"></div></div>
+        <div class="spacing-row"><span class="spacing-label">16px</span><div class="spacing-bar" style="width:16px"></div></div>
+        <div class="spacing-row"><span class="spacing-label">20px</span><div class="spacing-bar" style="width:20px"></div></div>
+        <div class="spacing-row"><span class="spacing-label">24px</span><div class="spacing-bar" style="width:24px"></div></div>
+      </div>
+    </div>
+    <div class="dl-card">
+      <div class="dl-card-title">Border Radius</div>
+      <div class="dl-row">
+        <div style="text-align:center">
+          <div style="width:60px;height:40px;background:var(--surface);border:1px solid var(--card-border);border-radius:4px;margin-bottom:6px"></div>
+          <div style="font-size:10px;color:var(--muted)">4px · tiny</div>
+        </div>
+        <div style="text-align:center">
+          <div style="width:60px;height:40px;background:var(--surface);border:1px solid var(--card-border);border-radius:8px;margin-bottom:6px"></div>
+          <div style="font-size:10px;color:var(--muted)">8px · --rs</div>
+        </div>
+        <div style="text-align:center">
+          <div style="width:60px;height:40px;background:var(--surface);border:1px solid var(--card-border);border-radius:10px;margin-bottom:6px"></div>
+          <div style="font-size:10px;color:var(--muted)">10px · nav</div>
+        </div>
+        <div style="text-align:center">
+          <div style="width:60px;height:40px;background:var(--surface);border:1px solid var(--card-border);border-radius:12px;margin-bottom:6px"></div>
+          <div style="font-size:10px;color:var(--muted)">12px · --r</div>
+        </div>
+        <div style="text-align:center">
+          <div style="width:60px;height:40px;background:var(--surface);border:1px solid var(--card-border);border-radius:999px;margin-bottom:6px"></div>
+          <div style="font-size:10px;color:var(--muted)">999px · pill</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 4 — BUTTONS
+       ═══════════════════════════════════════════════════════ -->
+  <div class="dl-section">
+    <div class="dl-section-title">Buttons</div>
+    <div class="dl-card">
+      <div class="dl-row">
+        <button class="btn btn-primary">
+          <span class="material-symbols-outlined" style="font-size:16px">add</span> Primary
+        </button>
+        <button class="btn btn-secondary">Secondary</button>
+        <button class="btn btn-outline">Outline</button>
+        <button class="btn btn-ghost">Ghost</button>
+        <button class="btn btn-danger">Delete</button>
+      </div>
+      <div class="dl-row" style="margin-top:12px">
+        <button class="btn btn-primary btn-sm">Small</button>
+        <button class="btn btn-primary">Default</button>
+        <button class="btn btn-primary btn-lg">Large</button>
+        <button class="btn btn-icon">
+          <span class="material-symbols-outlined" style="font-size:18px">refresh</span>
+        </button>
+        <button class="btn btn-icon" style="background:var(--primary);color:#fff;border-color:var(--primary)">
+          <span class="material-symbols-outlined" style="font-size:18px">search</span>
+        </button>
+      </div>
+    </div>
+    <div class="code">
+&lt;<span class="kw">button</span> <span class="str">class</span>=<span class="str">"btn btn-primary"</span>&gt;Label&lt;/button&gt;
+&lt;<span class="kw">button</span> <span class="str">class</span>=<span class="str">"btn btn-outline btn-sm"</span>&gt;Small outline&lt;/button&gt;
+<span class="cmt">/* Variants: btn-primary | btn-secondary | btn-outline | btn-ghost | btn-danger */</span>
+<span class="cmt">/* Sizes:    btn-sm      | (default)     | btn-lg                              */</span></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 5 — BADGES & CHIPS
+       ═══════════════════════════════════════════════════════ -->
+  <div class="dl-section">
+    <div class="dl-section-title">Badges &amp; Chips</div>
+    <div class="dl-card">
+      <div class="dl-card-title">Filled badges</div>
+      <div class="dl-row" style="margin-bottom:12px">
+        <span class="badge badge-green">+12.4%</span>
+        <span class="badge badge-red">−8.1%</span>
+        <span class="badge badge-yellow">⏳ Awaiting</span>
+        <span class="badge badge-indigo">Consolidated</span>
+        <span class="badge badge-neutral">NSE</span>
+      </div>
+      <div class="dl-card-title">Outline badges</div>
+      <div class="dl-row" style="margin-bottom:12px">
+        <span class="badge badge-outline-green">+12.4%</span>
+        <span class="badge badge-outline-red">−8.1%</span>
+      </div>
+      <div class="dl-card-title">Filter chips</div>
+      <div class="dl-row">
+        <span class="chip chip-active">All</span>
+        <span class="chip">Technology</span>
+        <span class="chip">Finance</span>
+        <span class="chip">Healthcare</span>
+        <span class="chip">Energy</span>
+      </div>
+    </div>
+    <div class="code">
+&lt;<span class="kw">span</span> <span class="str">class</span>=<span class="str">"badge badge-green"</span>&gt;+12.4%&lt;/span&gt;
+&lt;<span class="kw">span</span> <span class="str">class</span>=<span class="str">"badge badge-yellow"</span>&gt;⏳ Awaiting&lt;/span&gt;
+&lt;<span class="kw">span</span> <span class="str">class</span>=<span class="str">"chip chip-active"</span>&gt;All&lt;/span&gt;
+<span class="cmt">/* Badge bg variants: badge-green | badge-red | badge-yellow | badge-indigo | badge-neutral */</span></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 6 — INPUTS
+       ═══════════════════════════════════════════════════════ -->
+  <div class="dl-section">
+    <div class="dl-section-title">Inputs</div>
+    <div class="dl-card">
+      <div class="dl-row" style="flex-wrap:wrap;gap:12px">
+        <input class="input" type="text" placeholder="Default input" style="width:220px" />
+        <div style="position:relative;display:flex;align-items:center">
+          <span class="material-symbols-outlined" style="position:absolute;left:10px;font-size:16px;color:var(--muted);pointer-events:none">search</span>
+          <input class="input input-search" type="text" placeholder="Search NSE symbol…" style="width:220px" />
+        </div>
+      </div>
+    </div>
+    <div class="code">
+<span class="cmt">/* Default */</span>
+&lt;<span class="kw">input</span> <span class="str">class</span>=<span class="str">"input"</span> <span class="str">placeholder</span>=<span class="str">"…"</span> /&gt;
+<span class="cmt">/* Pill search (with icon absolutely positioned inside) */</span>
+&lt;<span class="kw">input</span> <span class="str">class</span>=<span class="str">"input input-search"</span> /&gt;</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 7 — DATA COMPONENTS
+       ═══════════════════════════════════════════════════════ -->
+  <div class="dl-section">
+    <div class="dl-section-title">Data Components</div>
+
+    <div class="dl-card">
+      <div class="dl-card-title">Stat chips (Key Statistics grid)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="stat-chip">
+          <div class="stat-chip-label">Market Cap</div>
+          <div class="stat-chip-value">₹19.2L Cr</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-chip-label">Price</div>
+          <div class="stat-chip-value up">₹2,847</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-chip-label">Day Change</div>
+          <div class="stat-chip-value up">+1.4%</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-chip-label">Trailing PE</div>
+          <div class="stat-chip-value">24.8×</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-chip-label">52W High</div>
+          <div class="stat-chip-value">₹3,217</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-chip-label">52W Low</div>
+          <div class="stat-chip-value down">₹2,221</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dl-card">
+      <div class="dl-card-title">Stock row states</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+
+        <!-- Default -->
+        <div class="preview-row">
+          <div class="preview-bar-none"></div>
+          <div class="preview-col-stock">
+            <div class="preview-sym">RELIANCE</div>
+            <div class="preview-name">Reliance Industries</div>
+          </div>
+          <div class="preview-col-num"><span class="badge badge-green" style="font-size:9px">+14%</span></div>
+          <div class="preview-col-num"><span class="badge badge-green" style="font-size:9px">+22%</span></div>
+          <div class="preview-col-price">
+            <div class="preview-price">₹2,847</div>
+            <div class="preview-delta" style="color:var(--green);font-size:10px;font-weight:600">+1.4%</div>
+          </div>
+        </div>
+
+        <!-- Selected (teal border) -->
+        <div class="preview-row" style="box-shadow:inset 2px 0 0 var(--primary);background:var(--card-sel)">
+          <div class="preview-bar-none"></div>
+          <div class="preview-col-stock">
+            <div class="preview-sym">INFY</div>
+            <div class="preview-name">Infosys Ltd · selected</div>
+          </div>
+          <div class="preview-col-num"><span class="badge badge-red" style="font-size:9px">−3%</span></div>
+          <div class="preview-col-num"><span class="badge badge-red" style="font-size:9px">−8%</span></div>
+          <div class="preview-col-price">
+            <div class="preview-price">₹1,512</div>
+            <div class="preview-delta" style="color:var(--red);font-size:10px;font-weight:600">−0.8%</div>
+          </div>
+        </div>
+
+        <!-- Awaiting results (amber bar) -->
+        <div class="preview-row">
+          <div class="preview-bar-amber"></div>
+          <div class="preview-col-stock">
+            <div class="preview-sym">HDFCBANK</div>
+            <div class="preview-name">HDFC Bank Ltd</div>
+          </div>
+          <div class="preview-col-num" style="font-size:9px;color:var(--muted)">Q4 FY25</div>
+          <div class="preview-col-num" style="font-size:10px;color:var(--yellow);font-weight:600">⏳ May 28</div>
+          <div class="preview-col-price">
+            <div class="preview-price">₹1,620</div>
+            <div class="preview-delta" style="color:var(--green);font-size:10px;font-weight:600">+0.3%</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="dl-card">
+      <div class="dl-card-title">Freshness indicators</div>
+      <div class="dl-row">
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)"><span class="dot dot-live"></span>Live (updated today)</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)"><span class="dot dot-recent"></span>Recent (&lt;30d ago)</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)"><span class="dot dot-stale"></span>Stale (&gt;30d ago)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 8 — LAYOUT SYSTEM
+       ═══════════════════════════════════════════════════════ -->
+  <div class="dl-section">
+    <div class="dl-section-title">Layout — 4-Column Cockpit</div>
+    <div class="dl-card">
+      <div class="ld-wrap">
+        <div class="ld-header">
+          <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary)">bar_chart</span>
+          BoardroomX &nbsp;—&nbsp; header (56px, sticky, full-width)
+        </div>
+        <div class="ld-body">
+          <div class="ld-col ld-wl">
+            <span class="material-symbols-outlined">format_list_bulleted</span>
+            <div style="font-size:10px;font-weight:700">Watchlist</div>
+            <div class="ld-tag">284px</div>
+          </div>
+          <div class="ld-col ld-chart">
+            <span class="material-symbols-outlined">candlestick_chart</span>
+            <div style="font-size:10px;font-weight:700">Chart</div>
+            <div class="ld-tag">flex-1</div>
+          </div>
+          <div class="ld-col ld-det">
+            <span class="material-symbols-outlined">query_stats</span>
+            <div style="font-size:10px;font-weight:700">Details</div>
+            <div class="ld-tag">296px · ≥1200px</div>
+          </div>
+          <div class="ld-col ld-util">
+            <span class="material-symbols-outlined">apps</span>
+            <div class="ld-tag">56px · ≥1440px</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px;font-size:12px">
+          <span style="width:90px;font-weight:700;color:var(--muted);font-size:11px">&lt;768px</span>
+          <span>Single column (watchlist only). Chart and details open as bottom sheets.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:12px">
+          <span style="width:90px;font-weight:700;color:var(--primary);font-size:11px">≥768px</span>
+          <span>Watchlist + Chart (2 columns).</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:12px">
+          <span style="width:90px;font-weight:700;color:var(--primary);font-size:11px">≥1200px</span>
+          <span>+ Details panel (3 columns).</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:12px">
+          <span style="width:90px;font-weight:700;color:var(--primary);font-size:11px">≥1440px</span>
+          <span>+ Utility sidebar (4 columns, full cockpit view).</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dl-card">
+      <div class="dl-card-title">CSS Class Reference</div>
+      <div class="code">
+<span class="cmt">/* ── Layout containers ── */</span>
+<span class="kw">header</span>              <span class="cmt">sticky, full-width, 56px</span>
+<span class="kw">.app-layout</span>        <span class="cmt">flex row, below header, full remaining height</span>
+<span class="kw">.watchlist-panel</span>   <span class="cmt">col 1 · 284px · always visible</span>
+<span class="kw">.chart-main</span>        <span class="cmt">col 2 · flex:1 · desktop only</span>
+<span class="kw">.details-panel</span>     <span class="cmt">col 3 · 296px · ≥1200px</span>
+<span class="kw">.utility-sidebar</span>   <span class="cmt">col 4 · 56px  · ≥1440px</span>
+
+<span class="cmt">/* ── Header elements ── */</span>
+<span class="kw">.hdr-brand</span>         <span class="cmt">logo + name (flex row)</span>
+<span class="kw">.hdr-nav</span>           <span class="cmt">nav links, desktop only (≥768px)</span>
+<span class="kw">.hdr-search</span>        <span class="cmt">search input wrapper</span>
+<span class="kw">.hdr-actions</span>       <span class="cmt">icon buttons + user pill</span>
+
+<span class="cmt">/* ── Watchlist internals ── */</span>
+<span class="kw">.wl-header</span>         <span class="cmt">teal top-border bar with title + action btns</span>
+<span class="kw">.sector-tabs</span>       <span class="cmt">horizontal chip strip (filter)</span>
+<span class="kw">.list-header</span>       <span class="cmt">col labels row</span>
+<span class="kw">.stock-list</span>        <span class="cmt">scrollable stock rows container</span>
+<span class="kw">.sector-header</span>     <span class="cmt">ALL-CAPS sector group label</span>
+<span class="kw">.stock-row</span>         <span class="cmt">clickable row · .selected · hover=inset-shadow</span>
+
+<span class="cmt">/* ── Overlays ── */</span>
+<span class="kw">.sheet</span>             <span class="cmt">bottom drawer · .open to show · max-h 88vh</span>
+<span class="kw">.sheet-tall</span>        <span class="cmt">taller variant · max-h 94vh</span>
+<span class="kw">.sidebar</span>           <span class="cmt">right drawer · .open to show</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 9 — DESIGN RULES
+       ═══════════════════════════════════════════════════════ -->
+  <div class="dl-section">
+    <div class="dl-section-title">Design Rules</div>
+    <div class="dl-card">
+      <div style="display:flex;flex-direction:column;gap:10px">
+
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:11px;font-weight:800;color:var(--primary);width:100px;flex-shrink:0">COLOUR USE</span>
+          <span style="font-size:13px;line-height:1.5">
+            Teal (#00685f) for primary actions, borders, active states, brand.
+            Indigo (#4b41e1) for active chips, secondary actions, accent pills.
+            Never mix teal and indigo in the same interactive element.
+          </span>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:11px;font-weight:800;color:var(--primary);width:100px;flex-shrink:0">DATA COLOUR</span>
+          <span style="font-size:13px;line-height:1.5">
+            Green = positive/up, Red = negative/down, Yellow = pending/awaiting.
+            Always pair a coloured value with its semantic label.
+            Never use colour alone to convey meaning.
+          </span>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:11px;font-weight:800;color:var(--primary);width:100px;flex-shrink:0">HOVER</span>
+          <span style="font-size:13px;line-height:1.5">
+            Stock rows: <code>box-shadow: inset 3px 0 0 var(--primary)</code> — no transform (prevents jitter).
+            Buttons: opacity .88 or background change. Never move elements on hover.
+          </span>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:11px;font-weight:800;color:var(--primary);width:100px;flex-shrink:0">DENSITY</span>
+          <span style="font-size:13px;line-height:1.5">
+            Stock rows: 54px min-height. Header: 56px. Cards: 12px padding default, 14px for panels.
+            Font sizes: never below 9px. Labels always uppercase + letter-spacing at 9–11px.
+          </span>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--card-border)">
+          <span style="font-size:11px;font-weight:800;color:var(--primary);width:100px;flex-shrink:0">SHADOWS</span>
+          <span style="font-size:13px;line-height:1.5">
+            Panels: <code>0 2px 16px rgba(75,65,225,.04)</code>.
+            Buttons: <code>0 2px 8px rgba(0,104,95,.25)</code> for primary.
+            Avoid blur effects on frequently-updating elements (performance).
+          </span>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0">
+          <span style="font-size:11px;font-weight:800;color:var(--primary);width:100px;flex-shrink:0">TYPOGRAPHY</span>
+          <span style="font-size:13px;line-height:1.5">
+            Always Hanken Grotesk. Numbers in tabular-nums (<code>font-variant-numeric: tabular-nums</code>).
+            Brand: 800 weight. Headings: 700–800. Labels: 600. Body: 500. Captions: 400.
+          </span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SECTION 10 — LAYOUT TOKENS
+       ═══════════════════════════════════════════════════════ -->
+  <div class="dl-section">
+    <div class="dl-section-title">CSS Variables Quick Reference</div>
+    <div class="code">
+<span class="cmt">/* ── :root tokens ── copy-paste to any new stylesheet ── */</span>
+<span class="kw">--primary</span>:        <span class="str">#00685f</span>;
+<span class="kw">--primary-light</span>:  <span class="str">rgba(0,104,95,.10)</span>;
+<span class="kw">--secondary</span>:      <span class="str">#4b41e1</span>;
+<span class="kw">--secondary-dim</span>:  <span class="str">rgba(75,65,225,.10)</span>;
+<span class="kw">--bg</span>:             <span class="str">#f0f2f3</span>;
+<span class="kw">--card</span>:           <span class="str">#ffffff</span>;
+<span class="kw">--card-border</span>:    <span class="str">#dde3e2</span>;
+<span class="kw">--surface</span>:        <span class="str">#edeef0</span>;
+<span class="kw">--text</span>:           <span class="str">#191c1d</span>;
+<span class="kw">--muted</span>:          <span class="str">#6d7a77</span>;
+<span class="kw">--green</span>:          <span class="str">#16a34a</span>;
+<span class="kw">--green-dim</span>:      <span class="str">rgba(22,163,74,.10)</span>;
+<span class="kw">--red</span>:            <span class="str">#dc2626</span>;
+<span class="kw">--red-dim</span>:        <span class="str">rgba(220,38,38,.10)</span>;
+<span class="kw">--yellow</span>:         <span class="str">#d97706</span>;
+<span class="kw">--r</span>:              <span class="str">12px</span>;  <span class="cmt">/* card border radius */</span>
+<span class="kw">--rs</span>:             <span class="str">8px</span>;   <span class="cmt">/* small border radius */</span>
+<span class="kw">--hdr-h</span>:          <span class="str">56px</span>;  <span class="cmt">/* header height */</span>
+<span class="kw">--wl-w</span>:           <span class="str">284px</span>; <span class="cmt">/* watchlist width */</span>
+<span class="kw">--det-w</span>:          <span class="str">296px</span>; <span class="cmt">/* details panel width */</span>
+<span class="kw">--util-w</span>:         <span class="str">56px</span>;  <span class="cmt">/* utility sidebar width */</span></div>
+  </div>
+
+</div>
+</body>
+</html>

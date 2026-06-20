@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ God Mode — BoardroomX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- Auth module: single source of truth for session/token management -->
+  <script src="/auth.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #05080f;
+      --surface: #0b1629;
+      --surface2: #0f1e35;
+      --border:  #1a3250;
+      --border2: #264868;
+      --text:    #c4d8f0;
+      --muted:   #5880a0;
+      --faint:   #2a4a68;
+      --accent:  #38bdf8;
+      --accent2: #0ea5e9;
+      --success: #4ade80;
+      --warning: #fb923c;
+      --danger:  #f87171;
+      --mono:    'JetBrains Mono', monospace;
+      --sans:    'Inter', system-ui, sans-serif;
+    }
+    html { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 14px; }
+    body { min-height: 100vh; }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 20px 24px 60px; }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    .hdr { display: flex; align-items: center; gap: 14px; margin-bottom: 24px;
+           border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+    .hdr-title { font-size: 18px; font-weight: 700; letter-spacing: -.3px;
+                 font-family: var(--mono); }
+    .hdr-title span { color: var(--accent);
+                      text-shadow: 0 0 20px rgba(56,189,248,.4); }
+    .hdr-sub   { font-size: 10px; color: var(--muted); font-family: var(--mono);
+                 margin-top: 2px; letter-spacing: .5px; text-transform: uppercase; }
+    .hdr-sep   { flex: 1; }
+    .back-link { font-size: 11px; color: var(--muted); text-decoration: none;
+                 padding: 5px 10px; border: 1px solid var(--border2); border-radius: 6px;
+                 font-family: var(--mono); transition: all .15s; }
+    .back-link:hover { color: var(--accent); border-color: var(--accent); }
+    .live-dot  { display: inline-flex; align-items: center; gap: 6px; font-size: 10px;
+                 font-family: var(--mono); color: var(--success); font-weight: 600;
+                 letter-spacing: .5px; text-transform: uppercase; }
+    .live-dot::before { content: ''; width: 6px; height: 6px; border-radius: 50%;
+                        background: var(--success);
+                        box-shadow: 0 0 8px var(--success);
+                        animation: pulse 1.8s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* ── Section header ─────────────────────────────────────────────────── */
+    .section-hdr { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .section-label { font-size: 13px; font-weight: 700; letter-spacing: .5px;
+                     font-family: var(--mono); text-transform: uppercase; color: var(--accent); }
+    .section-badge { background: rgba(56,189,248,.12); color: var(--accent);
+                     border: 1px solid rgba(56,189,248,.3);
+                     font-size: 11px; font-weight: 600;
+                     padding: 2px 8px; border-radius: 20px; font-family: var(--mono); }
+
+    /* ── Stats row ──────────────────────────────────────────────────────── */
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+                 padding: 14px 16px; position: relative; overflow: hidden; }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0;
+                          height: 2px; background: linear-gradient(90deg, var(--accent2), transparent); }
+    .stat-val  { font-size: 24px; font-weight: 700; font-family: var(--mono);
+                 color: var(--accent); line-height: 1; }
+    .stat-lbl  { font-size: 10px; color: var(--muted); margin-top: 5px;
+                 text-transform: uppercase; letter-spacing: .6px; font-family: var(--mono); }
+
+    /* ── Sub-tabs ───────────────────────────────────────────────────────── */
+    .subtab-bar { display: flex; gap: 2px; background: var(--surface);
+                  border: 1px solid var(--border);
+                  border-radius: 8px; padding: 3px; width: fit-content; margin-bottom: 16px; }
+    .subtab     { padding: 5px 16px; border-radius: 6px; font-size: 11px; font-weight: 600;
+                  cursor: pointer; border: none; background: transparent; color: var(--muted);
+                  font-family: var(--mono); letter-spacing: .3px; text-transform: uppercase;
+                  transition: all .15s; }
+    .subtab.active { background: var(--accent2); color: #fff;
+                     box-shadow: 0 0 12px rgba(14,165,233,.4); }
+
+
+    /* ── Purpose chip (shared) ─────────────────────────────────────────── */
+    .chip { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 9.5px;
+            font-weight: 700; letter-spacing: .3px; white-space: nowrap;
+            font-family: var(--mono); max-width: 100%;
+            overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+    /* Purpose chips — color-coded by event type */
+    .chip-earnings   { background: rgba(251,191,36,.12);  color: #fbbf24;  border: 1px solid rgba(251,191,36,.25); }
+    .chip-fund       { background: rgba(96,165,250,.12);  color: #60a5fa;  border: 1px solid rgba(96,165,250,.25); }
+    .chip-dividend   { background: rgba(240,171,252,.12); color: #e879f9;  border: 1px solid rgba(240,171,252,.25); }
+    .chip-buyback    { background: rgba(248,113,113,.12); color: #f87171;  border: 1px solid rgba(248,113,113,.25); }
+    .chip-bonus      { background: rgba(74,222,128,.12);  color: #4ade80;  border: 1px solid rgba(74,222,128,.25); }
+    .chip-reschedule { background: rgba(251,146,60,.12);  color: #fb923c;  border: 1px solid rgba(251,146,60,.25); }
+    .chip-generic    { background: rgba(148,163,184,.1);  color: #94a3b8;  border: 1px solid rgba(148,163,184,.2); }
+
+    /* ── Events log view ────────────────────────────────────────────────── */
+    .ev-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px;
+                  flex-wrap: wrap; }
+    .ev-input  { padding: 5px 10px; border: 1px solid var(--border2); border-radius: 5px;
+                 font-size: 11px; font-family: var(--mono); background: var(--surface);
+                 color: var(--text); width: 110px; outline: none; }
+    .ev-select { padding: 5px 10px; border: 1px solid var(--border2); border-radius: 5px;
+                 font-size: 11px; font-family: var(--mono); background: var(--surface);
+                 color: var(--text); cursor: pointer; outline: none; }
+    .ev-input:focus, .ev-select:focus { border-color: var(--accent);
+                                        box-shadow: 0 0 0 2px rgba(56,189,248,.15); }
+    .ev-count-lbl  { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-left: auto; }
+    .ev-schema-link { font-size: 10px; color: var(--accent); text-decoration: none;
+                      font-family: var(--mono); padding: 4px 9px;
+                      border: 1px solid rgba(56,189,248,.3); border-radius: 5px;
+                      transition: all .12s; letter-spacing: .3px; }
+    .ev-schema-link:hover { background: rgba(56,189,248,.1); }
+
+    /* Column header bar — 7 cols: SYMBOL DATE CLUSTER DESCRIPTION UPDATED TYPE › */
+    .ev-cols { display: grid;
+               grid-template-columns: 88px 100px 118px 1fr 105px 92px 22px;
+               padding: 7px 14px; background: var(--surface2);
+               border: 1px solid var(--border); border-radius: 8px 8px 0 0; }
+    .ev-cols span { font-size: 9px; font-weight: 700; text-transform: uppercase;
+                    letter-spacing: .8px; color: var(--faint); font-family: var(--mono); }
+
+    /* Company block */
+    .ev-company { border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+                  border-bottom: 1px solid var(--border); }
+    .ev-company:last-child { border-radius: 0 0 8px 8px; overflow: hidden; }
+
+    /* Row grid — main + sub share same template */
+    .ev-row { display: grid;
+              grid-template-columns: 88px 100px 118px 1fr 105px 92px 22px;
+              padding: 10px 14px; align-items: start;
+              font-family: var(--mono); font-size: 11.5px; }
+    /* All cells clip overflow so description column stays clean */
+    .ev-row > * { min-width: 0; overflow: hidden; }
+
+    .ev-main { cursor: pointer; background: var(--surface); transition: background .12s; }
+    .ev-main:hover { background: var(--surface2); }
+    .ev-sub  { background: #070d1a; border-top: 1px solid var(--border); }
+
+    /* Individual cells */
+    .ev-sym  { font-weight: 700; color: var(--accent); white-space: nowrap;
+               text-overflow: ellipsis; overflow: hidden; padding-top: 2px;
+               text-shadow: 0 0 12px rgba(56,189,248,.25); }
+    .ev-date { color: var(--muted); font-size: 10.5px; white-space: nowrap; padding-top: 2px; }
+
+    /* Description — 2-line clamp so long NSE text doesn't truncate to nothing */
+    .ev-desc-col { font-size: 11px; color: var(--text); font-family: var(--sans);
+                   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                   overflow: hidden; white-space: normal; line-height: 1.45;
+                   padding-right: 10px; }
+    .ev-more { display: inline-block; margin-top: 3px; font-size: 9.5px; color: var(--faint);
+               font-family: var(--mono); padding: 1px 5px; background: var(--surface2);
+               border-radius: 3px; border: 1px solid var(--border); white-space: nowrap; }
+
+    /* Updated-at cell — two lines: absolute timestamp + relative "5h ago" */
+    .ev-updated     { display: flex; flex-direction: column; gap: 2px; }
+    .ev-updated-abs { font-size: 10px; color: var(--muted); white-space: nowrap; }
+    .ev-updated-rel { font-size: 9px;  color: var(--faint); white-space: nowrap;
+                      font-family: var(--mono); }
+    .ev-sub-indent  { color: var(--faint); font-size: 11px; padding-left: 4px; padding-top: 2px; }
+
+    /* Type badges */
+    .ev-badge { font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+                letter-spacing: .3px; white-space: nowrap; font-family: var(--mono); }
+    .ev-badge.upcoming { background: rgba(74,222,128,.1); color: #4ade80;
+                         border: 1px solid rgba(74,222,128,.3);
+                         box-shadow: 0 0 8px rgba(74,222,128,.15); }
+    .ev-badge.past     { background: transparent; color: var(--faint);
+                         border: 1px solid var(--border); }
+
+    /* Chevron */
+    .ev-chev { color: var(--faint); font-size: 14px; text-align: center;
+               user-select: none; transition: transform .2s, color .2s;
+               overflow: visible !important; }
+    .ev-chev.open { transform: rotate(90deg); color: var(--accent); }
+
+    /* Sub-row loading */
+    .ev-sub-loading { padding: 9px 14px; font-size: 10.5px; color: var(--muted);
+                      font-family: var(--mono); background: #070d1a;
+                      border-top: 1px solid var(--border); }
+
+    /* Load more */
+    .ev-load-more { padding: 7px 20px; border: 1px solid var(--border2); border-radius: 6px;
+                    background: var(--surface); font-size: 11px; font-family: var(--mono);
+                    cursor: pointer; color: var(--muted); margin-top: 12px;
+                    transition: all .12s; letter-spacing: .3px; text-transform: uppercase; }
+    .ev-load-more:hover { border-color: var(--accent); color: var(--accent);
+                          box-shadow: 0 0 10px rgba(56,189,248,.15); }
+
+    /* NEW badge — shown when company was ingested within last 24h */
+    .ev-company.is-new > .ev-row.ev-main { border-left: 2px solid var(--accent2); }
+    .ev-new-badge { display: inline-block; font-size: 8px; font-weight: 700;
+                    padding: 1px 4px; border-radius: 2px;
+                    background: rgba(56,189,248,.18); color: var(--accent);
+                    border: 1px solid rgba(56,189,248,.4); font-family: var(--mono);
+                    letter-spacing: .5px; vertical-align: middle; margin-left: 5px;
+                    animation: newblink 2s ease-in-out infinite; }
+    @keyframes newblink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+    /* ── Loading / empty ────────────────────────────────────────────────── */
+    .loading { text-align: center; color: var(--muted); font-size: 12px; padding: 40px;
+               font-family: var(--mono); }
+    .empty   { text-align: center; color: var(--faint); font-size: 11px; padding: 40px;
+               border: 1px dashed var(--border); border-radius: 10px;
+               font-family: var(--mono); }
+  /* ── Scheduler tab ──────────────────────────────────────────────────── */
+  .sched-wrap        { padding: 16px 0; max-width: 860px; }
+  .sched-header      { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .sched-title       { font-size: 10px; font-weight: 700; letter-spacing: .12em;
+                       color: var(--muted); text-transform: uppercase; }
+  .sched-count       { font-weight: 400; color: var(--faint); }
+  .sched-refresh-btn { margin-left: auto; background: var(--surface2); border: 1px solid var(--border);
+                       color: var(--accent); font-size: 11px; padding: 3px 10px;
+                       border-radius: 4px; cursor: pointer; }
+  .sched-refresh-btn:hover { background: var(--border); }
+
+  /* Job cards */
+  .sched-jobs        { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sched-job-card    { background: var(--surface); border: 1px solid var(--border);
+                       border-radius: 6px; padding: 12px 16px; min-width: 220px; }
+  .sched-job-name    { font-size: 11px; font-weight: 700; color: var(--accent);
+                       letter-spacing: .06em; margin-bottom: 6px; font-family: var(--mono); }
+  .sched-job-next    { display: flex; flex-direction: column; gap: 2px; }
+  .sched-key         { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  .sched-val         { font-size: 11px; color: var(--text); font-family: var(--mono); }
+  .sched-rel         { font-size: 10px; color: var(--faint); margin-left: 6px; }
+
+  /* Log stream */
+  .sched-log         { background: var(--surface); border: 1px solid var(--border);
+                       border-radius: 6px; overflow: hidden; font-family: var(--mono); font-size: 11px; }
+  .sched-entry       { display: grid;
+                       grid-template-columns: 18px 120px 160px 1fr 68px;
+                       gap: 0 10px; align-items: center;
+                       padding: 6px 12px; border-bottom: 1px solid var(--border); }
+  .sched-entry:last-child { border-bottom: none; }
+  .sched-entry:hover { background: var(--surface2); }
+  .sched-dot         { font-size: 10px; }
+  .sched-entry-ts    { color: var(--muted); white-space: nowrap; }
+  .sched-entry-job   { color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sched-entry-msg   { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sched-entry.sched-error .sched-entry-msg   { color: #f87171; }
+  .sched-entry.sched-running .sched-entry-msg { color: #fbbf24; }
+  .sched-entry.sched-started .sched-entry-msg { color: #fbbf24; }
+  .sched-entry.sched-ok .sched-entry-msg      { color: var(--success); }
+  .sched-entry.sched-skipped .sched-entry-msg { color: var(--muted); }
+  .sched-entry.sched-warn .sched-entry-msg    { color: #fb923c; }
+  .sched-entry-new   { text-align: right; white-space: nowrap; }
+  .new-badge         { display: inline-block; background: rgba(56,189,248,.12);
+                       color: var(--accent); border: 1px solid rgba(56,189,248,.3);
+                       border-radius: 4px; padding: 1px 6px; font-size: 10px; font-weight: 600; }
+  .sched-empty       { padding: 20px; color: var(--muted); font-size: 12px; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div>
+      <div class="hdr-title">⚡ <span>God Mode</span></div>
+      <div class="hdr-sub">BoardroomX Internal Dashboard</div>
+    </div>
+    <div class="hdr-sep"></div>
+    <span class="live-dot" id="live-status">Live</span>
+    <a href="/" class="back-link">← App</a>
+  </div>
+
+  <!-- Sub-tabs -->
+  <div class="subtab-bar">
+    <button class="subtab active" id="tab-events" onclick="switchTab('events')">NSE Events</button>
+    <button class="subtab"        id="tab-sched"  onclick="switchTab('sched')">Scheduler</button>
+  </div>
+
+  <!-- ── NSE Events view ───────────────────────────────────────────── -->
+  <div id="view-events" style="display:none">
+
+    <!-- Section header + stats — inside events tab only -->
+    <div class="section-hdr" style="margin-bottom:14px">
+      <span class="section-label">📋 NSE Events</span>
+      <span class="section-badge" id="total-badge">—</span>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-val" id="stat-total-events">—</div>
+        <div class="stat-lbl">Total events</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-total">—</div>
+        <div class="stat-lbl">Companies</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-upcoming">—</div>
+        <div class="stat-lbl">Upcoming cos.</div>
+      </div>
+    </div>
+
+    <!-- Filter toolbar -->
+    <div class="ev-toolbar">
+      <input  class="ev-input"  id="ev-sym"     placeholder="SYMBOL…"
+              oninput="evDebounce()" />
+      <select class="ev-select" id="ev-purpose" onchange="evApplyFilters()">
+        <option value="">All purposes</option>
+      </select>
+      <select class="ev-select" id="ev-type" onchange="evApplyFilters()">
+        <option value="all">All types</option>
+        <option value="upcoming">Upcoming</option>
+        <option value="past">Past</option>
+      </select>
+      <span class="ev-count-lbl" id="ev-count">—</span>
+    </div>
+
+    <!-- Column header bar -->
+    <div class="ev-cols">
+      <span>SYMBOL</span>
+      <span>DATE</span>
+      <span>PURPOSE</span>
+      <span>DESCRIPTION</span>
+      <span>UPDATED</span>
+      <span>TYPE</span>
+      <span></span>
+    </div>
+
+    <!-- Company rows -->
+    <div id="ev-list"></div>
+
+    <!-- Load more -->
+    <div style="text-align:center;margin-top:12px">
+      <button class="ev-load-more" id="ev-load-more-btn" onclick="evLoadMore()" style="display:none">
+        Load more companies
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Scheduler view ───────────────────────────────────────────────── -->
+  <div id="view-sched" style="display:none">
+    <div class="sched-wrap">
+
+      <!-- Job status cards -->
+      <div class="sched-header">
+        <span class="sched-title">SCHEDULED JOBS</span>
+        <button class="sched-refresh-btn" onclick="loadSchedLog()">↺ Refresh</button>
+      </div>
+      <div id="sched-jobs" class="sched-jobs"></div>
+
+      <!-- Log stream -->
+      <div class="sched-header" style="margin-top:20px">
+        <span class="sched-title">LOG  <span class="sched-count" id="sched-log-count"></span></span>
+      </div>
+      <div id="sched-log" class="sched-log">
+        <div class="sched-empty">Loading…</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Auth guard ────────────────────────────────────────────────────────────────
+// auth.js (loaded in <head>) owns all session logic.
+// authGuard() returns the access_token or redirects to /auth.html?redirect=/godmode.
+authGuard();
+
+// ── API fetch wrapper ─────────────────────────────────────────────────────────
+// Thin wrapper around bxFetch (from auth.js): handles token attach, refresh,
+// and redirect-after-login automatically. Just parses JSON on top.
+async function apiFetch(path, opts = {}) {
+  const res = await bxFetch(path, opts);
+  if (!res || res.status === 401) return null; // bxFetch already redirecting
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+let activeTab = 'events';
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('view-events').style.display = tab === 'events' ? '' : 'none';
+  document.getElementById('view-sched').style.display  = tab === 'sched'  ? '' : 'none';
+  document.getElementById('tab-events').classList.toggle('active', tab === 'events');
+  document.getElementById('tab-sched').classList.toggle('active',  tab === 'sched');
+  if (tab === 'events') {
+    refreshEventStats();
+    loadPurposes();
+    if (evOffset === 0) loadGroupedEvents(true);
+  }
+  if (tab === 'sched') loadSchedLog();
+}
+
+// ── Stats row — global unfiltered counts for 3 stat cards ────────────────────
+// Always shows total-events / companies / upcoming regardless of active filter.
+// Called on tab switch + every 5 min.
+async function refreshEventStats() {
+  try {
+    const all = await apiFetch('/api/events/grouped?limit=1');
+    if (all) {
+      document.getElementById('stat-total').textContent        = all.total.toLocaleString();
+      document.getElementById('stat-total-events').textContent = all.total_events?.toLocaleString() ?? '—';
+      document.getElementById('total-badge').textContent        = all.total.toLocaleString();
+    }
+  } catch(e) { /* informational — fail silently */ }
+  try {
+    const upc = await apiFetch('/api/events/grouped?type=upcoming&limit=1');
+    if (upc) document.getElementById('stat-upcoming').textContent = upc.total.toLocaleString();
+  } catch(e) {}
+}
+
+
+// ── Events tab — grouped company view ─────────────────────────────────────────
+let evOffset    = 0;
+let evTotal     = 0;
+let evPurpose   = '';
+let evType      = 'all';
+let evSymbol    = '';
+let _evDebTimer = null;
+let _purposesLoaded = false;
+const EV_PAGE   = 50;   // companies per page
+
+// Load purpose dropdown once when events tab first opens
+async function loadPurposes() {
+  if (_purposesLoaded) return;
+  try {
+    const purposes = await apiFetch('/api/events/purposes');
+    if (!purposes) return;
+    const sel = document.getElementById('ev-purpose');
+    for (const p of purposes) {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      sel.appendChild(opt);
+    }
+    _purposesLoaded = true;
+  } catch(e) { /* silently ignore — dropdown still works with "All purposes" */ }
+}
+
+// Debounce the symbol text input to avoid firing on every keystroke
+function evDebounce() {
+  clearTimeout(_evDebTimer);
+  _evDebTimer = setTimeout(evApplyFilters, 300);
+}
+
+function evApplyFilters() {
+  evSymbol  = document.getElementById('ev-sym').value.trim().toUpperCase();
+  evPurpose = document.getElementById('ev-purpose').value;
+  evType    = document.getElementById('ev-type').value;
+  evOffset  = 0;
+  _evLoaded.clear();
+  loadGroupedEvents(true);
+}
+
+async function loadGroupedEvents(reset = false) {
+  if (reset) { evOffset = 0; document.getElementById('ev-list').innerHTML = ''; }
+
+  let url = `/api/events/grouped?limit=${EV_PAGE}&offset=${evOffset}`;
+  if (evPurpose) url += `&purpose=${encodeURIComponent(evPurpose)}`;
+  if (evType && evType !== 'all') url += `&type=${evType}`;
+  if (evSymbol)  url += `&symbol=${encodeURIComponent(evSymbol)}`;
+
+  const list = document.getElementById('ev-list');
+  if (evOffset === 0) list.innerHTML = '<div class="loading">Loading…</div>';
+
+  try {
+    const data = await apiFetch(url);
+    if (!data) return;
+
+    evTotal = data.total;
+    document.getElementById('ev-count').textContent =
+      `${evTotal.toLocaleString()} compan${evTotal === 1 ? 'y' : 'ies'}`;
+
+    if (evOffset === 0) list.innerHTML = '';
+
+    if (data.companies.length === 0 && evOffset === 0) {
+      list.innerHTML = '<div class="empty">No results for this filter.</div>';
+      document.getElementById('ev-load-more-btn').style.display = 'none';
+      return;
+    }
+
+    for (const co of data.companies) {
+      list.insertAdjacentHTML('beforeend', renderCompanyBlock(co));
+    }
+    evOffset += data.companies.length;
+
+    document.getElementById('ev-load-more-btn').style.display =
+      evOffset < evTotal ? '' : 'none';
+  } catch(e) {
+    list.innerHTML = `<div class="empty" style="color:var(--danger)">Error: ${e.message}</div>`;
+  }
+}
+
+function evLoadMore() { loadGroupedEvents(false); }
+
+/** Returns true if the ISO timestamp is within the last 24 hours */
+function _isNew(iso) {
+  if (!iso) return false;
+  return Date.now() - new Date(iso).getTime() < 86400000;
+}
+
+// Build the collapsed company header row + empty sub-container
+function renderCompanyBlock(co) {
+  const sym      = esc(co.symbol ?? '—');
+  const date     = esc(co.latest_date ?? '—');
+  const chip     = purposeChip(co.latest_purpose);
+  const descFull = esc(co.latest_desc ?? '');
+  const more     = (co.event_count ?? 1) - 1;
+  const moreBadge= more > 0 ? `<span class="ev-more">+${more} more</span>` : '';
+  const bCls     = co.has_upcoming ? 'upcoming' : 'past';
+  const bTxt     = co.has_upcoming ? 'UPCOMING' : 'PAST';
+  const updatedHtml = fmtUpdatedAt(co.latest_ingested_at);
+  const isNew    = _isNew(co.latest_ingested_at);
+  const newBadge = isNew ? '<span class="ev-new-badge" title="Ingested in the most recent cron run (within last 24h)">NEW</span>' : '';
+  // dedup key: used in toggleCompany to skip the sub-row that duplicates the header
+  const previewKey  = encodeURIComponent((co.latest_date ?? '') + '|' + (co.latest_desc ?? ''));
+
+  return `
+<div class="ev-company${isNew ? ' is-new' : ''}" id="co-${sym}" data-preview="${previewKey}">
+  <div class="ev-row ev-main" onclick="toggleCompany('${sym}', this)">
+    <span class="ev-sym">${sym}${newBadge}</span>
+    <span class="ev-date">${date}</span>
+    <span>${chip}</span>
+    <div style="padding-right:10px;overflow:hidden">
+      <div class="ev-desc-col">${descFull}</div>
+      ${moreBadge}
+    </div>
+    <span class="ev-updated">${updatedHtml}</span>
+    <span><span class="ev-badge ${bCls}">${bTxt}</span></span>
+    <span class="ev-chev" id="chev-${sym}">›</span>
+  </div>
+  <div id="sub-${sym}" style="display:none"></div>
+</div>`;
+}
+
+// Track which symbols have already been fetched (avoid re-fetch on collapse→expand)
+const _evLoaded = new Set();
+
+async function toggleCompany(sym, rowEl) {
+  const subEl  = document.getElementById(`sub-${sym}`);
+  const chevEl = document.getElementById(`chev-${sym}`);
+  const isOpen = subEl.style.display !== 'none';
+
+  if (isOpen) {
+    subEl.style.display = 'none';
+    chevEl.classList.remove('open');
+    return;
+  }
+
+  // Open
+  subEl.style.display = '';
+  chevEl.classList.add('open');
+
+  if (_evLoaded.has(sym)) return;   // data already loaded
+  _evLoaded.add(sym);
+
+  subEl.innerHTML = `<div class="ev-sub-loading">Fetching events for ${sym}…</div>`;
+  try {
+    const events = await apiFetch(`/api/events/list?symbol=${encodeURIComponent(sym)}`);
+    if (!events || events.length === 0) {
+      subEl.innerHTML = `<div class="ev-sub-loading">No events found.</div>`;
+      return;
+    }
+    // Skip the sub-row that duplicates what the header row already shows.
+    // The header preview key is stored as data-preview on the parent .ev-company.
+    const companyEl  = document.getElementById(`co-${sym}`);
+    const previewKey = decodeURIComponent(companyEl?.dataset?.preview ?? '');
+    const subEvents  = events.filter(r => {
+      const key = (r.date ?? '') + '|' + (r.bm_desc ?? '');
+      return key !== previewKey;
+    });
+    subEl.innerHTML = subEvents.length > 0
+      ? subEvents.map(renderSubRow).join('')
+      : `<div class="ev-sub-loading">No additional events.</div>`;
+  } catch(e) {
+    subEl.innerHTML = `<div class="ev-sub-loading" style="color:var(--danger)">Error: ${e.message}</div>`;
+    _evLoaded.delete(sym);   // allow retry
+  }
+}
+
+function renderSubRow(r) {
+  const typCls = _evTypeLabel(r.date);
+  const typTxt = typCls === 'upcoming' ? 'UPCOMING' : 'PAST';
+  return `<div class="ev-row ev-sub">
+    <span class="ev-sub-indent">└</span>
+    <span class="ev-date">${esc(r.date ?? '—')}</span>
+    <span>${purposeChip(r.purpose)}</span>
+    <div style="padding-right:10px;overflow:hidden">
+      <div class="ev-desc-col">${esc(r.bm_desc ?? '')}</div>
+    </div>
+    <span class="ev-updated">${fmtUpdatedAt(r.ingested_at)}</span>
+    <span><span class="ev-badge ${typCls}">${typTxt}</span></span>
+    <span></span>
+  </div>`;
+}
+
+/** Client-side "DD-Mon-YYYY" → upcoming / past */
+function _evTypeLabel(date) {
+  if (!date) return 'past';
+  const M = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  const p = date.split('-');
+  if (p.length !== 3) return 'past';
+  const d = new Date(parseInt(p[2]), M[p[1]] ?? 0, parseInt(p[0]));
+  return d >= new Date() ? 'upcoming' : 'past';
+}
+
+// ── Render helpers ────────────────────────────────────────────────────────────
+
+/** Purpose chip — color-coded by keyword match */
+function purposeChip(purpose) {
+  if (!purpose) return `<span class="chip chip-generic">—</span>`;
+  const p   = purpose.toLowerCase();
+  let   cls = 'chip-generic';
+  if (p.includes('financial') || p.includes('result'))   cls = 'chip-earnings';
+  else if (p.includes('fund'))                            cls = 'chip-fund';
+  else if (p.includes('dividend'))                        cls = 'chip-dividend';
+  else if (p.includes('buyback'))                         cls = 'chip-buyback';
+  else if (p.includes('bonus') || p.includes('split'))    cls = 'chip-bonus';
+  else if (p.includes('reschedule'))                      cls = 'chip-reschedule';
+  const short = purpose.length > 22 ? purpose.slice(0, 20) + '…' : purpose;
+  return `<span class="chip ${cls}" title="${esc(purpose)}">${esc(short)}</span>`;
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmtIngestedAt(iso) {
+  if (!iso) return '';
+  const d    = new Date(iso);
+  const diff = Date.now() - d.getTime();
+  if (diff < 3600000)  return `${Math.round(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.round(diff / 3600000)}h ago`;
+  return `${Math.round(diff / 86400000)}d ago`;
+}
+
+/** Two-line updated-at HTML: absolute IST timestamp on top, relative "5h ago" below */
+function fmtUpdatedAt(iso) {
+  if (!iso) return '<span class="ev-updated-abs">—</span>';
+  const d   = new Date(iso);
+  const abs = d.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit', month: 'short',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });                                    // "24 May, 02:30"
+  const rel = fmtIngestedAt(iso);       // "5h ago"
+  return `<span class="ev-updated-abs">${abs}</span><span class="ev-updated-rel">${rel}</span>`;
+}
+
+// ── Scheduler log ─────────────────────────────────────────────────────────────
+
+const STATUS_DOT = { ok: '🟢', error: '🔴', started: '🟡', running: '🟡', skipped: '⚪', scheduled: '⚪', warn: '🟠' };
+
+function _fmtIso(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit', month: 'short',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+}
+
+function _relTime(iso) {
+  if (!iso) return '';
+  const diff = new Date(iso) - Date.now();
+  const abs  = Math.abs(diff);
+  const h    = Math.floor(abs / 3600000);
+  const m    = Math.floor((abs % 3600000) / 60000);
+  if (diff > 0) return `in ${h > 0 ? h + 'h ' : ''}${m}m`;
+  return `${h > 0 ? h + 'h ' : ''}${m}m ago`;
+}
+
+async function loadSchedLog() {
+  const logEl  = document.getElementById('sched-log');
+  const jobsEl = document.getElementById('sched-jobs');
+  const cntEl  = document.getElementById('sched-log-count');
+
+  try {
+    const res  = await bxFetch('/api/scheduler/log');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    // Jobs summary
+    jobsEl.innerHTML = data.jobs.length
+      ? data.jobs.map(j => `
+          <div class="sched-job-card">
+            <div class="sched-job-name">${esc(j.job)}</div>
+            <div class="sched-job-next">
+              <span class="sched-key">Next run</span>
+              <span class="sched-val">${_fmtIso(j.next_run)}
+                <span class="sched-rel">${_relTime(j.next_run)}</span>
+              </span>
+            </div>
+          </div>`).join('')
+      : '<div class="sched-empty">No scheduled jobs registered yet.</div>';
+
+    // Log entries — exclude 'scheduled' (next-run announcements belong in job cards only)
+    const log = (data.log ?? []).filter(e => e.status !== 'scheduled');
+    if (!log.length) {
+      logEl.innerHTML = '<div class="sched-empty">No log entries yet.</div>';
+      if (cntEl) cntEl.textContent = '';
+      return;
+    }
+    if (cntEl) cntEl.textContent = `(${log.length})`;
+
+    // Parse "new=N" from ok messages — shown as a badge in the New Rows column
+    function _newRowsBadge(e) {
+      if (e.status !== 'ok') return '';
+      const m = e.message?.match(/\bnew=(\d+)/) ?? e.message?.match(/"new":(\d+)/);
+      if (!m) return '';
+      const n = Number(m[1]);
+      return n > 0
+        ? `<span class="new-badge">+${n.toLocaleString()}</span>`
+        : `<span style="color:var(--faint);font-size:10px">0 new</span>`;
+    }
+
+    logEl.innerHTML = log.map(e => `
+      <div class="sched-entry sched-${esc(e.status)}">
+        <span class="sched-dot">${STATUS_DOT[e.status] ?? '⚫'}</span>
+        <span class="sched-entry-ts">${_fmtIso(e.ts)}</span>
+        <span class="sched-entry-job">${esc(e.job)}</span>
+        <span class="sched-entry-msg">${esc(e.message ?? '')}</span>
+        <span class="sched-entry-new">${_newRowsBadge(e)}</span>
+      </div>`).join('');
+
+  } catch (err) {
+    logEl.innerHTML = `<div class="sched-empty" style="color:var(--danger)">Error: ${esc(err.message)}</div>`;
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+// switchTab('events') makes view-events visible AND triggers data loads (stats +
+// purposes + grouped events). Without this call the view stays hidden on page refresh.
+switchTab('events');
+
+// Refresh stats cards every 5 min while the events tab is active
+setInterval(() => { if (activeTab === 'events') refreshEventStats(); }, 300000);
+</script>
+</body>
+</html>

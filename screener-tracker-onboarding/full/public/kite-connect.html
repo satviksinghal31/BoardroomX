@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Connect Kite — BoardroomX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── Page-level layout ─────────────────────────────────────── */
+    .kite-page {
+      min-height: calc(100vh - var(--header-h));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+      gap: 20px;
+    }
+
+    .kite-container {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ── Card ──────────────────────────────────────────────────── */
+    .kite-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--r);
+      padding: 24px;
+    }
+
+    .kite-card-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -.2px;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .kite-card-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    /* ── Status badge ──────────────────────────────────────────── */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      border-radius: var(--rs);
+      background: var(--surface);
+      margin-bottom: 16px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.connected    { background: var(--green); box-shadow: 0 0 0 3px var(--green-dim); }
+    .status-dot.disconnected { background: var(--muted); }
+
+    .status-text {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .status-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    /* ── Token warning ─────────────────────────────────────────── */
+    .token-warning {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: var(--rs);
+      background: rgba(217,119,6,.1);
+      border: 1px solid rgba(217,119,6,.25);
+      font-size: 12px;
+      color: var(--yellow);
+      margin-bottom: 16px;
+    }
+
+    /* ── Action buttons ────────────────────────────────────────── */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      border-radius: var(--rs);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 18px;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      flex-shrink: 0;
+    }
+    .btn:active { opacity: .75; transform: scale(.98); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-outline {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+    }
+    .btn-danger {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(220,38,38,.2);
+    }
+    .btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .btn-outline .btn-spinner,
+    .btn-danger .btn-spinner {
+      border-color: rgba(0,0,0,.15);
+      border-top-color: currentColor;
+    }
+
+    /* ── Form ──────────────────────────────────────────────────── */
+    .kite-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+
+    .form-input {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: var(--rs);
+      color: var(--text);
+      font-size: 13px;
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color .15s;
+      width: 100%;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input::placeholder { font-family: inherit; color: var(--muted); }
+
+    .form-hint {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .form-error {
+      font-size: 12px;
+      color: var(--red);
+      padding: 8px 12px;
+      border-radius: var(--rs);
+      background: var(--red-dim);
+      display: none;
+    }
+    .form-error.visible { display: block; }
+
+    /* ── Info banner ───────────────────────────────────────────── */
+    .info-banner {
+      display: flex;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: var(--rs);
+      background: rgba(124,111,247,.08);
+      border: 1px solid rgba(124,111,247,.2);
+      font-size: 12px;
+      color: var(--accent);
+      line-height: 1.5;
+    }
+    .info-banner .info-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── Holdings table ────────────────────────────────────────── */
+    .holdings-wrap {
+      overflow-x: auto;
+      margin-top: 4px;
+    }
+
+    table.holdings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .holdings-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      padding: 0 8px 10px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .holdings-table th:not(:first-child) { text-align: right; }
+    .name-sub { font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 1px; }
+    .t1-tag { font-size: 10px; color: var(--yellow, #d97706); margin-left: 4px; }
+
+    .holdings-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--card-border);
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .holdings-table td:not(:first-child) { text-align: right; }
+    .holdings-table tr:last-child td { border-bottom: none; }
+    .holdings-table tr:hover td { background: var(--surface); }
+
+    .symbol-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .symbol-text {
+      font-weight: 700;
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      font-size: 12px;
+      letter-spacing: .3px;
+    }
+    .exch-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--card-border);
+    }
+
+    .in-portfolio-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: rgba(124,111,247,.12);
+      color: var(--accent);
+      border: 1px solid rgba(124,111,247,.3);
+      white-space: nowrap;
+    }
+
+    .pnl-pos { color: var(--green); font-weight: 600; }
+    .pnl-neg { color: var(--red);   font-weight: 600; }
+    .pnl-zero { color: var(--muted); }
+
+    .holdings-empty {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ── Sync meta row ─────────────────────────────────────────── */
+    .sync-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .sync-label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ── Loading skeleton ──────────────────────────────────────── */
+    .skeleton-row {
+      height: 40px;
+      border-radius: var(--rs);
+      background: linear-gradient(90deg, var(--surface) 25%, var(--card-border) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      margin-bottom: 8px;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* ── Toast ─────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: #1a1a2e;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 10px 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.25);
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+      z-index: 100;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 540px) {
+      .kite-page { padding: 20px 12px 64px; }
+      .kite-card { padding: 18px 16px; }
+      .btn-row   { flex-direction: column; }
+      .btn       { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="/" class="header-title" style="text-decoration:none;color:inherit">BoardroomX</a>
+    <span style="font-size:13px;color:var(--muted);font-weight:500">Connect Kite Account</span>
+  </header>
+
+  <div class="kite-page">
+    <div class="kite-container" id="mainContainer">
+
+      <!-- Loading state -->
+      <div id="loadingState" class="kite-card">
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row" style="width:70%"></div>
+        <div class="skeleton-row" style="width:85%"></div>
+      </div>
+
+      <!-- Auth gate — shown if user is not logged in -->
+      <div id="authGate" class="kite-card" style="display:none;text-align:center">
+        <div class="kite-card-title" style="margin-bottom:8px">Sign in required</div>
+        <p class="kite-card-sub" style="margin-bottom:16px">
+          You need to be signed in to BoardroomX to connect your Kite account.
+        </p>
+        <a href="/" class="btn btn-primary" style="text-decoration:none;display:inline-flex">
+          Go to BoardroomX
+        </a>
+      </div>
+
+      <!-- Status card -->
+      <div id="statusCard" class="kite-card" style="display:none">
+        <div class="kite-card-title">Connection Status</div>
+        <div class="kite-card-sub" id="statusSub"></div>
+
+        <div id="tokenWarning" class="token-warning" style="display:none">
+          <span>&#9888;&#65039;</span>
+          <span>Your Kite token has expired. Re-connect below to refresh it — tokens reset at 6:30 AM IST daily.</span>
+        </div>
+
+        <div class="status-row" id="statusRow">
+          <div class="status-dot disconnected" id="statusDot"></div>
+          <div>
+            <div class="status-text" id="statusText">Not connected</div>
+            <div class="status-meta" id="statusMeta"></div>
+          </div>
+        </div>
+
+        <div class="btn-row" id="connectedActions" style="display:none">
+          <button class="btn btn-outline" id="syncBtn" onclick="syncNow()">
+            ↻&nbsp; Sync Now
+          </button>
+          <button class="btn btn-danger" id="disconnectBtn" onclick="disconnectKite()">
+            Disconnect
+          </button>
+        </div>
+      </div>
+
+      <!-- Connect form — shown only when not connected or re-authenticating -->
+      <div id="connectCard" class="kite-card" style="display:none">
+        <div class="kite-card-title">Enter Kite Connect Credentials</div>
+        <div class="kite-card-sub">
+          Enter your Kite Connect API credentials from
+          <a href="https://developers.kite.trade/" target="_blank" rel="noopener"
+             style="color:var(--accent)">developers.kite.trade</a>.
+          We only fetch your holdings — no trading, ever.
+        </div>
+
+        <div class="info-banner" style="margin-bottom:20px">
+          <span class="info-icon">&#128274;</span>
+          <span>
+            Your API secret is encrypted with AES-256 and stored server-side only.
+            It is never sent to the browser after you save it.
+          </span>
+        </div>
+
+        <form class="kite-form" id="connectForm" onsubmit="saveAndConnect(event)">
+          <div class="form-field">
+            <label class="form-label" for="apiKeyInput">API Key</label>
+            <input class="form-input" id="apiKeyInput" type="text"
+                   placeholder="e.g. abc123xyz789" autocomplete="off" spellcheck="false" required />
+            <span class="form-hint">Found in your Kite Connect app settings.</span>
+          </div>
+
+          <div class="form-field">
+            <label class="form-label" for="apiSecretInput">API Secret</label>
+            <input class="form-input" id="apiSecretInput" type="password"
+                   placeholder="Your Kite API secret" autocomplete="new-password" required />
+            <span class="form-hint">Stored encrypted. Not visible after saving.</span>
+          </div>
+
+          <div class="form-error" id="formError"></div>
+
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn btn-primary" type="submit" id="saveBtn">
+              Save &amp; Connect with Kite
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Holdings preview — shown after connection -->
+      <div id="holdingsCard" class="kite-card" style="display:none">
+        <div class="kite-card-title">Your Kite Holdings</div>
+
+        <div class="sync-meta" id="syncMeta">
+          <span class="sync-label" id="syncLabel"></span>
+          <span class="sync-label" id="holdingsCountLabel"></span>
+        </div>
+
+        <div id="holdingsBody">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row" style="width:80%"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script>
+    // ── Globals ──────────────────────────────────────────────────────────────
+    let _supabase = null;
+    let _session  = null;
+    let _status   = null;
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    async function init() {
+      // 1. Load Supabase config from server
+      let config;
+      try {
+        const r = await fetch("/api/config");
+        config = await r.json();
+      } catch (e) {
+        showToast("Could not reach server", true);
+        return;
+      }
+
+      _supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
+
+      // 2. Check auth session
+      const { data: { session } } = await _supabase.auth.getSession();
+      _session = session;
+
+      document.getElementById("loadingState").style.display = "none";
+
+      if (!_session) {
+        document.getElementById("authGate").style.display = "";
+        return;
+      }
+
+      // 3. Check for OAuth redirect result
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("kite") === "connected") {
+        showToast("Kite connected successfully!");
+        window.history.replaceState({}, "", window.location.pathname);
+      } else if (params.get("kite") === "error") {
+        const reason = params.get("reason") || "unknown";
+        showToast(`Kite connection failed: ${reason.replace(/_/g, " ")}`, true);
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+
+      await refreshStatus();
+    }
+
+    // ── Fetch and render status ───────────────────────────────────────────────
+    async function refreshStatus() {
+      const res = await authedFetch("/api/kite/status");
+      if (!res) return;
+      _status = await res.json();
+      renderStatus();
+    }
+
+    function renderStatus() {
+      const s = _status;
+      document.getElementById("statusCard").style.display = "";
+      document.getElementById("statusSub").textContent = "";
+
+      const dot      = document.getElementById("statusDot");
+      const textEl   = document.getElementById("statusText");
+      const metaEl   = document.getElementById("statusMeta");
+      const actions  = document.getElementById("connectedActions");
+      const warning  = document.getElementById("tokenWarning");
+      const connectCard = document.getElementById("connectCard");
+      const holdingsCard = document.getElementById("holdingsCard");
+
+      if (!s.connected) {
+        dot.className      = "status-dot disconnected";
+        textEl.textContent = "Not connected";
+        metaEl.textContent = "";
+        actions.style.display   = "none";
+        warning.style.display   = "none";
+        connectCard.style.display    = "";
+        holdingsCard.style.display   = "none";
+        return;
+      }
+
+      // Connected
+      dot.className = s.token_valid ? "status-dot connected" : "status-dot disconnected";
+      textEl.textContent = s.kite_user_name
+        ? `Connected as ${s.kite_user_name}`
+        : "Connected";
+      metaEl.textContent = s.last_synced_at
+        ? `Last synced: ${formatTime(s.last_synced_at)}`
+        : "Never synced";
+
+      actions.style.display = "";
+      warning.style.display = s.token_valid ? "none" : "";
+
+      // Show re-connect form if token is expired
+      connectCard.style.display = s.token_valid ? "none" : "";
+      if (!s.token_valid) {
+        document.querySelector(".kite-card-title", connectCard);
+        document.getElementById("connectCard").querySelector(".kite-card-title").textContent =
+          "Re-connect to Refresh Token";
+        document.getElementById("connectCard").querySelector(".kite-card-sub").textContent =
+          "Your Kite token expired at 6:30 AM IST. Enter your credentials again to re-authorise — no new API keys needed.";
+      }
+
+      holdingsCard.style.display = "";
+      loadHoldings();
+    }
+
+    // ── Load and render holdings ──────────────────────────────────────────────
+    async function loadHoldings() {
+      const res = await authedFetch("/api/kite/holdings");
+      if (!res) return;
+      const holdings = await res.json();
+      renderHoldings(holdings);
+    }
+
+    function renderHoldings(holdings) {
+      const syncLabel   = document.getElementById("syncLabel");
+      const countLabel  = document.getElementById("holdingsCountLabel");
+      const body        = document.getElementById("holdingsBody");
+
+      const lastSynced = _status?.last_synced_at;
+      syncLabel.textContent  = lastSynced ? `Snapshot: ${formatTime(lastSynced)}` : "";
+      countLabel.textContent = `${holdings.length} holding${holdings.length !== 1 ? "s" : ""}`;
+
+      if (!holdings.length) {
+        body.innerHTML = `<div class="holdings-empty">No holdings found in your Kite account.</div>`;
+        return;
+      }
+
+      const rows = holdings.map(h => {
+        const pnlClass   = h.pnl > 0 ? "pnl-pos" : h.pnl < 0 ? "pnl-neg" : "pnl-zero";
+        const pnlStr     = h.pnl != null ? (h.pnl >= 0 ? "+" : "") + fmt(h.pnl) : "—";
+        const dayClass   = h.day_change > 0 ? "pnl-pos" : h.day_change < 0 ? "pnl-neg" : "pnl-zero";
+        const dayStr     = h.day_change_pct != null
+          ? (h.day_change_pct >= 0 ? "+" : "") + h.day_change_pct.toFixed(2) + "%"
+          : "—";
+        const t1Tag      = h.t1_quantity > 0
+          ? `<span class="t1-tag">+${h.t1_quantity} T1</span>`
+          : "";
+        // Show full name on first line, symbol+exchange on second line
+        const nameBlock = `
+          <div style="font-weight:700;font-size:13px">${esc(h.display_name)}</div>
+          <div class="name-sub">
+            ${esc(h.tradingsymbol)}
+            ${h.exchange ? `<span class="exch-badge" style="margin-left:4px">${esc(h.exchange)}</span>` : ""}
+            ${h.in_portfolio ? `<span class="in-portfolio-badge" style="margin-left:4px">&#9733; Portfolio</span>` : ""}
+          </div>`;
+
+        return `<tr>
+          <td><div class="symbol-cell">${nameBlock}</div></td>
+          <td>${h.total_quantity ?? "—"}${t1Tag}</td>
+          <td>${h.average_price != null ? fmt(h.average_price) : "—"}</td>
+          <td>${h.invested_value != null ? fmt(h.invested_value) : "—"}</td>
+          <td>${h.last_price != null ? fmt(h.last_price) : "—"}</td>
+          <td class="${dayClass}">${dayStr}</td>
+          <td class="${pnlClass}">${pnlStr}</td>
+        </tr>`;
+      }).join("");
+
+      body.innerHTML = `
+        <div class="holdings-wrap">
+          <table class="holdings-table">
+            <thead>
+              <tr>
+                <th>Holding</th>
+                <th>Qty</th>
+                <th>Avg Price</th>
+                <th>Invested</th>
+                <th>LTP</th>
+                <th>Day</th>
+                <th>P&amp;L</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    // ── Save credentials & kick off OAuth ────────────────────────────────────
+    async function saveAndConnect(e) {
+      e.preventDefault();
+
+      const apiKey    = document.getElementById("apiKeyInput").value.trim();
+      const apiSecret = document.getElementById("apiSecretInput").value.trim();
+      const errEl     = document.getElementById("formError");
+      const btn       = document.getElementById("saveBtn");
+
+      errEl.classList.remove("visible");
+      btn.disabled = true;
+      btn.innerHTML = `<span class="btn-spinner"></span>&nbsp; Saving…`;
+
+      try {
+        const res = await authedFetch("/api/kite/connect", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ user_id: _session.user.id, api_key: apiKey, api_secret: apiSecret }),
+        });
+
+        if (!res) { resetBtn(btn, "Save &amp; Connect with Kite"); return; }
+
+        const json = await res.json();
+
+        if (!res.ok) {
+          errEl.textContent = json.error || "Failed to save credentials.";
+          errEl.classList.add("visible");
+          resetBtn(btn, "Save &amp; Connect with Kite");
+          return;
+        }
+
+        // Redirect to Kite OAuth
+        btn.innerHTML = `<span class="btn-spinner"></span>&nbsp; Redirecting to Kite…`;
+
+        // Append user_id to the callback URL so kite/callback can resolve the account
+        const redirectUrl = new URL(
+          `/kite/login?user_id=${encodeURIComponent(_session.user.id)}`,
+          window.location.origin
+        );
+        window.location.href = redirectUrl.toString();
+
+      } catch (err) {
+        errEl.textContent = "Network error — please try again.";
+        errEl.classList.add("visible");
+        resetBtn(btn, "Save &amp; Connect with Kite");
+      }
+    }
+
+    // ── Sync now ──────────────────────────────────────────────────────────────
+    async function syncNow() {
+      const btn = document.getElementById("syncBtn");
+      btn.disabled = true;
+      btn.innerHTML = `<span class="btn-spinner"></span>&nbsp; Syncing…`;
+
+      const res = await authedFetch("/api/kite/sync", { method: "POST" });
+
+      if (res) {
+        const json = await res.json();
+        if (res.ok) {
+          showToast(`Synced ${json.count} holdings`);
+          await refreshStatus();
+        } else if (json.reconnect) {
+          showToast("Token expired — please re-connect", true);
+          await refreshStatus();
+        } else {
+          showToast(json.error || "Sync failed", true);
+        }
+      }
+
+      resetBtn(btn, "↻&nbsp; Sync Now");
+    }
+
+    // ── Disconnect ────────────────────────────────────────────────────────────
+    async function disconnectKite() {
+      if (!confirm("Disconnect Kite? This removes your API credentials and all cached holdings from BoardroomX.")) return;
+
+      const btn = document.getElementById("disconnectBtn");
+      btn.disabled = true;
+      btn.innerHTML = `<span class="btn-spinner"></span>&nbsp; Disconnecting…`;
+
+      const res = await authedFetch("/api/kite/disconnect", { method: "DELETE" });
+      if (res && res.ok) {
+        showToast("Kite disconnected");
+        _status = null;
+        await refreshStatus();
+      } else {
+        showToast("Failed to disconnect", true);
+        resetBtn(btn, "Disconnect");
+      }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    async function authedFetch(url, opts = {}) {
+      if (!_session) return null;
+      const headers = {
+        ...(opts.headers || {}),
+        "Authorization": `Bearer ${_session.access_token}`,
+      };
+      try {
+        return await fetch(url, { ...opts, headers });
+      } catch {
+        showToast("Network error", true);
+        return null;
+      }
+    }
+
+    function resetBtn(btn, label) {
+      btn.disabled = false;
+      btn.innerHTML = label;
+    }
+
+    function fmt(n) {
+      if (n == null) return "—";
+      return new Intl.NumberFormat("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(n);
+    }
+
+    function formatTime(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      return d.toLocaleDateString("en-IN", {
+        day: "numeric", month: "short", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      });
+    }
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    let _toastTimer = null;
+    function showToast(msg, isError = false) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.style.background = isError ? "#b91c1c" : "#1a1a2e";
+      el.classList.add("show");
+      if (_toastTimer) clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+    init();
+  </script>
+</body>
+</html>
