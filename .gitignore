@@ -1,0 +1,21 @@
+.DS_Store
+.tools/
+
+# Secrets and local runtime config
+.env
+.env.*
+!.env.example
+
+# Node dependencies and logs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Generated research/cache artifacts
+data/
+graphify-out/
+
+# Temporary Railway config pulls
+.railway-config-pull-*/
