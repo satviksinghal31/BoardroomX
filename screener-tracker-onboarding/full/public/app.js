@@ -1113,20 +1113,20 @@ async function getQuoteInfo(symbol) {
 }
 
 // ─────────────────────────────────────────────
-//  NSE STOCK UNIVERSE  (Nifty 500 + popular extras)
-//  Loaded dynamically from /api/universe (NSE EQUITY_L.csv + bhavcopy mcap)
+//  MARKET UNIVERSE
+//  Loaded dynamically from /api/universe (Dhan instruments + latest EOD market cap)
 //  Format: [symbol, company_name, market_cap]  — fetched once on page load
 // ─────────────────────────────────────────────
-let NSE_UNIVERSE = [];   // populated by _loadUniverse() below
+let MARKET_UNIVERSE = [];   // populated by _loadUniverse() below
 
 async function _loadUniverse() {
   try {
     const res  = await bxFetch('/api/universe');
     if (!res.ok) return;
     const data = await res.json();
-    // Normalise to [symbol, company_name, ''] tuple so search code is unchanged
-    NSE_UNIVERSE = data.map(r => [r.symbol, r.company_name ?? '', '']);
-    console.log('[universe] loaded', NSE_UNIVERSE.length, 'stocks');
+    // Normalise to [symbol, company_name, market_cap] tuple so search code is unchanged.
+    MARKET_UNIVERSE = data.map(r => [r.symbol, r.company_name ?? '', r.market_cap ?? null]);
+    console.log('[universe] loaded', MARKET_UNIVERSE.length, 'stocks');
   } catch (e) {
     console.warn('[universe] load failed:', e.message);
   }
@@ -1386,7 +1386,7 @@ function _renderSearchDropdown(q, context) {
   const dropdown = _getDropdownEl(context);
   if (!dropdown) return;
 
-  const scored = NSE_UNIVERSE
+  const scored = MARKET_UNIVERSE
     .map(entry => ({ entry, score: _scoreMatch(entry, q) }))
     .filter(x => x.score > 0)
     .sort((a, b) => b.score - a.score || a.entry[0].localeCompare(b.entry[0]));
@@ -2503,7 +2503,7 @@ function toggleDetails() {
 }
 
 loadPortfolio().then(startPriceRefresh);
-_loadUniverse();   // async — populates NSE_UNIVERSE for search dropdown
+_loadUniverse();   // async — populates MARKET_UNIVERSE for search dropdown
 
 // ─────────────────────────────────────────────
 //  LIVE PRICE REFRESH (every 60s)

@@ -73,6 +73,7 @@ test('getPrices and getQuote shape live data for the frontend', async () => {
   const pool = createFakePool((sql, params) => {
     if (sql.includes('WITH week52')) {
       assert.deepEqual(params, ['ABC']);
+      assert.match(sql, /FROM market_universe u/);
       return { rows: [{
         symbol: 'ABC',
         company_name: 'ABC Ltd',
@@ -109,6 +110,7 @@ test('getPrices and getQuote shape live data for the frontend', async () => {
 
 test('getActiveUniverse filters inactive rows in SQL', async () => {
   const pool = createFakePool(sql => {
+    assert.match(sql, /FROM market_universe/);
     assert.match(sql, /is_active IS DISTINCT FROM false/);
     return { rows: [{ symbol: 'ABC', company_name: 'ABC Ltd', market_cap: 1 }] };
   });

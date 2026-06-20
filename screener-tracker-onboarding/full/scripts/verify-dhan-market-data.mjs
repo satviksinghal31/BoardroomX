@@ -20,7 +20,7 @@ async function fetchJson(url, token) {
 async function verifyDb(pool) {
   const active = await pool.query(`
     SELECT count(*)::int AS count
-    FROM nse_universe
+    FROM dhan_instruments
     WHERE is_active IS DISTINCT FROM false
       AND dhan_security_id IS NOT NULL
   `);

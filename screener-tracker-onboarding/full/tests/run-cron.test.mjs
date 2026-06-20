@@ -22,7 +22,7 @@ test('getCronJobs exposes the Railway Cron schedules used by God Mode', () => {
     jobs.map(j => [j.job, j.schedule_ist, j.cron_utc]),
     [
       ['events-cron', '08:00, 20:00 IST', '30 2,14 * * *'],
-      ['universe-mcap', '18:30 IST', '0 13 * * *'],
+      ['eod-market-cap', '18:30 IST', '0 13 * * *'],
       ['screener-annuals', 'Every minute', '* * * * *'],
       ['dhan-instrument-sync', '07:30 IST', '0 2 * * *'],
       ['dhan-eod-update', '16:00 IST', '30 10 * * *'],
@@ -42,7 +42,7 @@ test('formatTerminalMessage strips internal retry metadata from logged results',
   );
 
   assert.equal(
-    formatTerminalMessage('universe-mcap', { updated: 0, total: 0, _retryMs: 900000, _retryReason: 'no_bhavcopy' }, 250),
+    formatTerminalMessage('eod-market-cap', { updated: 0, total: 0, _retryMs: 900000, _retryReason: 'no_bhavcopy' }, 250),
     'completed in 0.3s - {"updated":0,"total":0}',
   );
 });

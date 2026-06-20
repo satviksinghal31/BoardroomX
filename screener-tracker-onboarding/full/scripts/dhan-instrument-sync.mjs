@@ -20,8 +20,17 @@ export function filterDhanEquityRows(rows) {
     .map(row => ({
       symbol: pick(row, ['UNDERLYING_SYMBOL', 'SEM_TRADING_SYMBOL', 'SYMBOL']).toUpperCase(),
       isin: pick(row, ['ISIN']),
+      company_name: pick(row, ['SYMBOL_NAME', 'SEM_CUSTOM_SYMBOL', 'SEM_SYMBOL_NAME']),
+      display_name: pick(row, ['DISPLAY_NAME', 'SEM_CUSTOM_SYMBOL', 'SYMBOL_NAME']),
+      instrument: pick(row, ['INSTRUMENT', 'INSTRUMENT_TYPE', 'SEM_INSTRUMENT_NAME']) || 'EQUITY',
+      series: pick(row, ['SERIES']) || 'EQ',
       dhan_security_id: pick(row, ['SECURITY_ID', 'SEM_SMST_SECURITY_ID']),
       dhan_exchange_segment: 'NSE_EQ',
+      lot_size: Number(pick(row, ['LOT_SIZE', 'SEM_LOT_UNITS'])) || null,
+      tick_size: Number(pick(row, ['TICK_SIZE', 'SEM_TICK_SIZE'])) || null,
+      upper_limit: Number(pick(row, ['UPPER_LIMIT', 'SEM_UPPER_CKT_LIMIT'])) || null,
+      lower_limit: Number(pick(row, ['LOWER_LIMIT', 'SEM_LOWER_CKT_LIMIT'])) || null,
+      freeze_qty: Number(pick(row, ['FREEZE_QTY', 'SEM_FREEZE_QTY'])) || null,
       is_active: true,
     }))
     .filter(row => row.symbol && row.dhan_security_id);
@@ -64,7 +73,7 @@ export async function runDhanInstrumentSync({ supabase = createSupabase(), dhanC
   const seen = new Set(rows.map(row => row.symbol));
 
   const { data: existing, error: existingErr } = await supabase
-    .from('nse_universe')
+    .from('dhan_instruments')
     .select('symbol')
     .neq('is_active', false);
   if (existingErr) throw new Error(existingErr.message);
@@ -74,15 +83,15 @@ export async function runDhanInstrumentSync({ supabase = createSupabase(), dhanC
   for (let i = 0; i < rows.length; i += 500) {
     const batch = rows.slice(i, i + 500);
     const { error } = await supabase
-      .from('nse_universe')
-      .upsert(batch, { onConflict: 'symbol' });
+      .from('dhan_instruments')
+      .upsert(batch.map(row => ({ ...row, last_synced_at: new Date().toISOString() })), { onConflict: 'symbol' });
     if (error) throw new Error(error.message);
   }
 
   if (inactive.length) {
     const { error } = await supabase
-      .from('nse_universe')
-      .update({ is_active: false })
+      .from('dhan_instruments')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
       .in('symbol', inactive);
     if (error) throw new Error(error.message);
   }

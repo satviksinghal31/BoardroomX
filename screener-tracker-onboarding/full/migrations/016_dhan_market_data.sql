@@ -1,10 +1,5 @@
-ALTER TABLE nse_universe
-  ADD COLUMN IF NOT EXISTS dhan_security_id TEXT,
-  ADD COLUMN IF NOT EXISTS dhan_exchange_segment TEXT DEFAULT 'NSE_EQ',
-  ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-
 CREATE TABLE IF NOT EXISTS dhan_daily_candles (
-  symbol TEXT NOT NULL REFERENCES nse_universe(symbol),
+  symbol TEXT NOT NULL REFERENCES dhan_instruments(symbol),
   trade_date DATE NOT NULL,
   open NUMERIC NOT NULL,
   high NUMERIC NOT NULL,
@@ -20,7 +15,7 @@ CREATE INDEX IF NOT EXISTS idx_dhan_daily_symbol_date_desc
   ON dhan_daily_candles(symbol, trade_date DESC);
 
 CREATE TABLE IF NOT EXISTS dhan_live_today (
-  symbol TEXT PRIMARY KEY REFERENCES nse_universe(symbol),
+  symbol TEXT PRIMARY KEY REFERENCES dhan_instruments(symbol),
   trade_date DATE NOT NULL,
   open NUMERIC,
   high NUMERIC,

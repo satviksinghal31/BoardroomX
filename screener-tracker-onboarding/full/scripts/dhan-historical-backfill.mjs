@@ -34,8 +34,8 @@ export async function runDhanHistoricalBackfill({ supabase = createSupabase(), d
   });
 
   let query = supabase
-    .from('nse_universe')
-    .select('symbol,dhan_security_id,dhan_exchange_segment,date_of_listing')
+    .from('dhan_instruments')
+    .select('symbol,dhan_security_id,dhan_exchange_segment')
     .neq('is_active', false)
     .not('dhan_security_id', 'is', null);
   if (symbols?.length) query = query.in('symbol', symbols.map(s => String(s).toUpperCase()));
@@ -49,7 +49,7 @@ export async function runDhanHistoricalBackfill({ supabase = createSupabase(), d
       const payload = await client.fetchHistoricalDaily({
         securityId: row.dhan_security_id,
         exchangeSegment: row.dhan_exchange_segment ?? 'NSE_EQ',
-        fromDate: row.date_of_listing ?? '1990-01-01',
+        fromDate: '1990-01-01',
         toDate: new Date().toISOString().slice(0, 10),
       });
       const rows = buildHistoricalRows(row.symbol, normalizeHistoricalResponse(payload));

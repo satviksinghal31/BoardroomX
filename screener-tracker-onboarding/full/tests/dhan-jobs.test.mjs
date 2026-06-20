@@ -17,8 +17,17 @@ test('filterDhanEquityRows keeps only NSE equity EQ instruments', () => {
   assert.deepEqual(rows, [{
     symbol: 'ABC',
     isin: 'INE1',
+    company_name: '',
+    display_name: '',
+    instrument: 'EQUITY',
+    series: 'EQ',
     dhan_security_id: '1',
     dhan_exchange_segment: 'NSE_EQ',
+    lot_size: null,
+    tick_size: null,
+    upper_limit: null,
+    lower_limit: null,
+    freeze_qty: null,
     is_active: true,
   }]);
 });

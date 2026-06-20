@@ -60,7 +60,7 @@ function createPool(env = process.env) {
 async function loadInstruments(pool) {
   const { rows } = await pool.query(`
     SELECT symbol, dhan_security_id, dhan_exchange_segment
-    FROM nse_universe
+    FROM dhan_instruments
     WHERE is_active IS DISTINCT FROM false
       AND dhan_security_id IS NOT NULL
     ORDER BY symbol ASC

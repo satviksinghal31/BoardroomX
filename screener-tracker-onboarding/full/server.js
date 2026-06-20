@@ -379,8 +379,7 @@ app.get("/api/portfolio", auth, async (req, res) => {
       return {
         symbol:           stock.symbol,
         name:             stock.name,
-        // sector lives on the stocks row now (populated from data/nse_universe.json
-        // during seed). Falling back to sectorMap covers the legacy 14 in
+        // sector lives on the stocks row now. Falling back to sectorMap covers the legacy 14 in
         // portfolio.json whose stocks rows pre-date the column.
         sector:           stock.sector ?? sectorMap[stock.symbol] ?? null,
         isBanking,
@@ -919,10 +918,9 @@ app.get('/api/events/grouped', requireAuth(supabase), async (req, res) => {
 
 // /api/bm/status removed — nse_bm_runs table dropped in migration 013
 
-// ── NSE Universe ──────────────────────────────────────────────────────────────
-// In-memory cache of nse_universe rows — loaded from DB on startup.
-// mcap column refreshed nightly at midnight IST via bhavcopy ZIP.
-// Symbol list (EQUITY_L) is a one-time / manual operation — not auto-refreshed.
+// ── Market Universe ───────────────────────────────────────────────────────────
+// In-memory cache of active Dhan instruments joined with latest EOD market cap.
+// The symbol list comes from Dhan; market cap remains a dated NSE EOD fact.
 
 let _universeCache   = [];
 let _universeCacheAt = 0;
@@ -933,7 +931,7 @@ async function _loadUniverseCache() {
     // Do NOT catch here — a silent REST fallback would silently truncate at 1000 rows.
     const { rows } = await dbPool.query(
       `SELECT symbol, company_name, market_cap
-       FROM nse_universe
+       FROM market_universe
        WHERE is_active IS DISTINCT FROM false
        ORDER BY symbol`
     );
@@ -947,7 +945,7 @@ async function _loadUniverseCache() {
     let   from = 0;
     while (true) {
       const { data, error } = await supabase
-        .from('nse_universe')
+        .from('market_universe')
         .select('symbol,company_name,market_cap')
         .neq('is_active', false)
         .order('symbol')
@@ -1004,7 +1002,7 @@ app.get('/api/universe', (_req, res) => {
 
 // ── Annual Results APIs ──────────────────────────────────────────────────────
 // DB-backed Screener annuals. The UI never scrapes; the Railway worker fills
-// these tables progressively from nse_universe.
+// these tables progressively from the active Dhan market universe.
 
 function _annualNoStore(res) {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -1018,7 +1016,9 @@ app.get('/api/annuals/status', auth, async (_req, res) => {
     const annualsDb = await getRequiredDbPool();
     const { rows } = await annualsDb.query(`
       WITH totals AS (
-        SELECT count(*)::int AS total FROM nse_universe
+        SELECT count(*)::int AS total
+        FROM market_universe
+        WHERE is_active IS DISTINCT FROM false
       ),
       fetched AS (
         SELECT count(DISTINCT symbol)::int AS fetched FROM annual_fundamentals
@@ -1077,9 +1077,10 @@ app.get('/api/annuals/symbols', auth, async (_req, res) => {
         q.last_attempt_at,
         q.next_attempt_at,
         q.last_error
-      FROM nse_universe u
+      FROM market_universe u
       LEFT JOIN screener_fetch_queue q ON q.symbol = u.symbol
       LEFT JOIN annual_counts ac ON ac.symbol = u.symbol
+      WHERE u.is_active IS DISTINCT FROM false
       ORDER BY u.symbol
     `);
     return res.json(rows);
@@ -1158,7 +1159,7 @@ app.get('/api/annuals/:symbol', auth, async (req, res) => {
       { data: queue, error: qErr },
       { data: runs, error: runErr },
     ] = await Promise.all([
-      supabase.from('nse_universe').select('symbol,company_name,market_cap').eq('symbol', symbol).maybeSingle(),
+      supabase.from('market_universe').select('symbol,company_name,market_cap').eq('symbol', symbol).maybeSingle(),
       supabase.from('annual_fundamentals').select('*').eq('symbol', symbol).order('period_order'),
       supabase.from('annual_ratios').select('*').eq('symbol', symbol).order('period_order'),
       supabase.from('annual_balance_sheet').select('*').eq('symbol', symbol).order('period_order'),

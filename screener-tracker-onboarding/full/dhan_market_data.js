@@ -82,7 +82,7 @@ export function createDhanMarketData({
           l.prev_close,
           week52."week52High",
           week52."week52Low"
-        FROM nse_universe u
+        FROM market_universe u
         LEFT JOIN dhan_live_today l ON l.symbol = u.symbol
         CROSS JOIN week52
         WHERE u.symbol = $1
@@ -94,7 +94,7 @@ export function createDhanMarketData({
     async getActiveUniverse() {
       const { rows } = await dbPool.query(`
         SELECT symbol, company_name, market_cap
-        FROM nse_universe
+        FROM market_universe
         WHERE is_active IS DISTINCT FROM false
         ORDER BY symbol ASC
       `);
@@ -107,7 +107,7 @@ export function createDhanMarketData({
           count(*) FILTER (WHERE dhan_security_id IS NOT NULL AND is_active IS DISTINCT FROM false)::int AS active_mapped,
           (SELECT count(*)::int FROM dhan_live_today WHERE last_tick_at > now() - interval '90 seconds') AS fresh_live_rows,
           (SELECT max(last_tick_at) FROM dhan_live_today) AS latest_tick_at
-        FROM nse_universe
+        FROM dhan_instruments
       `);
       return rows[0] ?? { active_mapped: 0, fresh_live_rows: 0, latest_tick_at: null };
     },

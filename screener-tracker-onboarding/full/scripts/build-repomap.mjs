@@ -22,13 +22,14 @@ const OUT  = path.join(ROOT, "REPOMAP.md");
 const INCLUDE_DIRS = [".", "public", "scripts", "migrations"];
 const EXCLUDE = new Set([
   "node_modules", ".git", "dist", "build", ".claude",
+  "graphify-out",
   "data",                     // handled via DATA_ALLOWLIST below
   "build-repomap.mjs",        // skip self
   "design-library.html",
   "design-mockup.html",
 ]);
 // Only index specific files from data/ (skip per-symbol JSON blobs)
-const DATA_ALLOWLIST = new Set(["nse_universe.json", "portfolio.json"]);
+const DATA_ALLOWLIST = new Set(["portfolio.json"]);
 
 const FILE_EXTS = new Set([".js", ".mjs", ".sql", ".json"]);
 
