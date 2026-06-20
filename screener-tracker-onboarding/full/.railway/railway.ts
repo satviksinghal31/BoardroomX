@@ -38,6 +38,9 @@ export default defineRailway(() => {
     source: portfolioRepo,
     replicas: 1,
     env: {
+      DHAN_CLIENT_ID: preserve(),
+      DHAN_PIN: preserve(),
+      DHAN_TOTP_SECRET: preserve(),
       PORT: preserve(),
       SCREENER_EMAIL: preserve(),
       SCREENER_PASSWORD: preserve(),
@@ -45,6 +48,50 @@ export default defineRailway(() => {
       SUPABASE_DB_URL: preserve(),
       SUPABASE_SERVICE_ROLE_KEY: preserve(),
       SUPABASE_URL: preserve(),
+    },
+  });
+
+  const dhanInstrumentSync = service("dhan-instrument-sync", {
+    source: portfolioRepo,
+    start: "npm run cron:dhan-instrument-sync",
+    replicas: 1,
+    deploy: { cronSchedule: "0 2 * * *", restartPolicyType: "NEVER" },
+    env: {
+      DHAN_CLIENT_ID: portfolioTrackerService.env.DHAN_CLIENT_ID,
+      DHAN_PIN: portfolioTrackerService.env.DHAN_PIN,
+      DHAN_TOTP_SECRET: portfolioTrackerService.env.DHAN_TOTP_SECRET,
+      SUPABASE_ANON_KEY: portfolioTrackerService.env.SUPABASE_ANON_KEY,
+      SUPABASE_DB_URL: portfolioTrackerService.env.SUPABASE_DB_URL,
+      SUPABASE_SERVICE_ROLE_KEY: portfolioTrackerService.env.SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_URL: portfolioTrackerService.env.SUPABASE_URL,
+    },
+  });
+
+  const dhanEodUpdate = service("dhan-eod-update", {
+    source: portfolioRepo,
+    start: "npm run cron:dhan-eod-update",
+    replicas: 1,
+    deploy: { cronSchedule: "30 10 * * *", restartPolicyType: "NEVER" },
+    env: {
+      SUPABASE_ANON_KEY: portfolioTrackerService.env.SUPABASE_ANON_KEY,
+      SUPABASE_DB_URL: portfolioTrackerService.env.SUPABASE_DB_URL,
+      SUPABASE_SERVICE_ROLE_KEY: portfolioTrackerService.env.SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_URL: portfolioTrackerService.env.SUPABASE_URL,
+    },
+  });
+
+  const dhanLiveFeed = service("dhan-live-feed", {
+    source: portfolioRepo,
+    start: "npm run dhan:worker",
+    replicas: 1,
+    env: {
+      DHAN_CLIENT_ID: portfolioTrackerService.env.DHAN_CLIENT_ID,
+      DHAN_PIN: portfolioTrackerService.env.DHAN_PIN,
+      DHAN_TOTP_SECRET: portfolioTrackerService.env.DHAN_TOTP_SECRET,
+      SUPABASE_ANON_KEY: portfolioTrackerService.env.SUPABASE_ANON_KEY,
+      SUPABASE_DB_URL: portfolioTrackerService.env.SUPABASE_DB_URL,
+      SUPABASE_SERVICE_ROLE_KEY: portfolioTrackerService.env.SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_URL: portfolioTrackerService.env.SUPABASE_URL,
     },
   });
   const screenerAnnuals = service("screener-annuals", {
@@ -63,6 +110,14 @@ export default defineRailway(() => {
   });
 
   return project("pretty-sparkle", {
-    resources: [eventsCron, universeMcap, portfolioTrackerService, screenerAnnuals],
+    resources: [
+      eventsCron,
+      universeMcap,
+      portfolioTrackerService,
+      screenerAnnuals,
+      dhanInstrumentSync,
+      dhanEodUpdate,
+      dhanLiveFeed,
+    ],
   });
 });
