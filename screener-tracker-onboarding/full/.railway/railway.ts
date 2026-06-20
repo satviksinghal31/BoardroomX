@@ -1,7 +1,10 @@
 import { defineRailway, github, preserve, project, service } from "railway/iac";
 
 export default defineRailway(() => {
-  const portfolioRepo = github("satviksinghal31/portfolio-tracker");
+  const portfolioRepo = github("satviksinghal31/BoardroomX", {
+    branch: "main",
+    rootDirectory: "screener-tracker-onboarding/full",
+  });
 
   const eventsCron = service("events-cron", {
     source: portfolioRepo,
@@ -22,20 +25,6 @@ export default defineRailway(() => {
     start: "npm run cron:universe-mcap",
     replicas: 1,
     deploy: { cronSchedule: "0 13 * * *", restartPolicyType: "NEVER" },
-    env: {
-      SCREENER_EMAIL: preserve(),
-      SCREENER_PASSWORD: preserve(),
-      SUPABASE_ANON_KEY: preserve(),
-      SUPABASE_DB_URL: preserve(),
-      SUPABASE_SERVICE_ROLE_KEY: preserve(),
-      SUPABASE_URL: preserve(),
-    },
-  });
-  const chartRefresh = service("chart-refresh", {
-    source: portfolioRepo,
-    start: "npm run cron:chart-refresh",
-    replicas: 1,
-    deploy: { cronSchedule: "*/5 3-10 * * 1-5", restartPolicyType: "NEVER" },
     env: {
       SCREENER_EMAIL: preserve(),
       SCREENER_PASSWORD: preserve(),
@@ -74,6 +63,6 @@ export default defineRailway(() => {
   });
 
   return project("pretty-sparkle", {
-    resources: [eventsCron, universeMcap, chartRefresh, portfolioTrackerService, screenerAnnuals],
+    resources: [eventsCron, universeMcap, portfolioTrackerService, screenerAnnuals],
   });
 });
