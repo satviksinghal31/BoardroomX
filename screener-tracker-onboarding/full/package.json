@@ -21,8 +21,10 @@
     "cli-table3": "^0.6.5",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "otpauth": "^9.5.1",
     "pg": "^8.21.0",
     "screener-scraper-pro": "latest",
+    "ws": "^8.21.0",
     "yahoo-finance2": "^3.14.1"
   },
   "devDependencies": {
