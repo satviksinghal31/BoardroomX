@@ -40,6 +40,11 @@ export function buildSubscriptionMessages(instruments, batchSize = 100) {
   return messages;
 }
 
+export function formatWebSocketClose(code, reason) {
+  const cleanReason = Buffer.isBuffer(reason) ? reason.toString('utf8') : String(reason ?? '');
+  return `code=${code}${cleanReason ? ` reason=${cleanReason}` : ''}`;
+}
+
 function createSupabase(env = process.env) {
   return createClient(
     env.SUPABASE_URL,
@@ -110,6 +115,10 @@ export async function runDhanLiveFeed({
 
   let state = new Map();
   const ws = new WebSocketImpl(url);
+  let resolveClosed;
+  const closed = new Promise(resolve => {
+    resolveClosed = resolve;
+  });
   const flushTimer = setInterval(async () => {
     try {
       await upsertLiveRows(supabase, serializeLiveState(state));
@@ -135,21 +144,29 @@ export async function runDhanLiveFeed({
     }
   });
 
-  ws.on('close', () => {
+  ws.on('close', (code, reason) => {
     clearInterval(flushTimer);
-    console.warn('[dhan-worker] websocket closed');
+    const details = formatWebSocketClose(code, reason);
+    console.warn(`[dhan-worker] websocket closed: ${details}`);
+    resolveClosed?.({ code, reason: Buffer.isBuffer(reason) ? reason.toString('utf8') : String(reason ?? '') });
   });
 
   ws.on('error', err => {
-    console.error('[dhan-worker] websocket error:', err.message);
+    console.error('[dhan-worker] websocket error:', err?.stack || err?.message || String(err));
   });
 
-  return { ws, stop: () => { clearInterval(flushTimer); ws.close(); } };
+  return { ws, closed, stop: () => { clearInterval(flushTimer); ws.close(); } };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  runDhanLiveFeed().catch(err => {
-    console.error('[dhan-worker] fatal:', err);
-    process.exitCode = 1;
-  });
+  while (true) {
+    try {
+      const session = await runDhanLiveFeed();
+      await session.closed;
+    } catch (err) {
+      console.error('[dhan-worker] fatal:', err);
+    }
+    console.warn('[dhan-worker] reconnecting in 5s');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  }
 }

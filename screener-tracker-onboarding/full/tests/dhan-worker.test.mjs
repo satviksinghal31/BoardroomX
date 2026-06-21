@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { buildSubscriptionMessages, validateWorkerEnv } from '../dhan_live_feed.mjs';
+import { buildSubscriptionMessages, formatWebSocketClose, validateWorkerEnv } from '../dhan_live_feed.mjs';
 
 test('validateWorkerEnv requires Dhan and database credentials', () => {
   assert.throws(() => validateWorkerEnv({}), /SUPABASE_URL is required/);
@@ -28,4 +28,9 @@ test('buildSubscriptionMessages batches instruments into Dhan request payloads',
   assert.equal(batches[0].InstrumentCount, 100);
   assert.deepEqual(batches[0].InstrumentList[0], { ExchangeSegment: 'NSE_EQ', SecurityId: '1000' });
   assert.equal(batches[2].InstrumentCount, 5);
+});
+
+test('formatWebSocketClose includes close code and optional reason', () => {
+  assert.equal(formatWebSocketClose(1000, ''), 'code=1000');
+  assert.equal(formatWebSocketClose(4001, Buffer.from('unauthorized')), 'code=4001 reason=unauthorized');
 });
