@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { buildHistoricalRows, fetchDhanBackfillUniverse } from '../scripts/dhan-historical-backfill.mjs';
+import { buildHistoricalRows, dateYearsAgo, fetchDhanBackfillUniverse } from '../scripts/dhan-historical-backfill.mjs';
 import { buildEodRows } from '../scripts/dhan-eod-update.mjs';
 import { buildInactiveSymbols, filterDhanEquityRows } from '../scripts/dhan-instrument-sync.mjs';
 import { createDhanClient } from '../scripts/lib/dhan-client.mjs';
@@ -115,6 +115,10 @@ test('fetchDhanBackfillUniverse paginates beyond Supabase default page size', as
 
   assert.equal(universe.length, 1001);
   assert.deepEqual(ranges, [[0, 999], [1000, 1999]]);
+});
+
+test('dateYearsAgo defaults historical backfills to bounded daily history', () => {
+  assert.equal(dateYearsAgo(new Date('2026-06-21T00:00:00.000Z'), 5), '2021-06-21');
 });
 
 test('buildEodRows prefers fresh live rows and falls back to quote rows', () => {

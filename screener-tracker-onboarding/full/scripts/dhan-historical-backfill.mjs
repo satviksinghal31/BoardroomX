@@ -34,6 +34,12 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+export function dateYearsAgo(now = new Date(), years = 5) {
+  const date = new Date(now);
+  date.setFullYear(date.getFullYear() - years);
+  return date.toISOString().slice(0, 10);
+}
+
 function isRateLimitError(err) {
   return /\b429\b|Rate_Limit|DH-904/i.test(err?.message ?? '');
 }
@@ -76,6 +82,8 @@ export async function runDhanHistoricalBackfill({
   supabase = createSupabase(),
   dhanClient,
   symbols = null,
+  fromDate = process.env.DHAN_BACKFILL_FROM_DATE ?? dateYearsAgo(new Date(), Number(process.env.DHAN_BACKFILL_YEARS ?? 5)),
+  toDate = new Date().toISOString().slice(0, 10),
   delayMs = Number(process.env.DHAN_BACKFILL_DELAY_MS ?? 750),
   retries = Number(process.env.DHAN_BACKFILL_RETRIES ?? 2),
   retryDelayMs = Number(process.env.DHAN_BACKFILL_RETRY_DELAY_MS ?? 60_000),
@@ -97,8 +105,8 @@ export async function runDhanHistoricalBackfill({
       const payload = await withRateLimitRetry(() => client.fetchHistoricalDaily({
         securityId: row.dhan_security_id,
         exchangeSegment: row.dhan_exchange_segment ?? 'NSE_EQ',
-        fromDate: '1990-01-01',
-        toDate: new Date().toISOString().slice(0, 10),
+        fromDate,
+        toDate,
       }), { retries, retryDelayMs });
       const rows = buildHistoricalRows(row.symbol, normalizeHistoricalResponse(payload));
       if (rows.length) {
@@ -115,17 +123,20 @@ export async function runDhanHistoricalBackfill({
     if (delayMs > 0 && index < universe.length - 1) await sleep(delayMs);
   }
 
-  return { attempted_count: universe.length, success_count, failed_count: failed_symbols.length, failed_symbols };
+  return { attempted_count: universe.length, success_count, failed_count: failed_symbols.length, fromDate, toDate, failed_symbols };
 }
 
 export async function main() {
   const symbolsArg = process.argv.find(arg => arg.startsWith('--symbols='))?.split('=')[1];
   const symbols = symbolsArg ? symbolsArg.split(',').map(s => s.trim()).filter(Boolean) : null;
+  const fromDateArg = process.argv.find(arg => arg.startsWith('--from-date='))?.split('=')[1];
+  const yearsArg = process.argv.find(arg => arg.startsWith('--years='))?.split('=')[1];
   const delayArg = process.argv.find(arg => arg.startsWith('--delay-ms='))?.split('=')[1];
   const retriesArg = process.argv.find(arg => arg.startsWith('--retries='))?.split('=')[1];
   const retryDelayArg = process.argv.find(arg => arg.startsWith('--retry-delay-ms='))?.split('=')[1];
   const result = await runDhanHistoricalBackfill({
     symbols,
+    fromDate: fromDateArg ?? (yearsArg == null ? undefined : dateYearsAgo(new Date(), Number(yearsArg))),
     delayMs: delayArg == null ? undefined : Number(delayArg),
     retries: retriesArg == null ? undefined : Number(retriesArg),
     retryDelayMs: retryDelayArg == null ? undefined : Number(retryDelayArg),
