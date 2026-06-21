@@ -24,6 +24,10 @@ export function validateWorkerEnv(env = process.env) {
   return true;
 }
 
+export function isDhanLiveFeedDisabled(env = process.env) {
+  return /^(1|true|yes)$/i.test(String(env.DISABLE_DHAN_LIVE_FEED ?? ''));
+}
+
 export function buildSubscriptionMessages(instruments, batchSize = 100) {
   const messages = [];
   for (let i = 0; i < instruments.length; i += batchSize) {
@@ -100,6 +104,11 @@ export async function runDhanLiveFeed({
   WebSocketImpl = WebSocket,
   flushMs = 10_000,
 } = {}) {
+  if (isDhanLiveFeedDisabled(env)) {
+    console.warn('[dhan-worker] disabled by DISABLE_DHAN_LIVE_FEED');
+    return { ws: null, closed: new Promise(() => {}), stop: () => {} };
+  }
+
   validateWorkerEnv(env);
 
   const auth = createDhanAuth({
@@ -159,6 +168,11 @@ export async function runDhanLiveFeed({
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  if (isDhanLiveFeedDisabled(process.env)) {
+    console.warn('[dhan-worker] disabled by DISABLE_DHAN_LIVE_FEED; idling');
+    await new Promise(() => {});
+  }
+
   while (true) {
     try {
       const session = await runDhanLiveFeed();

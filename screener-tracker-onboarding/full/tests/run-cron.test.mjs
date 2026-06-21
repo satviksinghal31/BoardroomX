@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
   formatTerminalMessage,
   getCronJobs,
+  isJobDisabled,
   nextIstRunIso,
   withAdvisoryLock,
 } from '../scripts/run-cron.mjs';
@@ -33,6 +34,14 @@ test('getCronJobs exposes the Railway Cron schedules used by God Mode', () => {
   assert.equal(jobs[2].next_run, null);
   assert.equal(jobs[3].next_run, '2026-05-27T02:00:00.000Z');
   assert.equal(jobs[4].next_run, '2026-05-27T10:30:00.000Z');
+});
+
+test('isJobDisabled supports global, list, and per-job environment switches', () => {
+  assert.equal(isJobDisabled('events-cron', {}), false);
+  assert.equal(isJobDisabled('events-cron', { DISABLE_JOBS: '*' }), true);
+  assert.equal(isJobDisabled('dhan-eod-update', { DISABLE_JOBS: 'events-cron,dhan-eod-update' }), true);
+  assert.equal(isJobDisabled('dhan-eod-update', { DISABLE_JOB_DHAN_EOD_UPDATE: 'true' }), true);
+  assert.equal(isJobDisabled('dhan-eod-update', { DISABLE_JOB_DHAN_EOD_UPDATE: 'false' }), false);
 });
 
 test('formatTerminalMessage strips internal retry metadata from logged results', () => {

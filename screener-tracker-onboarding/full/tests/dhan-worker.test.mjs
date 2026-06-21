@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { buildSubscriptionMessages, formatWebSocketClose, validateWorkerEnv } from '../dhan_live_feed.mjs';
+import { buildSubscriptionMessages, formatWebSocketClose, isDhanLiveFeedDisabled, validateWorkerEnv } from '../dhan_live_feed.mjs';
 
 test('validateWorkerEnv requires Dhan and database credentials', () => {
   assert.throws(() => validateWorkerEnv({}), /SUPABASE_URL is required/);
@@ -13,6 +13,13 @@ test('validateWorkerEnv requires Dhan and database credentials', () => {
     DHAN_PIN: '123456',
     DHAN_TOTP_SECRET: 'SECRET',
   }));
+});
+
+test('isDhanLiveFeedDisabled accepts explicit truthy values only', () => {
+  assert.equal(isDhanLiveFeedDisabled({}), false);
+  assert.equal(isDhanLiveFeedDisabled({ DISABLE_DHAN_LIVE_FEED: 'true' }), true);
+  assert.equal(isDhanLiveFeedDisabled({ DISABLE_DHAN_LIVE_FEED: '1' }), true);
+  assert.equal(isDhanLiveFeedDisabled({ DISABLE_DHAN_LIVE_FEED: 'false' }), false);
 });
 
 test('buildSubscriptionMessages batches instruments into Dhan request payloads', () => {

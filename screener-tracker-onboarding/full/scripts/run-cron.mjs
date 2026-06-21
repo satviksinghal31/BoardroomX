@@ -75,6 +75,16 @@ export function formatTerminalMessage(_job, result, elapsedMs) {
   return `completed in ${(elapsedMs / 1000).toFixed(1)}s - ${JSON.stringify(publicResult)}`;
 }
 
+export function isJobDisabled(job, env = process.env) {
+  const disabled = String(env.DISABLE_JOBS ?? '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+  if (disabled.includes('*') || disabled.includes(job)) return true;
+  const envName = `DISABLE_JOB_${job.toUpperCase().replaceAll('-', '_')}`;
+  return /^(1|true|yes)$/i.test(String(env[envName] ?? ''));
+}
+
 export async function withAdvisoryLock(pool, job, fn) {
   const lock = await pool.query('SELECT pg_try_advisory_lock(hashtext($1)) AS locked', [job]);
   if (!lock.rows?.[0]?.locked) return { status: 'skipped', reason: 'lock_held' };
@@ -133,6 +143,11 @@ async function runWithTimeout(fn, timeoutMs) {
 async function runJob(job) {
   if (!JOB_DEFS[job]) {
     throw new Error(`Unknown job "${job}". Expected one of: ${Object.keys(JOB_DEFS).join(', ')}`);
+  }
+
+  if (isJobDisabled(job)) {
+    console.warn(`[${job}] disabled by environment`);
+    return { exitCode: 0, result: { status: 'disabled' } };
   }
 
   const supabase = createSupabaseClient();
