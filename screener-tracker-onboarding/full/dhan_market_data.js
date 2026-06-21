@@ -91,6 +91,36 @@ export function createDhanMarketData({
       return toQuoteResponse(rows[0]);
     },
 
+    async getQuotes(symbols) {
+      const list = uniqueSymbols(symbols);
+      if (!list.length) return new Map();
+      const { rows } = await dbPool.query(`
+        WITH week52 AS (
+          SELECT
+            symbol,
+            max(high) AS "week52High",
+            min(low) AS "week52Low"
+          FROM dhan_daily_candles
+          WHERE symbol = ANY($1)
+            AND trade_date >= CURRENT_DATE - interval '365 days'
+          GROUP BY symbol
+        )
+        SELECT
+          u.symbol,
+          u.company_name,
+          u.market_cap,
+          l.ltp,
+          l.prev_close,
+          week52."week52High",
+          week52."week52Low"
+        FROM market_universe u
+        LEFT JOIN dhan_live_today l ON l.symbol = u.symbol
+        LEFT JOIN week52 ON week52.symbol = u.symbol
+        WHERE u.symbol = ANY($1)
+      `, [list]);
+      return new Map(rows.map(row => [row.symbol, toQuoteResponse(row)]));
+    },
+
     async getActiveUniverse() {
       const { rows } = await dbPool.query(`
         SELECT symbol, company_name, market_cap

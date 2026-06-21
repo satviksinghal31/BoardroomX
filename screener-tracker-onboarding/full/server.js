@@ -263,10 +263,15 @@ app.get("/api/portfolio", auth, async (req, res) => {
 
   // 2. Fetch global market data ONLY for this user's symbols
   const [
+    marketDataMap,
     { data: stocks,   error: se },
     { data: fins,     error: fe },
     { data: allResults, error: re },
   ] = await Promise.all([
+    dhanMarketData.getQuotes(symbols).catch(err => {
+      console.error("[/api/portfolio] quote batch error:", err.message);
+      return new Map();
+    }),
     supabase.from("stocks").select("*").in("symbol", symbols),
     supabase.from("financials").select("*").in("symbol", symbols),
     supabase.from("results").select("*").in("symbol", symbols),
@@ -292,7 +297,7 @@ app.get("/api/portfolio", auth, async (req, res) => {
       const fin        = finMap[stock.symbol] ?? null;
       const rows       = resultMap[stock.symbol] ?? [];
       const withData   = rows.filter(r => r.data && Object.keys(r.data).length > 0);
-      const marketData = await dhanMarketData.getQuote(stock.symbol).catch(() => ({}));
+      const marketData = marketDataMap.get(stock.symbol) ?? {};
 
       const isBanking = stock.is_banking ?? false;
       const revKey    = isBanking ? "Revenue"            : "Sales";

@@ -10,10 +10,17 @@ test('frontend no longer advertises Yahoo as active chart data source', () => {
   assert.equal(appJs.includes('yahooFinance.'), false);
 });
 
-test('chart range controls include MAX on desktop and mobile', () => {
+test('chart range controls are daily-year ranges only on desktop and mobile', () => {
+  for (const tf of ['1H', '1D', '1W']) {
+    assert.equal(indexHtml.includes(`switchTf('${tf}')`), false);
+    assert.equal(indexHtml.includes(`switchMobileTf('${tf}')`), false);
+  }
   assert.match(indexHtml, /id="tfmax"[^>]+switchTf\('MAX'\)[^>]*>MAX<\/button>/);
   assert.match(indexHtml, /id="mtfmax"[^>]+switchMobileTf\('MAX'\)[^>]*>MAX<\/button>/);
   assert.match(appJs, /'MAX':\s*null/);
+  assert.equal(appJs.includes("'1H'"), false);
+  assert.equal(appJs.includes("'1D'"), false);
+  assert.equal(appJs.includes("'1W'"), false);
 });
 
 test('frontend requests live prices for searched chart symbols', () => {

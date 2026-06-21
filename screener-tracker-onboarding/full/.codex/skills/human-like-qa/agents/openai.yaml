@@ -1,0 +1,6 @@
+interface:
+  display_name: "Human-Like QA"
+  short_description: "Browser-first user journey QA"
+  default_prompt: "Use $human-like-qa to validate this app like a real user and turn any escaped bug into a durable guard."
+policy:
+  allow_implicit_invocation: true

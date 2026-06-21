@@ -713,6 +713,7 @@ async function loadDesktopChart(symbol, years) {
   inner.style.display   = 'flex';
   if (!isCached) {
     loading.style.display = 'flex';
+    loading.innerHTML = '<div class="chart-spinner"></div><span>Loading chart...</span>';
     area.style.display    = 'none';
     legend.style.display  = 'none';
   }
@@ -730,6 +731,13 @@ async function loadDesktopChart(symbol, years) {
       if (currentChartTab !== 'overview') return;
       if (chartData.error) throw new Error(chartData.error);
       chartDataCache[symbol] = chartData;
+    }
+
+    if (!Array.isArray(chartData.candles) || chartData.candles.length === 0) {
+      area.style.display = 'none';
+      loading.style.display = 'flex';
+      loading.innerHTML = '<span class="chart-load-err">No daily candles available yet. Historical sync will fill this shortly.</span>';
+      return;
     }
 
     // Tab may have changed while the cached lookup happened synchronously above
@@ -756,7 +764,7 @@ async function loadDesktopChart(symbol, years) {
   }
 }
 
-const TF_YEARS = { '1H': 0.008, '1D': 0.019, '1W': 0.077, '1Y': 1, '3Y': 3, '5Y': 5, 'MAX': null };
+const TF_YEARS = { '1Y': 1, '3Y': 3, '5Y': 5, 'MAX': null };
 
 function switchTf(tf) {
   currentTf    = tf;
@@ -1063,6 +1071,7 @@ async function loadMobileChart(symbol, years) {
   }
 
   loading.style.display = 'flex';
+  loading.innerHTML = '<div class="chart-spinner"></div><span>Loading chart...</span>';
   priceW.style.display  = 'none';
   rsiW.style.display    = 'none';
   legend.style.display  = 'none';
@@ -1075,6 +1084,12 @@ async function loadMobileChart(symbol, years) {
       chartData = await bxFetch(`/api/chart/${symbol}?years=5`).then(r => r.json());
       if (chartData.error) throw new Error(chartData.error);
       chartDataCache[symbol] = chartData;
+    }
+
+    if (!Array.isArray(chartData.candles) || chartData.candles.length === 0) {
+      loading.style.display = 'flex';
+      loading.innerHTML = '<span class="chart-load-err">No daily candles available yet. Historical sync will fill this shortly.</span>';
+      return;
     }
 
     const info    = await getQuoteInfo(symbol);

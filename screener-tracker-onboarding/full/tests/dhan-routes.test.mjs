@@ -108,6 +108,41 @@ test('getPrices and getQuote shape live data for the frontend', async () => {
   assert.equal(quote.week52High, 20);
 });
 
+test('getQuotes fetches portfolio quote data in one SQL round trip', async () => {
+  const pool = createFakePool((sql, params) => {
+    assert.deepEqual(params, [['ABC', 'XYZ']]);
+    assert.match(sql, /FROM market_universe u/);
+    assert.match(sql, /symbol = ANY\(\$1\)/);
+    return { rows: [
+      {
+        symbol: 'ABC',
+        company_name: 'ABC Ltd',
+        market_cap: 123,
+        ltp: 10,
+        prev_close: 8,
+        week52High: 20,
+        week52Low: 5,
+      },
+      {
+        symbol: 'XYZ',
+        company_name: 'XYZ Ltd',
+        market_cap: 456,
+        ltp: null,
+        prev_close: null,
+        week52High: null,
+        week52Low: null,
+      },
+    ] };
+  });
+  const marketData = createDhanMarketData({ dbPool: pool });
+
+  const quotes = await marketData.getQuotes(['abc', 'ABC', 'xyz']);
+
+  assert.equal(quotes.get('ABC').price, 10);
+  assert.equal(quotes.get('ABC').week52High, 20);
+  assert.equal(quotes.get('XYZ').name, 'XYZ Ltd');
+});
+
 test('getActiveUniverse filters inactive rows in SQL', async () => {
   const pool = createFakePool(sql => {
     assert.match(sql, /FROM market_universe/);
