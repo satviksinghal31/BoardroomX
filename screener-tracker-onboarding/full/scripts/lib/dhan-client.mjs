@@ -59,6 +59,7 @@ export function createDhanClient({ clientId, getAccessToken, fetchImpl = fetch }
 
     async fetchScripMasterCsv() {
       const response = await fetchImpl(DHAN_SCRIP_MASTER_URL);
+      if (response.ok) return response.text();
       return parseResponse(response, 'Dhan scrip master');
     },
   };

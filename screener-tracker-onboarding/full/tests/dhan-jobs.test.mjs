@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { buildHistoricalRows } from '../scripts/dhan-historical-backfill.mjs';
 import { buildEodRows } from '../scripts/dhan-eod-update.mjs';
 import { buildInactiveSymbols, filterDhanEquityRows } from '../scripts/dhan-instrument-sync.mjs';
+import { createDhanClient } from '../scripts/lib/dhan-client.mjs';
 import { getCronJobs } from '../scripts/run-cron.mjs';
 
 test('filterDhanEquityRows keeps only NSE equity EQ instruments', () => {
@@ -37,6 +38,24 @@ test('buildInactiveSymbols returns active symbols missing from latest sync', () 
     buildInactiveSymbols(['ABC', 'XYZ', 'OLD'], new Set(['ABC', 'XYZ'])),
     ['OLD'],
   );
+});
+
+test('fetchScripMasterCsv reads CSV even when Dhan sends a non-text content type', async () => {
+  const csv = 'EXCH_ID,SEGMENT,SERIES,UNDERLYING_SYMBOL,SECURITY_ID\nNSE,E,EQ,ABC,1\n';
+  const client = createDhanClient({
+    clientId: '1001',
+    getAccessToken: async () => 'unused',
+    fetchImpl: async () => ({
+      ok: true,
+      headers: { get: () => 'application/octet-stream' },
+      text: async () => csv,
+      json: async () => {
+        throw new Error('CSV response should not be parsed as JSON');
+      },
+    }),
+  });
+
+  assert.equal(await client.fetchScripMasterCsv(), csv);
 });
 
 test('buildHistoricalRows maps normalized candles to DB rows', () => {
