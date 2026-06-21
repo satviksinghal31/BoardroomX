@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { buildHistoricalRows } from '../scripts/dhan-historical-backfill.mjs';
+import { buildHistoricalRows, fetchDhanBackfillUniverse } from '../scripts/dhan-historical-backfill.mjs';
 import { buildEodRows } from '../scripts/dhan-eod-update.mjs';
 import { buildInactiveSymbols, filterDhanEquityRows } from '../scripts/dhan-instrument-sync.mjs';
 import { createDhanClient } from '../scripts/lib/dhan-client.mjs';
@@ -70,6 +70,51 @@ test('buildHistoricalRows maps normalized candles to DB rows', () => {
     close: 2,
     volume: 100,
   }]);
+});
+
+test('buildHistoricalRows dedupes repeated trade dates before upsert', () => {
+  assert.deepEqual(buildHistoricalRows('ABC', [
+    { trade_date: '2026-01-01', open: 1, high: 2, low: 1, close: 2, volume: 100 },
+    { trade_date: '2026-01-01', open: 3, high: 4, low: 2, close: 3, volume: 200 },
+  ]), [{
+    symbol: 'ABC',
+    trade_date: '2026-01-01',
+    open: 3,
+    high: 4,
+    low: 2,
+    close: 3,
+    volume: 200,
+  }]);
+});
+
+test('fetchDhanBackfillUniverse paginates beyond Supabase default page size', async () => {
+  const ranges = [];
+  const rows = Array.from({ length: 1001 }, (_, i) => ({
+    symbol: `SYM${i}`,
+    dhan_security_id: String(i),
+    dhan_exchange_segment: 'NSE_EQ',
+  }));
+  const supabase = {
+    from() {
+      const query = {
+        select() { return this; },
+        neq() { return this; },
+        not() { return this; },
+        order() { return this; },
+        in() { return this; },
+        async range(from, to) {
+          ranges.push([from, to]);
+          return { data: rows.slice(from, to + 1), error: null };
+        },
+      };
+      return query;
+    },
+  };
+
+  const universe = await fetchDhanBackfillUniverse({ supabase, pageSize: 1000 });
+
+  assert.equal(universe.length, 1001);
+  assert.deepEqual(ranges, [[0, 999], [1000, 1999]]);
 });
 
 test('buildEodRows prefers fresh live rows and falls back to quote rows', () => {

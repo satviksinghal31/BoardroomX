@@ -32,6 +32,7 @@
     "yahoo-finance2": "^3.14.1"
   },
   "devDependencies": {
+    "playwright": "^1.61.0",
     "railway": "^3.3.2"
   }
 }
