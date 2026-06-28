@@ -170,17 +170,17 @@ export async function runDhanLiveFeed({
 if (import.meta.url === `file://${process.argv[1]}`) {
   if (isDhanLiveFeedDisabled(process.env)) {
     console.warn('[dhan-worker] disabled by DISABLE_DHAN_LIVE_FEED; idling');
-    await new Promise(() => {});
-  }
-
-  while (true) {
-    try {
-      const session = await runDhanLiveFeed();
-      await session.closed;
-    } catch (err) {
-      console.error('[dhan-worker] fatal:', err);
+    setInterval(() => {}, 60_000);
+  } else {
+    while (true) {
+      try {
+        const session = await runDhanLiveFeed();
+        await session.closed;
+      } catch (err) {
+        console.error('[dhan-worker] fatal:', err);
+      }
+      console.warn('[dhan-worker] reconnecting in 5s');
+      await new Promise(resolve => setTimeout(resolve, 5000));
     }
-    console.warn('[dhan-worker] reconnecting in 5s');
-    await new Promise(resolve => setTimeout(resolve, 5000));
   }
 }
