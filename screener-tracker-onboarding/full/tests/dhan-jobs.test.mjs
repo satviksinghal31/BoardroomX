@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { buildHistoricalRows, dateYearsAgo, fetchDhanBackfillUniverse } from '../scripts/dhan-historical-backfill.mjs';
+import { buildHistoricalSeriesRow, dateYearsAgo, fetchDhanBackfillUniverse } from '../scripts/dhan-historical-backfill.mjs';
+import { decodeCandleSeries } from '../scripts/lib/dhan-normalize.mjs';
 import { eodRepairWindow, runDhanEodUpdate } from '../scripts/dhan-eod-update.mjs';
 import { buildInactiveSymbols, filterDhanEquityRows } from '../scripts/dhan-instrument-sync.mjs';
 import { createDhanClient } from '../scripts/lib/dhan-client.mjs';
@@ -58,31 +59,37 @@ test('fetchScripMasterCsv reads CSV even when Dhan sends a non-text content type
   assert.equal(await client.fetchScripMasterCsv(), csv);
 });
 
-test('buildHistoricalRows maps normalized candles to DB rows', () => {
-  assert.deepEqual(buildHistoricalRows({ symbol: 'ABC', instrument_id: 42 }, [
+test('buildHistoricalSeriesRow maps normalized candles to one compressed DB row', () => {
+  const row = buildHistoricalSeriesRow({ symbol: 'ABC', instrument_id: 42 }, [
     { trade_date: '2026-01-01', open: 1, high: 2, low: 1, close: 2, volume: 100 },
-  ]), [{
-    instrument_id: 42,
+  ]);
+
+  assert.equal(row.instrument_id, 42);
+  assert.equal(row.from_date, '2026-01-01');
+  assert.equal(row.to_date, '2026-01-01');
+  assert.equal(row.candle_count, 1);
+  assert.deepEqual(decodeCandleSeries(row.candles_gzip_base64), [{
     trade_date: '2026-01-01',
-    open_paise: 100,
-    high_paise: 200,
-    low_paise: 100,
-    close_paise: 200,
+    open: 1,
+    high: 2,
+    low: 1,
+    close: 2,
     volume: 100,
   }]);
 });
 
-test('buildHistoricalRows dedupes repeated trade dates before upsert', () => {
-  assert.deepEqual(buildHistoricalRows({ symbol: 'ABC', instrument_id: 42 }, [
+test('buildHistoricalSeriesRow dedupes repeated trade dates before upsert', () => {
+  const row = buildHistoricalSeriesRow({ symbol: 'ABC', instrument_id: 42 }, [
     { trade_date: '2026-01-01', open: 1, high: 2, low: 1, close: 2, volume: 100 },
     { trade_date: '2026-01-01', open: 3, high: 4, low: 2, close: 3, volume: 200 },
-  ]), [{
-    instrument_id: 42,
+  ]);
+
+  assert.deepEqual(decodeCandleSeries(row.candles_gzip_base64), [{
     trade_date: '2026-01-01',
-    open_paise: 300,
-    high_paise: 400,
-    low_paise: 200,
-    close_paise: 300,
+    open: 3,
+    high: 4,
+    low: 2,
+    close: 3,
     volume: 200,
   }]);
 });
@@ -153,8 +160,13 @@ test('runDhanEodUpdate repairs daily candles from historical API and clears live
         };
         return query;
       }
-      if (table === 'dhan_daily_candles') {
+      if (table === 'dhan_daily_candle_series') {
         return {
+          select() { return this; },
+          eq() { return this; },
+          async maybeSingle() {
+            return { data: null, error: null };
+          },
           async upsert(rows, options) {
             upserts.push({ rows, options });
             return { error: null };
@@ -207,15 +219,21 @@ test('runDhanEodUpdate repairs daily candles from historical API and clears live
   assert.deepEqual(upserts[0], {
     rows: [{
       instrument_id: 42,
-      trade_date: '2026-06-20',
-      open_paise: 100,
-      high_paise: 200,
-      low_paise: 100,
-      close_paise: 200,
-      volume: 100,
+      from_date: '2026-06-20',
+      to_date: '2026-06-20',
+      candle_count: 1,
+      candles_gzip_base64: upserts[0].rows[0].candles_gzip_base64,
     }],
-    options: { onConflict: 'instrument_id,trade_date' },
+    options: { onConflict: 'instrument_id' },
   });
+  assert.deepEqual(decodeCandleSeries(upserts[0].rows[0].candles_gzip_base64), [{
+    trade_date: '2026-06-20',
+    open: 1,
+    high: 2,
+    low: 1,
+    close: 2,
+    volume: 100,
+  }]);
 });
 
 test('runDhanEodUpdate waits between historical repair symbols', async () => {
@@ -241,8 +259,13 @@ test('runDhanEodUpdate waits between historical repair symbols', async () => {
         };
         return query;
       }
-      if (table === 'dhan_daily_candles') {
+      if (table === 'dhan_daily_candle_series') {
         return {
+          select() { return this; },
+          eq() { return this; },
+          async maybeSingle() {
+            return { data: null, error: null };
+          },
           async upsert() {
             return { error: null };
           },

@@ -3,26 +3,22 @@ import { createClient } from '@supabase/supabase-js';
 
 import { createDhanAuth, createSupabaseDhanAuthStateStore } from '../dhan_auth.mjs';
 import { createDhanClient } from './lib/dhan-client.mjs';
-import { normalizeHistoricalResponse, rupeesToPaise } from './lib/dhan-normalize.mjs';
+import { encodeCandleSeries, mergeCandleSeries, normalizeHistoricalResponse } from './lib/dhan-normalize.mjs';
 
 const DEFAULT_BACKFILL_DELAY_MS = 2500;
 
-export function buildHistoricalRows(instrument, candles) {
+export function buildHistoricalSeriesRow(instrument, candles) {
   const instrumentId = typeof instrument === 'object' ? instrument.instrument_id : null;
-  const byDate = new Map();
-  for (const row of candles ?? []) {
-    if (!row?.trade_date) continue;
-    byDate.set(row.trade_date, {
-      instrument_id: instrumentId,
-      trade_date: row.trade_date,
-      open_paise: rupeesToPaise(row.open),
-      high_paise: rupeesToPaise(row.high),
-      low_paise: rupeesToPaise(row.low),
-      close_paise: rupeesToPaise(row.close),
-      volume: row.volume ?? 0,
-    });
-  }
-  return [...byDate.values()].filter(row => row.instrument_id != null && row.open_paise != null && row.high_paise != null && row.low_paise != null && row.close_paise != null);
+  if (instrumentId == null) return null;
+  const series = mergeCandleSeries([], candles);
+  if (!series.length) return null;
+  return {
+    instrument_id: instrumentId,
+    from_date: series[0].trade_date,
+    to_date: series.at(-1).trade_date,
+    candle_count: series.length,
+    candles_gzip_base64: encodeCandleSeries(series),
+  };
 }
 
 function createSupabase() {
@@ -111,11 +107,11 @@ export async function runDhanHistoricalBackfill({
         fromDate,
         toDate,
       }), { retries, retryDelayMs });
-      const rows = buildHistoricalRows(row, normalizeHistoricalResponse(payload));
-      if (rows.length) {
+      const seriesRow = buildHistoricalSeriesRow(row, normalizeHistoricalResponse(payload));
+      if (seriesRow) {
         const { error: upsertErr } = await supabase
-          .from('dhan_daily_candles')
-          .upsert(rows, { onConflict: 'instrument_id,trade_date' });
+          .from('dhan_daily_candle_series')
+          .upsert([seriesRow], { onConflict: 'instrument_id' });
         if (upsertErr) throw new Error(upsertErr.message);
       }
       success_count += 1;

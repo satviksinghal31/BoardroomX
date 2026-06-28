@@ -3,6 +3,9 @@ import { test } from 'node:test';
 
 import {
   appendFreshLiveCandle,
+  decodeCandleSeries,
+  encodeCandleSeries,
+  mergeCandleSeries,
   normalizeHistoricalResponse,
   paiseToRupees,
   rupeesToPaise,
@@ -15,6 +18,32 @@ test('rupeesToPaise and paiseToRupees convert chart prices compactly', () => {
   assert.equal(rupeesToPaise('0.01'), 1);
   assert.equal(rupeesToPaise(null), null);
   assert.equal(paiseToRupees(12346), 123.46);
+});
+
+test('encodeCandleSeries and decodeCandleSeries round-trip compact candles', () => {
+  const candles = [
+    { trade_date: '2026-01-01', open: 1.23, high: 2.34, low: 1.11, close: 2.22, volume: 100 },
+    { trade_date: '2026-01-02', open: 2.23, high: 3.34, low: 2.11, close: 3.22, volume: 200 },
+  ];
+  const encoded = encodeCandleSeries(candles);
+
+  assert.equal(typeof encoded, 'string');
+  assert.ok(encoded.length > 0);
+  assert.deepEqual(decodeCandleSeries(encoded), candles);
+});
+
+test('mergeCandleSeries dedupes repaired dates and keeps chronological order', () => {
+  assert.deepEqual(mergeCandleSeries([
+    { trade_date: '2026-01-01', open: 1, high: 2, low: 1, close: 2, volume: 100 },
+    { trade_date: '2026-01-02', open: 2, high: 3, low: 2, close: 3, volume: 200 },
+  ], [
+    { trade_date: '2026-01-02', open: 20, high: 30, low: 20, close: 30, volume: 2000 },
+    { trade_date: '2026-01-03', open: 3, high: 4, low: 3, close: 4, volume: 300 },
+  ]), [
+    { trade_date: '2026-01-01', open: 1, high: 2, low: 1, close: 2, volume: 100 },
+    { trade_date: '2026-01-02', open: 20, high: 30, low: 20, close: 30, volume: 2000 },
+    { trade_date: '2026-01-03', open: 3, high: 4, low: 3, close: 4, volume: 300 },
+  ]);
 });
 
 test('normalizeHistoricalResponse converts parallel Dhan arrays to sorted candles', () => {

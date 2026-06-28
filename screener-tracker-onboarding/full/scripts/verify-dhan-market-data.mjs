@@ -25,16 +25,21 @@ async function verifyDb(pool) {
       AND dhan_security_id IS NOT NULL
   `);
   const samples = await pool.query(`
-    SELECT i.symbol, count(*)::int AS candles
-    FROM dhan_daily_candles c
-    JOIN dhan_instruments i ON i.instrument_id = c.instrument_id
+    SELECT i.symbol, s.candle_count::int AS candles
+    FROM dhan_daily_candle_series s
+    JOIN dhan_instruments i ON i.instrument_id = s.instrument_id
     WHERE i.symbol = ANY($1)
-    GROUP BY i.symbol
     ORDER BY i.symbol
   `, [['RELIANCE', 'TCS', 'HDFCBANK']]);
+  const series = await pool.query(`
+    SELECT count(*)::int AS symbols, COALESCE(sum(candle_count), 0)::int AS candles
+    FROM dhan_daily_candle_series
+  `);
 
   return {
     active_mapped: active.rows[0]?.count ?? 0,
+    series_symbols: series.rows[0]?.symbols ?? 0,
+    series_candles: series.rows[0]?.candles ?? 0,
     sample_candles: samples.rows,
   };
 }

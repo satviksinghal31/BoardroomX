@@ -1,4 +1,4 @@
-import { appendFreshLiveCandle, toChartCandle, toPriceResponse, toQuoteResponse } from './scripts/lib/dhan-normalize.mjs';
+import { appendFreshLiveCandle, decodeCandleSeries, toChartCandle, toPriceResponse, toQuoteResponse } from './scripts/lib/dhan-normalize.mjs';
 import { isNseMarketOpenIst } from './scripts/lib/dhan-time.mjs';
 
 function normalizeSymbol(symbol) {
@@ -15,6 +15,23 @@ function uniqueSymbols(symbols) {
   return [...new Set((symbols ?? []).map(normalizeSymbol).filter(Boolean))];
 }
 
+function week52FromCandles(candles, now = new Date()) {
+  const cutoff = new Date(now);
+  cutoff.setDate(cutoff.getDate() - 365);
+  const cutoffDate = cutoff.toISOString().slice(0, 10);
+  let week52High = null;
+  let week52Low = null;
+  for (const candle of candles ?? []) {
+    const tradeDate = String(candle.trade_date ?? candle.time ?? '').slice(0, 10);
+    if (!tradeDate || tradeDate < cutoffDate) continue;
+    const high = Number(candle.high);
+    const low = Number(candle.low);
+    if (Number.isFinite(high)) week52High = week52High == null ? high : Math.max(week52High, high);
+    if (Number.isFinite(low)) week52Low = week52Low == null ? low : Math.min(week52Low, low);
+  }
+  return { week52High, week52Low };
+}
+
 export function createDhanMarketData({
   dbPool,
   now = () => new Date(),
@@ -27,17 +44,10 @@ export function createDhanMarketData({
       const sym = normalizeSymbol(symbol);
       const [historyResult, liveResult] = await Promise.all([
         dbPool.query(`
-          SELECT
-            c.trade_date,
-            c.open_paise / 100.0 AS open,
-            c.high_paise / 100.0 AS high,
-            c.low_paise / 100.0 AS low,
-            c.close_paise / 100.0 AS close,
-            c.volume
-          FROM dhan_daily_candles c
-          JOIN dhan_instruments i ON i.instrument_id = c.instrument_id
+          SELECT s.candles_gzip_base64
+          FROM dhan_daily_candle_series s
+          JOIN dhan_instruments i ON i.instrument_id = s.instrument_id
           WHERE i.symbol = $1
-          ORDER BY c.trade_date ASC
         `, [sym]),
         dbPool.query(`
           SELECT trade_date, open, high, low, ltp, volume, last_tick_at
@@ -46,7 +56,7 @@ export function createDhanMarketData({
         `, [sym]),
       ]);
 
-      const candles = historyResult.rows.map(toChartCandle).filter(Boolean);
+      const candles = decodeCandleSeries(historyResult.rows[0]?.candles_gzip_base64).map(toChartCandle).filter(Boolean);
       const withLive = appendFreshLiveCandle(candles, liveResult.rows[0] ?? null, {
         now: now(),
         marketOpen: isMarketOpen(now()),
@@ -72,62 +82,59 @@ export function createDhanMarketData({
 
     async getQuote(symbol) {
       const sym = normalizeSymbol(symbol);
-      const { rows } = await dbPool.query(`
-        WITH week52 AS (
-          SELECT
-            max(c.high_paise / 100.0) AS "week52High",
-            min(c.low_paise / 100.0) AS "week52Low"
-          FROM dhan_daily_candles c
-          JOIN dhan_instruments i ON i.instrument_id = c.instrument_id
-          WHERE i.symbol = $1
-            AND c.trade_date >= CURRENT_DATE - interval '365 days'
-        )
+      const [quoteResult, seriesResult] = await Promise.all([
+        dbPool.query(`
         SELECT
           u.symbol,
           u.company_name,
           u.market_cap,
           l.ltp,
-          l.prev_close,
-          week52."week52High",
-          week52."week52Low"
+          l.prev_close
         FROM market_universe u
         LEFT JOIN dhan_live_today l ON l.symbol = u.symbol
-        CROSS JOIN week52
         WHERE u.symbol = $1
-      `, [sym]);
-      if (!rows[0]) return { symbol: sym, name: sym, price: null, change: null, changePercent: null, mcap: null, week52High: null, week52Low: null };
-      return toQuoteResponse(rows[0]);
+      `, [sym]),
+        dbPool.query(`
+          SELECT s.candles_gzip_base64
+          FROM dhan_daily_candle_series s
+          JOIN dhan_instruments i ON i.instrument_id = s.instrument_id
+          WHERE i.symbol = $1
+        `, [sym]),
+      ]);
+      if (!quoteResult.rows[0]) return { symbol: sym, name: sym, price: null, change: null, changePercent: null, mcap: null, week52High: null, week52Low: null };
+      return toQuoteResponse({
+        ...quoteResult.rows[0],
+        ...week52FromCandles(decodeCandleSeries(seriesResult.rows[0]?.candles_gzip_base64), now()),
+      });
     },
 
     async getQuotes(symbols) {
       const list = uniqueSymbols(symbols);
       if (!list.length) return new Map();
-      const { rows } = await dbPool.query(`
-        WITH week52 AS (
-          SELECT
-            i.symbol,
-            max(c.high_paise / 100.0) AS "week52High",
-            min(c.low_paise / 100.0) AS "week52Low"
-          FROM dhan_daily_candles c
-          JOIN dhan_instruments i ON i.instrument_id = c.instrument_id
-          WHERE i.symbol = ANY($1)
-            AND c.trade_date >= CURRENT_DATE - interval '365 days'
-          GROUP BY i.symbol
-        )
+      const [quoteResult, seriesResult] = await Promise.all([
+        dbPool.query(`
         SELECT
           u.symbol,
           u.company_name,
           u.market_cap,
           l.ltp,
-          l.prev_close,
-          week52."week52High",
-          week52."week52Low"
+          l.prev_close
         FROM market_universe u
         LEFT JOIN dhan_live_today l ON l.symbol = u.symbol
-        LEFT JOIN week52 ON week52.symbol = u.symbol
         WHERE u.symbol = ANY($1)
-      `, [list]);
-      return new Map(rows.map(row => [row.symbol, toQuoteResponse(row)]));
+      `, [list]),
+        dbPool.query(`
+          SELECT i.symbol, s.candles_gzip_base64
+          FROM dhan_daily_candle_series s
+          JOIN dhan_instruments i ON i.instrument_id = s.instrument_id
+          WHERE i.symbol = ANY($1)
+        `, [list]),
+      ]);
+      const stats = new Map(seriesResult.rows.map(row => [
+        row.symbol,
+        week52FromCandles(decodeCandleSeries(row.candles_gzip_base64), now()),
+      ]));
+      return new Map(quoteResult.rows.map(row => [row.symbol, toQuoteResponse({ ...row, ...(stats.get(row.symbol) ?? {}) })]));
     },
 
     async getActiveUniverse() {

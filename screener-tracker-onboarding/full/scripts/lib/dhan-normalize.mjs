@@ -1,4 +1,5 @@
 import { isFreshLiveTick } from './dhan-time.mjs';
+import { gzipSync, gunzipSync } from 'node:zlib';
 
 function round(value, digits = 2) {
   if (value == null) return null;
@@ -19,6 +20,49 @@ export function paiseToRupees(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   return round(n / 100);
+}
+
+function normalizeCandleRow(row) {
+  const tradeDate = String(row?.trade_date ?? row?.time ?? '').slice(0, 10);
+  if (!tradeDate) return null;
+  const open = round(row.open);
+  const high = round(row.high);
+  const low = round(row.low);
+  const close = round(row.close ?? row.ltp);
+  if (open == null || high == null || low == null || close == null) return null;
+  return {
+    trade_date: tradeDate,
+    open,
+    high,
+    low,
+    close,
+    volume: Number(row.volume ?? 0),
+  };
+}
+
+export function mergeCandleSeries(existing = [], repairs = []) {
+  const byDate = new Map();
+  for (const row of existing ?? []) {
+    const candle = normalizeCandleRow(row);
+    if (candle) byDate.set(candle.trade_date, candle);
+  }
+  for (const row of repairs ?? []) {
+    const candle = normalizeCandleRow(row);
+    if (candle) byDate.set(candle.trade_date, candle);
+  }
+  return [...byDate.values()].sort((a, b) => a.trade_date.localeCompare(b.trade_date));
+}
+
+export function encodeCandleSeries(candles = []) {
+  const normalized = mergeCandleSeries([], candles);
+  return gzipSync(Buffer.from(JSON.stringify(normalized), 'utf8')).toString('base64');
+}
+
+export function decodeCandleSeries(value) {
+  if (!value) return [];
+  const json = gunzipSync(Buffer.from(String(value), 'base64')).toString('utf8');
+  const parsed = JSON.parse(json);
+  return mergeCandleSeries([], Array.isArray(parsed) ? parsed : []);
 }
 
 function epochToDateString(epochSeconds) {

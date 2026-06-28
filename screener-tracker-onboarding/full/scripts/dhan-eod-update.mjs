@@ -2,9 +2,9 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
 import { createDhanAuth, createSupabaseDhanAuthStateStore } from '../dhan_auth.mjs';
-import { buildHistoricalRows, fetchDhanBackfillUniverse } from './dhan-historical-backfill.mjs';
+import { fetchDhanBackfillUniverse } from './dhan-historical-backfill.mjs';
 import { createDhanClient } from './lib/dhan-client.mjs';
-import { normalizeHistoricalResponse } from './lib/dhan-normalize.mjs';
+import { decodeCandleSeries, encodeCandleSeries, mergeCandleSeries, normalizeHistoricalResponse } from './lib/dhan-normalize.mjs';
 import { todayIstDate } from './lib/dhan-time.mjs';
 
 const DEFAULT_EOD_DELAY_MS = 2500;
@@ -60,13 +60,27 @@ export async function runDhanEodUpdate({
         fromDate,
         toDate,
       });
-      const rows = buildHistoricalRows(row, normalizeHistoricalResponse(payload));
-      if (rows.length) {
+      const repairs = normalizeHistoricalResponse(payload);
+      if (repairs.length) {
+        const { data: existing, error: existingErr } = await supabase
+          .from('dhan_daily_candle_series')
+          .select('candles_gzip_base64')
+          .eq('instrument_id', row.instrument_id)
+          .maybeSingle();
+        if (existingErr) throw new Error(existingErr.message);
+
+        const series = mergeCandleSeries(decodeCandleSeries(existing?.candles_gzip_base64), repairs);
         const { error: upsertErr } = await supabase
-          .from('dhan_daily_candles')
-          .upsert(rows, { onConflict: 'instrument_id,trade_date' });
+          .from('dhan_daily_candle_series')
+          .upsert([{
+            instrument_id: row.instrument_id,
+            from_date: series[0].trade_date,
+            to_date: series.at(-1).trade_date,
+            candle_count: series.length,
+            candles_gzip_base64: encodeCandleSeries(series),
+          }], { onConflict: 'instrument_id' });
         if (upsertErr) throw new Error(upsertErr.message);
-        repaired += rows.length;
+        repaired += repairs.length;
       }
     } catch (err) {
       failed_symbols.push({ symbol: row.symbol, error: err.message });

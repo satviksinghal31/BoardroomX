@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import { createDhanMarketData } from '../dhan_market_data.js';
 import { registerDhanRoutes } from '../dhan_routes.js';
+import { encodeCandleSeries } from '../scripts/lib/dhan-normalize.mjs';
 
 function createFakePool(handler) {
   const calls = [];
@@ -17,9 +18,9 @@ function createFakePool(handler) {
 
 test('getChart returns history and appends only fresh live candle', async () => {
   const pool = createFakePool(sql => {
-    if (sql.includes('FROM dhan_daily_candles')) {
+    if (sql.includes('FROM dhan_daily_candle_series')) {
       return { rows: [
-        { trade_date: '2026-06-20', open: 10, high: 11, low: 9, close: 10.5, volume: 100 },
+        { candles_gzip_base64: encodeCandleSeries([{ trade_date: '2026-06-20', open: 10, high: 11, low: 9, close: 10.5, volume: 100 }]) },
       ] };
     }
     if (sql.includes('FROM dhan_live_today')) {
@@ -45,9 +46,9 @@ test('getChart returns history and appends only fresh live candle', async () => 
 
 test('getChart ignores stale live candle', async () => {
   const pool = createFakePool(sql => {
-    if (sql.includes('FROM dhan_daily_candles')) {
+    if (sql.includes('FROM dhan_daily_candle_series')) {
       return { rows: [
-        { trade_date: '2026-06-20', open: 10, high: 11, low: 9, close: 10.5, volume: 100 },
+        { candles_gzip_base64: encodeCandleSeries([{ trade_date: '2026-06-20', open: 10, high: 11, low: 9, close: 10.5, volume: 100 }]) },
       ] };
     }
     if (sql.includes('FROM dhan_live_today')) {
@@ -71,7 +72,13 @@ test('getChart ignores stale live candle', async () => {
 
 test('getPrices and getQuote shape live data for the frontend', async () => {
   const pool = createFakePool((sql, params) => {
-    if (sql.includes('WITH week52')) {
+    if (sql.includes('FROM dhan_daily_candle_series')) {
+      assert.deepEqual(params, ['ABC']);
+      return { rows: [
+        { candles_gzip_base64: encodeCandleSeries([{ trade_date: '2026-06-20', open: 10, high: 20, low: 5, close: 10, volume: 100 }]) },
+      ] };
+    }
+    if (sql.includes('FROM market_universe u')) {
       assert.deepEqual(params, ['ABC']);
       assert.match(sql, /FROM market_universe u/);
       return { rows: [{
@@ -80,8 +87,6 @@ test('getPrices and getQuote shape live data for the frontend', async () => {
         market_cap: 123,
         ltp: 10,
         prev_close: 8,
-        week52High: 20,
-        week52Low: 5,
       }] };
     }
     if (sql.includes('FROM dhan_live_today')) {
@@ -108,9 +113,14 @@ test('getPrices and getQuote shape live data for the frontend', async () => {
   assert.equal(quote.week52High, 20);
 });
 
-test('getQuotes fetches portfolio quote data in one SQL round trip', async () => {
+test('getQuotes fetches portfolio quote data and compressed week52 stats', async () => {
   const pool = createFakePool((sql, params) => {
     assert.deepEqual(params, [['ABC', 'XYZ']]);
+    if (sql.includes('FROM dhan_daily_candle_series')) {
+      return { rows: [
+        { symbol: 'ABC', candles_gzip_base64: encodeCandleSeries([{ trade_date: '2026-06-20', open: 10, high: 20, low: 5, close: 10, volume: 100 }]) },
+      ] };
+    }
     assert.match(sql, /FROM market_universe u/);
     assert.match(sql, /symbol = ANY\(\$1\)/);
     return { rows: [
@@ -120,8 +130,6 @@ test('getQuotes fetches portfolio quote data in one SQL round trip', async () =>
         market_cap: 123,
         ltp: 10,
         prev_close: 8,
-        week52High: 20,
-        week52Low: 5,
       },
       {
         symbol: 'XYZ',
@@ -129,8 +137,6 @@ test('getQuotes fetches portfolio quote data in one SQL round trip', async () =>
         market_cap: 456,
         ltp: null,
         prev_close: null,
-        week52High: null,
-        week52Low: null,
       },
     ] };
   });
