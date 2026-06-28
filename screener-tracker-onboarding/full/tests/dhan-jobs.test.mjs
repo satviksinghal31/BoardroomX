@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { buildHistoricalSeriesRow, dateYearsAgo, fetchDhanBackfillUniverse } from '../scripts/dhan-historical-backfill.mjs';
 import { decodeCandleSeries } from '../scripts/lib/dhan-normalize.mjs';
 import { eodRepairWindow, runDhanEodUpdate } from '../scripts/dhan-eod-update.mjs';
-import { buildInactiveSymbols, filterDhanEquityRows } from '../scripts/dhan-instrument-sync.mjs';
+import { buildInactiveSymbols, fetchExistingDhanSymbols, filterDhanEquityRows } from '../scripts/dhan-instrument-sync.mjs';
 import { createDhanClient } from '../scripts/lib/dhan-client.mjs';
 import { getCronJobs } from '../scripts/run-cron.mjs';
 
@@ -40,6 +40,28 @@ test('buildInactiveSymbols returns active symbols missing from latest sync', () 
     buildInactiveSymbols(['ABC', 'XYZ', 'OLD'], new Set(['ABC', 'XYZ'])),
     ['OLD'],
   );
+});
+
+test('fetchExistingDhanSymbols paginates existing instrument rows', async () => {
+  const ranges = [];
+  const rows = Array.from({ length: 1001 }, (_, i) => ({ symbol: `SYM${i}` }));
+  const supabase = {
+    from() {
+      return {
+        select() { return this; },
+        order() { return this; },
+        async range(from, to) {
+          ranges.push([from, to]);
+          return { data: rows.slice(from, to + 1), error: null };
+        },
+      };
+    },
+  };
+
+  const symbols = await fetchExistingDhanSymbols({ supabase, pageSize: 1000 });
+
+  assert.equal(symbols.length, 1001);
+  assert.deepEqual(ranges, [[0, 999], [1000, 1999]]);
 });
 
 test('fetchScripMasterCsv reads CSV even when Dhan sends a non-text content type', async () => {

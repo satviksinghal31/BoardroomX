@@ -43,6 +43,21 @@ export function buildInactiveSymbols(existingSymbols, seenSymbols) {
     .sort();
 }
 
+export async function fetchExistingDhanSymbols({ supabase, pageSize = 1000 } = {}) {
+  const symbols = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from('dhan_instruments')
+      .select('symbol')
+      .order('symbol', { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw new Error(error.message);
+    symbols.push(...(data ?? []).map(row => row.symbol));
+    if (!data || data.length < pageSize) break;
+  }
+  return symbols;
+}
+
 export function parseCsvRows(csv) {
   const [headerLine, ...lines] = String(csv ?? '').trim().split(/\r?\n/);
   if (!headerLine) return [];
@@ -72,12 +87,7 @@ export async function runDhanInstrumentSync({ supabase = createSupabase(), dhanC
   const rows = filterDhanEquityRows(parseCsvRows(csv));
   const seen = new Set(rows.map(row => row.symbol));
 
-  const { data: existing, error: existingErr } = await supabase
-    .from('dhan_instruments')
-    .select('symbol');
-  if (existingErr) throw new Error(existingErr.message);
-
-  const inactive = buildInactiveSymbols((existing ?? []).map(row => row.symbol), seen);
+  const inactive = buildInactiveSymbols(await fetchExistingDhanSymbols({ supabase }), seen);
 
   for (let i = 0; i < rows.length; i += 500) {
     const batch = rows.slice(i, i + 500);
