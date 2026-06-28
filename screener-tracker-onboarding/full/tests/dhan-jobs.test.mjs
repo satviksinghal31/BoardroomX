@@ -311,6 +311,48 @@ test('runDhanEodUpdate waits between historical repair symbols', async () => {
   assert.deepEqual(delayCalls, [2500]);
 });
 
+test('runDhanEodUpdate treats Dhan no-data windows as skipped symbols', async () => {
+  const supabase = {
+    from(table) {
+      if (table === 'dhan_instruments') {
+        const query = {
+          select() { return this; },
+          neq() { return this; },
+          not() { return this; },
+          order() { return this; },
+          async range() {
+            return { data: [{ symbol: 'ABC', instrument_id: 42, dhan_security_id: '100', dhan_exchange_segment: 'NSE_EQ' }], error: null };
+          },
+        };
+        return query;
+      }
+      if (table === 'dhan_live_today') {
+        return {
+          delete() {
+            return {
+              async neq() {
+                return { error: null };
+              },
+            };
+          },
+        };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    },
+  };
+  const dhanClient = {
+    async fetchHistoricalDaily() {
+      throw new Error('Dhan historical daily failed (400): {"errorType":"Input_Exception","errorCode":"DH-905","errorMessage":"System is unable to fetch data due to incorrect parameters or no data present"}');
+    },
+  };
+
+  const result = await runDhanEodUpdate({ supabase, dhanClient, now: new Date('2026-06-28T10:00:30.000Z') });
+
+  assert.equal(result.failed_count, 0);
+  assert.equal(result.skipped_no_data_count, 1);
+  assert.deepEqual(result.skipped_no_data_symbols, ['ABC']);
+});
+
 test('getCronJobs exposes Dhan market-data jobs', () => {
   const jobs = getCronJobs(new Date('2026-06-22T01:00:00.000Z'));
   assert.equal(jobs.some(job => job.job === 'dhan-instrument-sync' && job.schedule_ist === '07:30 IST'), true);

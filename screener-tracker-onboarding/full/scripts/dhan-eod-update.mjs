@@ -31,6 +31,10 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function isNoDataHistoricalError(err) {
+  return /DH-905|no data present/i.test(err?.message ?? '');
+}
+
 export async function runDhanEodUpdate({
   supabase = createSupabase(),
   dhanClient,
@@ -51,6 +55,7 @@ export async function runDhanEodUpdate({
 
   let repaired = 0;
   const failed_symbols = [];
+  const skipped_no_data_symbols = [];
   for (const [index, row] of universe.entries()) {
     if (index > 0 && delayMs > 0) await sleepFn(delayMs);
     try {
@@ -83,6 +88,10 @@ export async function runDhanEodUpdate({
         repaired += repairs.length;
       }
     } catch (err) {
+      if (isNoDataHistoricalError(err)) {
+        skipped_no_data_symbols.push(row.symbol);
+        continue;
+      }
       failed_symbols.push({ symbol: row.symbol, error: err.message });
     }
   }
@@ -97,6 +106,8 @@ export async function runDhanEodUpdate({
     toDate,
     failed_count: failed_symbols.length,
     failed_symbols,
+    skipped_no_data_count: skipped_no_data_symbols.length,
+    skipped_no_data_symbols,
   };
 }
 
