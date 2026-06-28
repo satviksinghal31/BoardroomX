@@ -74,8 +74,7 @@ export async function runDhanInstrumentSync({ supabase = createSupabase(), dhanC
 
   const { data: existing, error: existingErr } = await supabase
     .from('dhan_instruments')
-    .select('symbol')
-    .neq('is_active', false);
+    .select('symbol');
   if (existingErr) throw new Error(existingErr.message);
 
   const inactive = buildInactiveSymbols((existing ?? []).map(row => row.symbol), seen);
