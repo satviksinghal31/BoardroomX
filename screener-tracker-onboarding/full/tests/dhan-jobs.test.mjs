@@ -11,6 +11,7 @@ import { getCronJobs } from '../scripts/run-cron.mjs';
 test('filterDhanEquityRows keeps only NSE equity EQ instruments', () => {
   const rows = filterDhanEquityRows([
     { EXCH_ID: 'NSE', SEGMENT: 'E', SERIES: 'EQ', UNDERLYING_SYMBOL: 'ABC', SECURITY_ID: '1', ISIN: 'INE1' },
+    { EXCH_ID: 'NSE', SEGMENT: 'E', SERIES: 'EQ', UNDERLYING_SYMBOL: '011NSETEST', SECURITY_ID: '99' },
     { EXCH_ID: 'NSE', SEGMENT: 'D', SERIES: 'EQ', UNDERLYING_SYMBOL: 'FNO', SECURITY_ID: '2' },
     { EXCH_ID: 'BSE', SEGMENT: 'E', SERIES: 'EQ', UNDERLYING_SYMBOL: 'BSE', SECURITY_ID: '3' },
     { EXCH_ID: 'NSE', SEGMENT: 'E', SERIES: 'BE', UNDERLYING_SYMBOL: 'BEONLY', SECURITY_ID: '4' },

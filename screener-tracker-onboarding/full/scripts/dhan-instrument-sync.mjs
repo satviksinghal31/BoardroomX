@@ -33,7 +33,7 @@ export function filterDhanEquityRows(rows) {
       freeze_qty: Number(pick(row, ['FREEZE_QTY', 'SEM_FREEZE_QTY'])) || null,
       is_active: true,
     }))
-    .filter(row => row.symbol && row.dhan_security_id);
+    .filter(row => row.symbol && row.dhan_security_id && !row.symbol.endsWith('NSETEST'));
 }
 
 export function buildInactiveSymbols(existingSymbols, seenSymbols) {
