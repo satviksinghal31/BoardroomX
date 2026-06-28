@@ -3,23 +3,26 @@ import { createClient } from '@supabase/supabase-js';
 
 import { createDhanAuth, createSupabaseDhanAuthStateStore } from '../dhan_auth.mjs';
 import { createDhanClient } from './lib/dhan-client.mjs';
-import { normalizeHistoricalResponse } from './lib/dhan-normalize.mjs';
+import { normalizeHistoricalResponse, rupeesToPaise } from './lib/dhan-normalize.mjs';
 
-export function buildHistoricalRows(symbol, candles) {
+const DEFAULT_BACKFILL_DELAY_MS = 2500;
+
+export function buildHistoricalRows(instrument, candles) {
+  const instrumentId = typeof instrument === 'object' ? instrument.instrument_id : null;
   const byDate = new Map();
   for (const row of candles ?? []) {
     if (!row?.trade_date) continue;
     byDate.set(row.trade_date, {
-      symbol,
+      instrument_id: instrumentId,
       trade_date: row.trade_date,
-      open: row.open,
-      high: row.high,
-      low: row.low,
-      close: row.close,
+      open_paise: rupeesToPaise(row.open),
+      high_paise: rupeesToPaise(row.high),
+      low_paise: rupeesToPaise(row.low),
+      close_paise: rupeesToPaise(row.close),
       volume: row.volume ?? 0,
     });
   }
-  return [...byDate.values()];
+  return [...byDate.values()].filter(row => row.instrument_id != null && row.open_paise != null && row.high_paise != null && row.low_paise != null && row.close_paise != null);
 }
 
 function createSupabase() {
@@ -63,7 +66,7 @@ export async function fetchDhanBackfillUniverse({ supabase, symbols = null, page
   for (let from = 0; ; from += pageSize) {
     let query = supabase
       .from('dhan_instruments')
-      .select('symbol,dhan_security_id,dhan_exchange_segment')
+      .select('symbol,instrument_id,dhan_security_id,dhan_exchange_segment')
       .neq('is_active', false)
       .not('dhan_security_id', 'is', null)
       .order('symbol', { ascending: true })
@@ -82,9 +85,9 @@ export async function runDhanHistoricalBackfill({
   supabase = createSupabase(),
   dhanClient,
   symbols = null,
-  fromDate = process.env.DHAN_BACKFILL_FROM_DATE ?? dateYearsAgo(new Date(), Number(process.env.DHAN_BACKFILL_YEARS ?? 5)),
+  fromDate = process.env.DHAN_BACKFILL_FROM_DATE ?? '1990-01-01',
   toDate = new Date().toISOString().slice(0, 10),
-  delayMs = Number(process.env.DHAN_BACKFILL_DELAY_MS ?? 750),
+  delayMs = Number(process.env.DHAN_BACKFILL_DELAY_MS ?? DEFAULT_BACKFILL_DELAY_MS),
   retries = Number(process.env.DHAN_BACKFILL_RETRIES ?? 2),
   retryDelayMs = Number(process.env.DHAN_BACKFILL_RETRY_DELAY_MS ?? 60_000),
   onProgress = null,
@@ -108,11 +111,11 @@ export async function runDhanHistoricalBackfill({
         fromDate,
         toDate,
       }), { retries, retryDelayMs });
-      const rows = buildHistoricalRows(row.symbol, normalizeHistoricalResponse(payload));
+      const rows = buildHistoricalRows(row, normalizeHistoricalResponse(payload));
       if (rows.length) {
         const { error: upsertErr } = await supabase
           .from('dhan_daily_candles')
-          .upsert(rows, { onConflict: 'symbol,trade_date' });
+          .upsert(rows, { onConflict: 'instrument_id,trade_date' });
         if (upsertErr) throw new Error(upsertErr.message);
       }
       success_count += 1;

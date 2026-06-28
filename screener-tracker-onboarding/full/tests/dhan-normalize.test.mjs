@@ -4,9 +4,18 @@ import { test } from 'node:test';
 import {
   appendFreshLiveCandle,
   normalizeHistoricalResponse,
+  paiseToRupees,
+  rupeesToPaise,
   toPriceResponse,
   toQuoteResponse,
 } from '../scripts/lib/dhan-normalize.mjs';
+
+test('rupeesToPaise and paiseToRupees convert chart prices compactly', () => {
+  assert.equal(rupeesToPaise(123.456), 12346);
+  assert.equal(rupeesToPaise('0.01'), 1);
+  assert.equal(rupeesToPaise(null), null);
+  assert.equal(paiseToRupees(12346), 123.46);
+});
 
 test('normalizeHistoricalResponse converts parallel Dhan arrays to sorted candles', () => {
   const rows = normalizeHistoricalResponse({

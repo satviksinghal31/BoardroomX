@@ -25,11 +25,12 @@ async function verifyDb(pool) {
       AND dhan_security_id IS NOT NULL
   `);
   const samples = await pool.query(`
-    SELECT symbol, count(*)::int AS candles
-    FROM dhan_daily_candles
-    WHERE symbol = ANY($1)
-    GROUP BY symbol
-    ORDER BY symbol
+    SELECT i.symbol, count(*)::int AS candles
+    FROM dhan_daily_candles c
+    JOIN dhan_instruments i ON i.instrument_id = c.instrument_id
+    WHERE i.symbol = ANY($1)
+    GROUP BY i.symbol
+    ORDER BY i.symbol
   `, [['RELIANCE', 'TCS', 'HDFCBANK']]);
 
   return {

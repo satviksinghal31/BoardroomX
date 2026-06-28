@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { buildHistoricalRows, dateYearsAgo, fetchDhanBackfillUniverse } from '../scripts/dhan-historical-backfill.mjs';
-import { buildEodRows } from '../scripts/dhan-eod-update.mjs';
+import { eodRepairWindow, runDhanEodUpdate } from '../scripts/dhan-eod-update.mjs';
 import { buildInactiveSymbols, filterDhanEquityRows } from '../scripts/dhan-instrument-sync.mjs';
 import { createDhanClient } from '../scripts/lib/dhan-client.mjs';
 import { getCronJobs } from '../scripts/run-cron.mjs';
@@ -59,30 +59,30 @@ test('fetchScripMasterCsv reads CSV even when Dhan sends a non-text content type
 });
 
 test('buildHistoricalRows maps normalized candles to DB rows', () => {
-  assert.deepEqual(buildHistoricalRows('ABC', [
+  assert.deepEqual(buildHistoricalRows({ symbol: 'ABC', instrument_id: 42 }, [
     { trade_date: '2026-01-01', open: 1, high: 2, low: 1, close: 2, volume: 100 },
   ]), [{
-    symbol: 'ABC',
+    instrument_id: 42,
     trade_date: '2026-01-01',
-    open: 1,
-    high: 2,
-    low: 1,
-    close: 2,
+    open_paise: 100,
+    high_paise: 200,
+    low_paise: 100,
+    close_paise: 200,
     volume: 100,
   }]);
 });
 
 test('buildHistoricalRows dedupes repeated trade dates before upsert', () => {
-  assert.deepEqual(buildHistoricalRows('ABC', [
+  assert.deepEqual(buildHistoricalRows({ symbol: 'ABC', instrument_id: 42 }, [
     { trade_date: '2026-01-01', open: 1, high: 2, low: 1, close: 2, volume: 100 },
     { trade_date: '2026-01-01', open: 3, high: 4, low: 2, close: 3, volume: 200 },
   ]), [{
-    symbol: 'ABC',
+    instrument_id: 42,
     trade_date: '2026-01-01',
-    open: 3,
-    high: 4,
-    low: 2,
-    close: 3,
+    open_paise: 300,
+    high_paise: 400,
+    low_paise: 200,
+    close_paise: 300,
     volume: 200,
   }]);
 });
@@ -91,6 +91,7 @@ test('fetchDhanBackfillUniverse paginates beyond Supabase default page size', as
   const ranges = [];
   const rows = Array.from({ length: 1001 }, (_, i) => ({
     symbol: `SYM${i}`,
+    instrument_id: i + 1,
     dhan_security_id: String(i),
     dhan_exchange_segment: 'NSE_EQ',
   }));
@@ -117,26 +118,174 @@ test('fetchDhanBackfillUniverse paginates beyond Supabase default page size', as
   assert.deepEqual(ranges, [[0, 999], [1000, 1999]]);
 });
 
-test('dateYearsAgo defaults historical backfills to bounded daily history', () => {
+test('dateYearsAgo supports optional bounded historical runs', () => {
   assert.equal(dateYearsAgo(new Date('2026-06-21T00:00:00.000Z'), 5), '2021-06-21');
 });
 
-test('buildEodRows prefers fresh live rows and falls back to quote rows', () => {
-  const rows = buildEodRows({
-    liveRows: [
-      { symbol: 'ABC', trade_date: '2026-06-22', open: 10, high: 12, low: 9, ltp: 11, volume: 100, last_tick_at: '2026-06-22T10:00:00.000Z' },
-      { symbol: 'XYZ', trade_date: '2026-06-22', open: null, high: null, low: null, ltp: null, volume: null, last_tick_at: null },
-    ],
-    fallbackQuotes: new Map([
-      ['XYZ', { open: 20, high: 22, low: 19, close: 21, volume: 200 }],
-    ]),
+test('eodRepairWindow is exactly three calendar days inclusive', () => {
+  assert.deepEqual(eodRepairWindow(new Date('2026-06-22T10:00:30.000Z')), {
+    fromDate: '2026-06-20',
+    toDate: '2026-06-22',
+  });
+});
+
+test('eodRepairWindow uses the IST calendar date', () => {
+  assert.deepEqual(eodRepairWindow(new Date('2026-06-21T20:00:00.000Z')), {
+    fromDate: '2026-06-20',
+    toDate: '2026-06-22',
+  });
+});
+
+test('runDhanEodUpdate repairs daily candles from historical API and clears live overlay', async () => {
+  const upserts = [];
+  const deletes = [];
+  const supabase = {
+    from(table) {
+      if (table === 'dhan_instruments') {
+        const query = {
+          select() { return this; },
+          neq() { return this; },
+          not() { return this; },
+          order() { return this; },
+          async range() {
+            return { data: [{ symbol: 'ABC', instrument_id: 42, dhan_security_id: '100', dhan_exchange_segment: 'NSE_EQ' }], error: null };
+          },
+        };
+        return query;
+      }
+      if (table === 'dhan_daily_candles') {
+        return {
+          async upsert(rows, options) {
+            upserts.push({ rows, options });
+            return { error: null };
+          },
+        };
+      }
+      if (table === 'dhan_live_today') {
+        return {
+          delete() {
+            return {
+              async neq() {
+                deletes.push(table);
+                return { error: null };
+              },
+            };
+          },
+        };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    },
+  };
+  const dhanClient = {
+    async fetchHistoricalDaily(request) {
+      assert.deepEqual(request, {
+        securityId: '100',
+        exchangeSegment: 'NSE_EQ',
+        fromDate: '2026-06-20',
+        toDate: '2026-06-22',
+      });
+      return {
+        timestamp: [1781913600],
+        open: [1],
+        high: [2],
+        low: [1],
+        close: [2],
+        volume: [100],
+      };
+    },
+  };
+
+  const result = await runDhanEodUpdate({
+    supabase,
+    dhanClient,
     now: new Date('2026-06-22T10:00:30.000Z'),
   });
 
-  assert.deepEqual(rows, [
-    { symbol: 'ABC', trade_date: '2026-06-22', open: 10, high: 12, low: 9, close: 11, volume: 100 },
-    { symbol: 'XYZ', trade_date: '2026-06-22', open: 20, high: 22, low: 19, close: 21, volume: 200 },
-  ]);
+  assert.equal(result.repaired, 1);
+  assert.equal(result.failed_count, 0);
+  assert.equal(deletes.length, 1);
+  assert.deepEqual(upserts[0], {
+    rows: [{
+      instrument_id: 42,
+      trade_date: '2026-06-20',
+      open_paise: 100,
+      high_paise: 200,
+      low_paise: 100,
+      close_paise: 200,
+      volume: 100,
+    }],
+    options: { onConflict: 'instrument_id,trade_date' },
+  });
+});
+
+test('runDhanEodUpdate waits between historical repair symbols', async () => {
+  const delayCalls = [];
+  const fetched = [];
+  const supabase = {
+    from(table) {
+      if (table === 'dhan_instruments') {
+        const query = {
+          select() { return this; },
+          neq() { return this; },
+          not() { return this; },
+          order() { return this; },
+          async range() {
+            return {
+              data: [
+                { symbol: 'ABC', instrument_id: 42, dhan_security_id: '100', dhan_exchange_segment: 'NSE_EQ' },
+                { symbol: 'XYZ', instrument_id: 43, dhan_security_id: '101', dhan_exchange_segment: 'NSE_EQ' },
+              ],
+              error: null,
+            };
+          },
+        };
+        return query;
+      }
+      if (table === 'dhan_daily_candles') {
+        return {
+          async upsert() {
+            return { error: null };
+          },
+        };
+      }
+      if (table === 'dhan_live_today') {
+        return {
+          delete() {
+            return {
+              async neq() {
+                return { error: null };
+              },
+            };
+          },
+        };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    },
+  };
+  const dhanClient = {
+    async fetchHistoricalDaily(request) {
+      fetched.push(request.securityId);
+      return {
+        timestamp: [1781913600],
+        open: [1],
+        high: [2],
+        low: [1],
+        close: [2],
+        volume: [100],
+      };
+    },
+  };
+
+  await runDhanEodUpdate({
+    supabase,
+    dhanClient,
+    now: new Date('2026-06-22T10:00:30.000Z'),
+    delayMs: 2500,
+    sleepFn: async ms => delayCalls.push(ms),
+  });
+
+  assert.deepEqual(fetched, ['100', '101']);
+  assert.deepEqual(delayCalls, [2500]);
 });
 
 test('getCronJobs exposes Dhan market-data jobs', () => {

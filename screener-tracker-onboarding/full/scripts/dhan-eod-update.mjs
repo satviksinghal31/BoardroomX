@@ -1,44 +1,13 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
-import { isFreshLiveTick, todayIstDate } from './lib/dhan-time.mjs';
+import { createDhanAuth, createSupabaseDhanAuthStateStore } from '../dhan_auth.mjs';
+import { buildHistoricalRows, fetchDhanBackfillUniverse } from './dhan-historical-backfill.mjs';
+import { createDhanClient } from './lib/dhan-client.mjs';
+import { normalizeHistoricalResponse } from './lib/dhan-normalize.mjs';
+import { todayIstDate } from './lib/dhan-time.mjs';
 
-function candleFromLive(row, now) {
-  if (!isFreshLiveTick(row.last_tick_at, now)) return null;
-  if ([row.open, row.high, row.low, row.ltp].some(v => v == null)) return null;
-  return {
-    symbol: row.symbol,
-    trade_date: String(row.trade_date).slice(0, 10),
-    open: Number(row.open),
-    high: Number(row.high),
-    low: Number(row.low),
-    close: Number(row.ltp),
-    volume: Number(row.volume ?? 0),
-  };
-}
-
-export function buildEodRows({ liveRows = [], fallbackQuotes = new Map(), now = new Date() } = {}) {
-  const out = [];
-  for (const live of liveRows) {
-    const liveCandle = candleFromLive(live, now);
-    if (liveCandle) {
-      out.push(liveCandle);
-      continue;
-    }
-    const fallback = fallbackQuotes.get(live.symbol);
-    if (!fallback) continue;
-    out.push({
-      symbol: live.symbol,
-      trade_date: String(live.trade_date ?? todayIstDate(now)).slice(0, 10),
-      open: Number(fallback.open),
-      high: Number(fallback.high),
-      low: Number(fallback.low),
-      close: Number(fallback.close ?? fallback.ltp),
-      volume: Number(fallback.volume ?? 0),
-    });
-  }
-  return out;
-}
+const DEFAULT_EOD_DELAY_MS = 2500;
 
 function createSupabase() {
   return createClient(
@@ -48,23 +17,73 @@ function createSupabase() {
   );
 }
 
-export async function runDhanEodUpdate({ supabase = createSupabase(), now = new Date(), fallbackQuotes = new Map() } = {}) {
-  const { data: liveRows, error } = await supabase
-    .from('dhan_live_today')
-    .select('symbol,trade_date,open,high,low,ltp,volume,last_tick_at');
-  if (error) throw new Error(error.message);
+export function eodRepairWindow(now = new Date()) {
+  const toDate = todayIstDate(now);
+  const from = new Date(`${toDate}T00:00:00.000Z`);
+  from.setUTCDate(from.getUTCDate() - 2);
+  return {
+    fromDate: from.toISOString().slice(0, 10),
+    toDate,
+  };
+}
 
-  const rows = buildEodRows({ liveRows: liveRows ?? [], fallbackQuotes, now });
-  if (rows.length) {
-    const { error: upsertErr } = await supabase
-      .from('dhan_daily_candles')
-      .upsert(rows, { onConflict: 'symbol,trade_date' });
-    if (upsertErr) throw new Error(upsertErr.message);
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export async function runDhanEodUpdate({
+  supabase = createSupabase(),
+  dhanClient,
+  now = new Date(),
+  symbols = null,
+  delayMs = Number(process.env.DHAN_EOD_DELAY_MS ?? DEFAULT_EOD_DELAY_MS),
+  sleepFn = sleep,
+} = {}) {
+  const client = dhanClient ?? createDhanClient({
+    clientId: process.env.DHAN_CLIENT_ID,
+    getAccessToken: createDhanAuth({
+      stateStore: createSupabaseDhanAuthStateStore(supabase),
+    }).getAccessToken,
+  });
+
+  const { fromDate, toDate } = eodRepairWindow(now);
+  const universe = await fetchDhanBackfillUniverse({ supabase, symbols });
+
+  let repaired = 0;
+  const failed_symbols = [];
+  for (const [index, row] of universe.entries()) {
+    if (index > 0 && delayMs > 0) await sleepFn(delayMs);
+    try {
+      const payload = await client.fetchHistoricalDaily({
+        securityId: row.dhan_security_id,
+        exchangeSegment: row.dhan_exchange_segment ?? 'NSE_EQ',
+        fromDate,
+        toDate,
+      });
+      const rows = buildHistoricalRows(row, normalizeHistoricalResponse(payload));
+      if (rows.length) {
+        const { error: upsertErr } = await supabase
+          .from('dhan_daily_candles')
+          .upsert(rows, { onConflict: 'instrument_id,trade_date' });
+        if (upsertErr) throw new Error(upsertErr.message);
+        repaired += rows.length;
+      }
+    } catch (err) {
+      failed_symbols.push({ symbol: row.symbol, error: err.message });
+    }
   }
 
   const { error: clearErr } = await supabase.from('dhan_live_today').delete().neq('symbol', '');
   if (clearErr) throw new Error(clearErr.message);
-  return { finalized: rows.length, cleared: liveRows?.length ?? 0 };
+  return {
+    attempted_count: universe.length,
+    repaired,
+    cleared_live: true,
+    fromDate,
+    toDate,
+    failed_count: failed_symbols.length,
+    failed_symbols,
+  };
 }
 
 export async function main() {

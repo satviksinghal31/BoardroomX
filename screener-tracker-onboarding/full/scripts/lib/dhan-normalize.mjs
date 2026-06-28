@@ -7,6 +7,20 @@ function round(value, digits = 2) {
   return Number(n.toFixed(digits));
 }
 
+export function rupeesToPaise(value) {
+  if (value == null) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n * 100);
+}
+
+export function paiseToRupees(value) {
+  if (value == null) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return round(n / 100);
+}
+
 function epochToDateString(epochSeconds) {
   return new Date(Number(epochSeconds) * 1000).toISOString().slice(0, 10);
 }

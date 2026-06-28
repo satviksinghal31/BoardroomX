@@ -27,10 +27,17 @@ export function createDhanMarketData({
       const sym = normalizeSymbol(symbol);
       const [historyResult, liveResult] = await Promise.all([
         dbPool.query(`
-          SELECT trade_date, open, high, low, close, volume
-          FROM dhan_daily_candles
-          WHERE symbol = $1
-          ORDER BY trade_date ASC
+          SELECT
+            c.trade_date,
+            c.open_paise / 100.0 AS open,
+            c.high_paise / 100.0 AS high,
+            c.low_paise / 100.0 AS low,
+            c.close_paise / 100.0 AS close,
+            c.volume
+          FROM dhan_daily_candles c
+          JOIN dhan_instruments i ON i.instrument_id = c.instrument_id
+          WHERE i.symbol = $1
+          ORDER BY c.trade_date ASC
         `, [sym]),
         dbPool.query(`
           SELECT trade_date, open, high, low, ltp, volume, last_tick_at
@@ -68,11 +75,12 @@ export function createDhanMarketData({
       const { rows } = await dbPool.query(`
         WITH week52 AS (
           SELECT
-            max(high) AS "week52High",
-            min(low) AS "week52Low"
-          FROM dhan_daily_candles
-          WHERE symbol = $1
-            AND trade_date >= CURRENT_DATE - interval '365 days'
+            max(c.high_paise / 100.0) AS "week52High",
+            min(c.low_paise / 100.0) AS "week52Low"
+          FROM dhan_daily_candles c
+          JOIN dhan_instruments i ON i.instrument_id = c.instrument_id
+          WHERE i.symbol = $1
+            AND c.trade_date >= CURRENT_DATE - interval '365 days'
         )
         SELECT
           u.symbol,
@@ -97,13 +105,14 @@ export function createDhanMarketData({
       const { rows } = await dbPool.query(`
         WITH week52 AS (
           SELECT
-            symbol,
-            max(high) AS "week52High",
-            min(low) AS "week52Low"
-          FROM dhan_daily_candles
-          WHERE symbol = ANY($1)
-            AND trade_date >= CURRENT_DATE - interval '365 days'
-          GROUP BY symbol
+            i.symbol,
+            max(c.high_paise / 100.0) AS "week52High",
+            min(c.low_paise / 100.0) AS "week52Low"
+          FROM dhan_daily_candles c
+          JOIN dhan_instruments i ON i.instrument_id = c.instrument_id
+          WHERE i.symbol = ANY($1)
+            AND c.trade_date >= CURRENT_DATE - interval '365 days'
+          GROUP BY i.symbol
         )
         SELECT
           u.symbol,
