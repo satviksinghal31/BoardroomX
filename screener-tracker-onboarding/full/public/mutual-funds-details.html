@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Small Cap Analyser Details — BoardroomX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>:root{--bg:#f7f6f3;--surface:#fff;--text:#1a1a18;--muted:#787870;--accent:#c44125;--border:#e8e7e2;--amber:#a67c00;--amber-light:#fff9eb}*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;line-height:1.6}.wrap{margin:auto;max-width:1100px;padding:48px 24px}.back{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);display:inline-flex;font-size:12px;margin-bottom:24px;padding:6px 12px;text-decoration:none}h1{font-size:29px;letter-spacing:-.025em}.sub{color:var(--muted);font-size:13px;margin:7px 0 28px;max-width:720px}.caveat{background:var(--amber-light);border-left:3px solid var(--amber);border-radius:0 7px 7px 0;color:var(--amber);font-size:12px;margin-bottom:24px;padding:13px 15px}.section{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:20px;padding:24px}.section h2{font-size:15px;margin-bottom:4px}.meta{color:var(--muted);font-size:11px;margin-bottom:16px}.grid{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}.item{background:var(--bg);border-radius:7px;padding:14px}.item strong{display:block;font-size:13px}.item span{color:var(--muted);font-size:11px}.empty{border-top:1px solid var(--border);color:var(--muted);font-size:12px;margin-top:16px;padding-top:16px}.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:24px 0 16px}.tab{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font:inherit;font-size:12px;padding:6px 12px}.tab.active{background:var(--text);border-color:var(--text);color:white}.data-shell{min-height:230px}.view{display:none}.view.active{display:block}.skeleton-row{border-bottom:1px solid var(--border);display:grid;gap:12px;grid-template-columns:2fr repeat(3,1fr);padding:12px 0}.skeleton-row i{background:var(--border);border-radius:4px;height:9px}.facts{border-collapse:collapse;font-size:12px;width:100%}.facts th{color:var(--muted);font-size:10px;font-weight:500;letter-spacing:.06em;text-align:left;text-transform:uppercase}.facts th,.facts td{border-bottom:1px solid var(--border);padding:10px 8px;white-space:nowrap}.note{color:var(--muted);font-size:11px;margin-top:12px}.warn{background:var(--amber-light);border-radius:4px;color:var(--amber);display:inline-flex;font-size:10px;padding:3px 7px}@media(max-width:760px){.wrap{padding:28px 16px}.grid{grid-template-columns:1fr}.skeleton-row{grid-template-columns:1fr 1fr}}</style>
+</head>
+<body><main class="wrap">
+  <a class="back" href="/mutual-funds.html">← Back to analyser</a>
+  <h1>Analysis details</h1>
+  <p class="sub">Release A skeleton for traceable Value Research facts. It intentionally contains no ranking, recommendation, or unsupported analytical claim.</p>
+  <div class="caveat"><strong>Preview structure only.</strong> Values are intentionally blank. Nippon India Nifty Smallcap 250 Index Fund is the benchmark fund proxy, not the actual Nifty Smallcap 250 TRI.</div>
+  <section class="section"><h2>Approved instruments</h2><p class="meta">Three Direct Growth funds and one benchmark proxy</p><div class="grid"><div class="item"><strong>Bandhan Small Cap Fund</strong><span>Direct · Growth</span></div><div class="item"><strong>Quant Small Cap Fund</strong><span>Direct · Growth</span></div><div class="item"><strong>Bank of India Small Cap Fund</strong><span>Direct · Growth</span></div><div class="item"><strong>Nippon India Nifty Smallcap 250 Index Fund</strong><span>Benchmark fund proxy</span></div></div></section>
+  <section class="section"><h2>Value Research source fields</h2><p class="meta">One-time verified overview dataset</p><div class="grid"><div class="item"><strong>Identity & costs</strong><span>AUM, expense ratio and source date loaded</span></div><div class="item"><strong>Management</strong><span>Unavailable in JSON-LD capture</span></div><div class="item"><strong>Portfolio</strong><span>Holdings not complete</span></div><div class="item"><strong>Risk</strong><span>Pending source-labelled measures</span></div></div><p class="empty">Missing values remain explicitly unavailable. The first data pass stores only fields proven from Value Research JSON-LD.</p></section>
+  <div class="tabs" role="tablist" aria-label="Analysis data views"><button class="tab active" data-view="nav" id="tab-nav" role="tab" aria-controls="view-nav" aria-selected="true" tabindex="0">Raw NAV</button><button class="tab" data-view="rolling" id="tab-rolling" role="tab" aria-controls="view-rolling" aria-selected="false" tabindex="-1">Rolling Returns</button><button class="tab" data-view="scores" id="tab-scores" role="tab" aria-controls="view-scores" aria-selected="false" tabindex="-1">Score Components</button><button class="tab" data-view="instruments" id="tab-instruments" role="tab" aria-controls="view-instruments" aria-selected="false" tabindex="-1">Instrument Metadata</button></div>
+  <section class="section data-shell" id="detailsContent">
+    <div class="view active" id="view-nav" role="tabpanel" aria-labelledby="tab-nav"><h2>Raw NAV</h2><p class="meta">Pending verified data</p><div class="skeleton-row"><i></i><i></i><i></i><i></i></div><div class="skeleton-row"><i></i><i></i><i></i><i></i></div></div>
+    <div class="view" id="view-rolling" role="tabpanel" aria-labelledby="tab-rolling" hidden><h2>Rolling Returns</h2><p class="meta">Pending verified data and deterministic calculation</p><div class="skeleton-row"><i></i><i></i><i></i><i></i></div><div class="skeleton-row"><i></i><i></i><i></i><i></i></div></div>
+    <div class="view" id="view-scores" role="tabpanel" aria-labelledby="tab-scores" hidden><h2>Score Components</h2><p class="meta">Pending verified data; no scores or ranking in Release A</p><div class="skeleton-row"><i></i><i></i><i></i><i></i></div></div>
+    <div class="view" id="view-instruments" role="tabpanel" aria-labelledby="tab-instruments" hidden><h2>Instrument Metadata</h2><p class="meta" id="metadataStatus">Loading Value Research overview facts</p><div class="table-wrap"><table class="facts" id="metadataTable"><thead><tr><th>Fund</th><th>NAV date</th><th>NAV</th><th>AUM (Cr)</th><th>Expense</th><th>Launch</th><th>Rating</th><th>Portfolio</th></tr></thead><tbody></tbody></table></div><p class="note" id="metadataNote"></p></div>
+  </section>
+  <script>
+    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+    const panels = Array.from(document.querySelectorAll('[role="tabpanel"]'));
+    function activateTab(tab, moveFocus) {
+      tabs.forEach(function(item) {
+        const selected = item === tab;
+        item.classList.toggle('active', selected);
+        item.setAttribute('aria-selected', String(selected));
+        item.tabIndex = selected ? 0 : -1;
+      });
+      panels.forEach(function(panel) {
+        const selected = panel.id === tab.getAttribute('aria-controls');
+        panel.classList.toggle('active', selected);
+        panel.hidden = !selected;
+      });
+      if (moveFocus) tab.focus();
+    }
+    tabs.forEach(function(tab, index) {
+      tab.addEventListener('click', function() { activateTab(tab, false); });
+      tab.addEventListener('keydown', function(event) {
+        let nextIndex = null;
+        if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+        if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+        if (event.key === 'Home') nextIndex = 0;
+        if (event.key === 'End') nextIndex = tabs.length - 1;
+        if (nextIndex === null) return;
+        event.preventDefault();
+        activateTab(tabs[nextIndex], true);
+      });
+    });
+
+    const formatNumber = (value) => value == null ? '—' : Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    const appendCell = (row, value, className) => {
+      const cell = document.createElement('td');
+      if (className) cell.className = className;
+      cell.textContent = value ?? '—';
+      row.appendChild(cell);
+      return cell;
+    };
+    fetch('/data/mutual-funds/fund-facts.json')
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('fund facts unavailable')))
+      .then((payload) => {
+        const body = document.querySelector('#metadataTable tbody');
+        body.textContent = '';
+        (payload.funds || []).forEach(function(fund) {
+          const row = document.createElement('tr');
+          appendCell(row, fund.name);
+          appendCell(row, fund.nav?.as_of);
+          appendCell(row, fund.nav?.parsed_value == null ? '—' : '₹' + formatNumber(fund.nav.parsed_value));
+          appendCell(row, formatNumber(fund.aum?.parsed_value));
+          appendCell(row, fund.expense_ratio?.parsed_value == null ? '—' : formatNumber(fund.expense_ratio.parsed_value) + '%');
+          appendCell(row, fund.launch_date);
+          appendCell(row, fund.rating?.raw_value ? fund.rating.raw_value + '/' + fund.rating.best : '—');
+          const statusCell = appendCell(row, '');
+          const status = document.createElement('span');
+          status.className = 'warn';
+          status.textContent = fund.portfolio_status || 'unknown';
+          statusCell.appendChild(status);
+          body.appendChild(row);
+        });
+        document.getElementById('metadataStatus').textContent = `${payload.provider} overview facts · generated ${payload.generated_at}`;
+        document.getElementById('metadataNote').textContent = payload.retrieval_note || '';
+      })
+      .catch(function() {
+        document.getElementById('metadataStatus').textContent = 'Value Research overview facts unavailable in this build';
+      });
+  </script>
+</main></body></html>

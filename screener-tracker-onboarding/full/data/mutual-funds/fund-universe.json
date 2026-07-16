@@ -1,0 +1,89 @@
+{
+  "schema_version": "1.0",
+  "provenance": {
+    "verified_at": "2026-07-12",
+    "sources": [
+      {
+        "provider": "Value Research",
+        "source_urls": [
+          "https://www.valueresearchonline.com/funds/40564/bandhan-small-cap-fund-direct-plan/",
+          "https://www.valueresearchonline.com/funds/17366/quant-small-cap-fund-direct-plan/",
+          "https://www.valueresearchonline.com/funds/38283/bank-of-india-small-cap-fund-direct-plan/"
+        ],
+        "method_note": "Resolved each canonical public fund page by exact displayed scheme name, Direct plan and NAV-Growth option. No fuzzy candidate selection was used."
+      },
+      {
+        "provider": "MFAPI",
+        "source_urls": [
+          "https://api.mfapi.in/mf"
+        ],
+        "method_note": "Phase 1 uses the four approved MFAPI scheme codes as provider-labelled identifiers. They are not represented as official AMFI scheme codes."
+      }
+    ]
+  },
+  "instruments": [
+    {
+      "fund_key": "bandhan-small-cap",
+      "display_name": "Bandhan Small Cap Fund - Direct Plan",
+      "role": "fund",
+      "amc": "Bandhan Mutual Fund",
+      "plan": "Direct",
+      "option": "Growth",
+      "mfapi_scheme_code": "147946",
+      "source_identity": {
+        "provider": "Value Research",
+        "fund_id": "40564",
+        "canonical_url": "https://www.valueresearchonline.com/funds/40564/bandhan-small-cap-fund-direct-plan/",
+        "displayed_scheme_name": "Bandhan Small Cap Fund - Direct Plan",
+        "displayed_nav_option": "NAV-Growth"
+      }
+    },
+    {
+      "fund_key": "quant-small-cap",
+      "display_name": "Quant Small Cap Fund - Direct Plan",
+      "role": "fund",
+      "amc": "Quant Mutual Fund",
+      "plan": "Direct",
+      "option": "Growth",
+      "mfapi_scheme_code": "120828",
+      "source_identity": {
+        "provider": "Value Research",
+        "fund_id": "17366",
+        "canonical_url": "https://www.valueresearchonline.com/funds/17366/quant-small-cap-fund-direct-plan/",
+        "displayed_scheme_name": "Quant Small Cap Fund - Direct Plan",
+        "displayed_nav_option": "NAV-Growth"
+      }
+    },
+    {
+      "fund_key": "bank-of-india-small-cap",
+      "display_name": "Bank of India Small Cap Fund - Direct Plan",
+      "role": "fund",
+      "amc": "Bank of India Mutual Fund",
+      "plan": "Direct",
+      "option": "Growth",
+      "mfapi_scheme_code": "145678",
+      "source_identity": {
+        "provider": "Value Research",
+        "fund_id": "38283",
+        "canonical_url": "https://www.valueresearchonline.com/funds/38283/bank-of-india-small-cap-fund-direct-plan/",
+        "displayed_scheme_name": "Bank of India Small Cap Fund - Direct Plan",
+        "displayed_nav_option": "NAV-Growth"
+      }
+    },
+    {
+      "fund_key": "nippon-smallcap-250-proxy",
+      "display_name": "Nippon India Nifty Smallcap 250 Index Fund - Direct Plan",
+      "role": "benchmark_proxy",
+      "amc": "Nippon India Mutual Fund",
+      "plan": "Direct",
+      "option": "Growth",
+      "mfapi_scheme_code": "148519",
+      "source_identity": {
+        "provider": "MFAPI",
+        "mfapi_scheme_code": "148519"
+      },
+      "proxy_description": "Benchmark fund proxy for the Nifty Smallcap 250 index.",
+      "caveat": "This mutual fund is a benchmark proxy, not the actual Nifty Smallcap 250 TRI. Tracking difference and fund expenses may cause its returns to differ from the index."
+    }
+  ]
+}

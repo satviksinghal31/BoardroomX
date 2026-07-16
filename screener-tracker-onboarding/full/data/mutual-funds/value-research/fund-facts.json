@@ -1,0 +1,407 @@
+{
+  "schema_version": "1.0",
+  "provider": "Value Research",
+  "generated_at": "2026-07-16T03:36:00+00:00",
+  "records": [
+    {
+      "schema_version": "1.0",
+      "source": {
+        "provider": "Value Research",
+        "fund_id": "40564",
+        "urls": [
+          "https://www.valueresearchonline.com/funds/40564/bandhan-small-cap-fund-direct-plan/"
+        ],
+        "retrieved_at": "2026-07-16T03:36:00+00:00",
+        "raw_sha256": [
+          "713f171c486b5fe916ae1763025afc142c1c4455d80799dd938e7cc31ec40c89"
+        ],
+        "canonical_sha256": "0da8eeb450c25070d239ef1fa830f8eae47f661a3c161f6c1899b4505340eae4",
+        "tabs_captured": [
+          "overview"
+        ],
+        "raw_path": "data/mutual-funds/value-research/raw/40564-overview.html"
+      },
+      "identity": {
+        "fund_key": "bandhan-small-cap",
+        "displayed_scheme_name": "Bandhan Small Cap Fund - Direct Plan",
+        "expected_scheme_name": "Bandhan Small Cap Fund - Direct Plan",
+        "amc": "Bandhan Mutual Fund",
+        "plan": "Direct",
+        "option": "Growth",
+        "fund_id": "40564"
+      },
+      "dates": {
+        "nav_as_of": "2026-07-15",
+        "aum_as_of": null,
+        "portfolio_as_of": null,
+        "returns_as_of": null,
+        "retrieved_at": "2026-07-16T03:36:00+00:00"
+      },
+      "fund_details": {
+        "nav": {
+          "raw_value": "55.8650",
+          "parsed_value": 55.865,
+          "unit": "INR",
+          "as_of": "2026-07-15"
+        },
+        "aum": {
+          "raw_value": "28,466",
+          "parsed_value": 28466.0,
+          "unit": "Crore INR",
+          "as_of": null
+        },
+        "launch_date": "2020-02-25",
+        "rating": {
+          "raw_value": "5",
+          "best": 5
+        }
+      },
+      "costs_and_investment": {
+        "expense_ratio": {
+          "raw_value": "0.35",
+          "parsed_value": 0.35,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "minimum_investment": {
+          "raw_value": "1,000",
+          "parsed_value": 1000.0,
+          "unit": "INR"
+        },
+        "minimum_sip_investment": {
+          "raw_value": "100",
+          "parsed_value": 100.0,
+          "unit": "INR"
+        },
+        "exit_load": "1% for redemption within 365 days"
+      },
+      "management": {
+        "current_managers": null
+      },
+      "performance": {
+        "point_to_point": [
+          {
+            "label": "1Y Return",
+            "raw_value": "6.67",
+            "parsed_value": 6.67,
+            "unit": "Percent",
+            "as_of": null
+          },
+          {
+            "label": "3Y Return",
+            "raw_value": "28.36",
+            "parsed_value": 28.36,
+            "unit": "Percent",
+            "as_of": null
+          },
+          {
+            "label": "5Y Return",
+            "raw_value": "20.71",
+            "parsed_value": 20.71,
+            "unit": "Percent",
+            "as_of": null
+          }
+        ]
+      },
+      "risk": {},
+      "portfolio": {
+        "holdings": [],
+        "sectors": [],
+        "turnover": null,
+        "holdings_completeness": "unknown",
+        "partial_reason": "No expanded holdings table was captured from the public page."
+      },
+      "additional_fields": [],
+      "missing_fields": [
+        "portfolio.holdings",
+        "portfolio.sectors",
+        "portfolio.turnover",
+        "management.current_managers",
+        "risk.source_labelled_measures"
+      ],
+      "warnings": [
+        "Raw browser-rendered HTML hit the acquisition return-size limit; only JSON-LD overview fields are treated as audit-ready.",
+        "Portfolio holdings were not captured with expansion evidence; holdings completeness is unknown."
+      ],
+      "quality": {
+        "identity_match": true,
+        "section_markers": {
+          "overview_json_ld": true,
+          "portfolio_holdings": false
+        },
+        "audit_ready": true,
+        "raw_capture_bytes": 200011,
+        "holdings_completeness": "unknown"
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "source": {
+        "provider": "Value Research",
+        "fund_id": "17366",
+        "urls": [
+          "https://www.valueresearchonline.com/funds/17366/quant-small-cap-fund-direct-plan/"
+        ],
+        "retrieved_at": "2026-07-16T03:36:00+00:00",
+        "raw_sha256": [
+          "6b4a1364f049b5dbd1976e9d1f41d997da3cb6c00318f164d20847aff5f76a16"
+        ],
+        "canonical_sha256": "32a073e8afb98a28a8b36c0f5de03978a8f5a8cfdeec3867026decfcd62c05a4",
+        "tabs_captured": [
+          "overview"
+        ],
+        "raw_path": "data/mutual-funds/value-research/raw/17366-overview.html"
+      },
+      "identity": {
+        "fund_key": "quant-small-cap",
+        "displayed_scheme_name": "Quant Small Cap Fund - Direct Plan",
+        "expected_scheme_name": "Quant Small Cap Fund - Direct Plan",
+        "amc": "Quant Mutual Fund",
+        "plan": "Direct",
+        "option": "Growth",
+        "fund_id": "17366"
+      },
+      "dates": {
+        "nav_as_of": "2026-07-15",
+        "aum_as_of": null,
+        "portfolio_as_of": null,
+        "returns_as_of": null,
+        "retrieved_at": "2026-07-16T03:36:00+00:00"
+      },
+      "fund_details": {
+        "nav": {
+          "raw_value": "315.7711",
+          "parsed_value": 315.7711,
+          "unit": "INR",
+          "as_of": "2026-07-15"
+        },
+        "aum": {
+          "raw_value": "33,739",
+          "parsed_value": 33739.0,
+          "unit": "Crore INR",
+          "as_of": null
+        },
+        "launch_date": "2013-01-01",
+        "rating": {
+          "raw_value": "3",
+          "best": 5
+        }
+      },
+      "costs_and_investment": {
+        "expense_ratio": {
+          "raw_value": "0.58",
+          "parsed_value": 0.58,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "minimum_investment": {
+          "raw_value": "5,000",
+          "parsed_value": 5000.0,
+          "unit": "INR"
+        },
+        "minimum_sip_investment": {
+          "raw_value": "1,000",
+          "parsed_value": 1000.0,
+          "unit": "INR"
+        },
+        "exit_load": "1% for redemption within 365 days"
+      },
+      "management": {
+        "current_managers": null
+      },
+      "performance": {
+        "point_to_point": [
+          {
+            "label": "1Y Return",
+            "raw_value": "10.19",
+            "parsed_value": 10.19,
+            "unit": "Percent",
+            "as_of": null
+          },
+          {
+            "label": "3Y Return",
+            "raw_value": "21.35",
+            "parsed_value": 21.35,
+            "unit": "Percent",
+            "as_of": null
+          },
+          {
+            "label": "5Y Return",
+            "raw_value": "20.05",
+            "parsed_value": 20.05,
+            "unit": "Percent",
+            "as_of": null
+          },
+          {
+            "label": "10Y Return",
+            "raw_value": "21.04",
+            "parsed_value": 21.04,
+            "unit": "Percent",
+            "as_of": null
+          }
+        ]
+      },
+      "risk": {},
+      "portfolio": {
+        "holdings": [],
+        "sectors": [],
+        "turnover": null,
+        "holdings_completeness": "unknown",
+        "partial_reason": "No expanded holdings table was captured from the public page."
+      },
+      "additional_fields": [],
+      "missing_fields": [
+        "portfolio.holdings",
+        "portfolio.sectors",
+        "portfolio.turnover",
+        "management.current_managers",
+        "risk.source_labelled_measures"
+      ],
+      "warnings": [
+        "Raw browser-rendered HTML hit the acquisition return-size limit; only JSON-LD overview fields are treated as audit-ready.",
+        "Portfolio holdings were not captured with expansion evidence; holdings completeness is unknown."
+      ],
+      "quality": {
+        "identity_match": true,
+        "section_markers": {
+          "overview_json_ld": true,
+          "portfolio_holdings": false
+        },
+        "audit_ready": true,
+        "raw_capture_bytes": 200011,
+        "holdings_completeness": "unknown"
+      }
+    },
+    {
+      "schema_version": "1.0",
+      "source": {
+        "provider": "Value Research",
+        "fund_id": "38283",
+        "urls": [
+          "https://www.valueresearchonline.com/funds/38283/bank-of-india-small-cap-fund-direct-plan/"
+        ],
+        "retrieved_at": "2026-07-16T03:36:00+00:00",
+        "raw_sha256": [
+          "646107ec5287d6022c7f44f4fc431ef60b519a8353c3aac0f7a901532e825c27"
+        ],
+        "canonical_sha256": "af07e9983333a73f77bc3b0ce1cbb72b2fe327aba391bf8381d626502c03aca8",
+        "tabs_captured": [
+          "overview"
+        ],
+        "raw_path": "data/mutual-funds/value-research/raw/38283-overview.html"
+      },
+      "identity": {
+        "fund_key": "bank-of-india-small-cap",
+        "displayed_scheme_name": "Bank of India Small Cap Fund - Direct Plan",
+        "expected_scheme_name": "Bank of India Small Cap Fund - Direct Plan",
+        "amc": "Bank of India Mutual Fund",
+        "plan": "Direct",
+        "option": "Growth",
+        "fund_id": "38283"
+      },
+      "dates": {
+        "nav_as_of": "2026-07-15",
+        "aum_as_of": null,
+        "portfolio_as_of": null,
+        "returns_as_of": null,
+        "retrieved_at": "2026-07-16T03:36:00+00:00"
+      },
+      "fund_details": {
+        "nav": {
+          "raw_value": "62.5300",
+          "parsed_value": 62.53,
+          "unit": "INR",
+          "as_of": "2026-07-15"
+        },
+        "aum": {
+          "raw_value": "2,572",
+          "parsed_value": 2572.0,
+          "unit": "Crore INR",
+          "as_of": null
+        },
+        "launch_date": "2018-12-19",
+        "rating": {
+          "raw_value": "4",
+          "best": 5
+        }
+      },
+      "costs_and_investment": {
+        "expense_ratio": {
+          "raw_value": "0.45",
+          "parsed_value": 0.45,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "minimum_investment": {
+          "raw_value": "5,000",
+          "parsed_value": 5000.0,
+          "unit": "INR"
+        },
+        "minimum_sip_investment": {
+          "raw_value": "1,000",
+          "parsed_value": 1000.0,
+          "unit": "INR"
+        },
+        "exit_load": "For units in excess of 10% of the investment, 1% will be charged for redemption within 365 days"
+      },
+      "management": {
+        "current_managers": null
+      },
+      "performance": {
+        "point_to_point": [
+          {
+            "label": "1Y Return",
+            "raw_value": "16.79",
+            "parsed_value": 16.79,
+            "unit": "Percent",
+            "as_of": null
+          },
+          {
+            "label": "3Y Return",
+            "raw_value": "23.09",
+            "parsed_value": 23.09,
+            "unit": "Percent",
+            "as_of": null
+          },
+          {
+            "label": "5Y Return",
+            "raw_value": "20.09",
+            "parsed_value": 20.09,
+            "unit": "Percent",
+            "as_of": null
+          }
+        ]
+      },
+      "risk": {},
+      "portfolio": {
+        "holdings": [],
+        "sectors": [],
+        "turnover": null,
+        "holdings_completeness": "unknown",
+        "partial_reason": "No expanded holdings table was captured from the public page."
+      },
+      "additional_fields": [],
+      "missing_fields": [
+        "portfolio.holdings",
+        "portfolio.sectors",
+        "portfolio.turnover",
+        "management.current_managers",
+        "risk.source_labelled_measures"
+      ],
+      "warnings": [
+        "Raw browser-rendered HTML hit the acquisition return-size limit; only JSON-LD overview fields are treated as audit-ready.",
+        "Portfolio holdings were not captured with expansion evidence; holdings completeness is unknown."
+      ],
+      "quality": {
+        "identity_match": true,
+        "section_markers": {
+          "overview_json_ld": true,
+          "portfolio_holdings": false
+        },
+        "audit_ready": true,
+        "raw_capture_bytes": 200011,
+        "holdings_completeness": "unknown"
+      }
+    }
+  ]
+}

@@ -15,6 +15,9 @@ yarn-error.log*
 
 # Generated research/cache artifacts
 data/
+!screener-tracker-onboarding/full/data/
+!screener-tracker-onboarding/full/public/data/
+!screener-tracker-onboarding/full/public/data/**
 graphify-out/
 
 # Temporary Railway config pulls

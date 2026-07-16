@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Small Cap Fund Analyser — BoardroomX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#f7f6f3;--surface:#fff;--text:#1a1a18;--muted:#787870;--accent:#c44125;--accent-light:#fdf0ed;--border:#e8e7e2;--amber:#a67c00;--amber-light:#fff9eb}
+    *{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;line-height:1.6}.mono{font-family:'DM Mono',monospace}
+    .topbar{align-items:center;background:rgba(247,246,243,.96);border-bottom:1px solid var(--border);display:flex;gap:24px;min-height:62px;padding:0 24px;position:sticky;top:0;z-index:10}.brand{align-items:center;color:var(--text);display:flex;font-weight:800;gap:9px;text-decoration:none}.logo{align-items:center;background:var(--text);border-radius:7px;color:white;display:flex;height:30px;justify-content:center;width:30px}.nav{display:flex;gap:6px}.nav a{border-radius:6px;color:var(--muted);font-size:13px;padding:7px 10px;text-decoration:none}.nav a:hover,.nav a.active{background:var(--surface);color:var(--text)}
+    .section{max-width:1040px;margin:auto;padding:64px 24px}.hero{padding-bottom:28px;padding-top:74px}.eyebrow{color:var(--accent);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}h1{font-size:38px;letter-spacing:-.035em;line-height:1.1;margin:8px 0 14px}h2{font-size:25px;letter-spacing:-.02em;margin:5px 0}.desc{color:var(--muted);font-size:14px;max-width:620px}.button{background:var(--text);border-radius:6px;color:white;display:inline-flex;font-size:12px;font-weight:600;margin-top:20px;padding:8px 15px;text-decoration:none}.notice{background:var(--amber-light);border-left:3px solid var(--amber);border-radius:0 8px 8px 0;color:var(--amber);font-size:13px;margin-top:26px;padding:15px 18px}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px}.table-wrap{overflow:auto}table{border-collapse:collapse;font-size:13px;width:100%}th{color:var(--muted);font-size:10px;font-weight:500;letter-spacing:.06em;text-align:left;text-transform:uppercase}th,td{border-bottom:1px solid var(--border);padding:11px 10px;white-space:nowrap}.fund{font-weight:600}.tag{background:var(--accent-light);border-radius:4px;color:var(--accent);font-size:11px;padding:3px 7px}.checks{display:flex;flex-wrap:wrap;gap:7px;margin-top:22px}.chip{background:var(--surface);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:11px;padding:4px 10px}.chip:before{background:#d2d0c9;border-radius:50%;content:'';display:inline-block;height:7px;margin-right:6px;width:7px}.placeholder-grid{display:grid;gap:14px;grid-template-columns:repeat(3,1fr);margin-top:22px}.placeholder{min-height:125px}.placeholder strong{display:block;font-size:14px;margin-bottom:8px}.placeholder p{color:var(--muted);font-size:12px}.bar{background:var(--border);border-radius:4px;height:7px;margin-top:15px;overflow:hidden}.bar span{background:#d8d6cf;display:block;height:100%}.metric-grid{display:grid;gap:12px;grid-template-columns:repeat(4,1fr);margin:22px 0}.metric{text-align:center}.metric b{display:block;font-family:'DM Mono',monospace;font-size:20px}.metric span{color:var(--muted);font-size:10px;letter-spacing:.05em;text-transform:uppercase}.analysis-stack{display:grid;gap:12px}.table-head{align-items:center;display:flex;justify-content:space-between;margin-bottom:12px}.table-head strong{font-size:15px}.status{color:var(--muted);font-size:11px}.chart-placeholder{align-items:flex-end;background:linear-gradient(180deg,#fff 0%,#faf9f6 100%);border:1px dashed var(--border);display:flex;gap:8px;height:210px;margin-top:12px;padding:28px}.chart-placeholder span{background:#ddd9d1;border-radius:3px 3px 0 0;flex:1;opacity:.75}.chart-placeholder span:nth-child(1){height:35%}.chart-placeholder span:nth-child(2){height:58%}.chart-placeholder span:nth-child(3){height:44%}.chart-placeholder span:nth-child(4){height:70%}.chart-placeholder span:nth-child(5){height:52%}
+    .source-note{color:var(--muted);font-size:11px;margin-top:12px}.warn{background:var(--amber-light);border-radius:4px;color:var(--amber);display:inline-flex;font-size:10px;padding:3px 7px}footer{border-top:1px solid var(--border);color:var(--muted);font-size:11px;margin-top:32px;padding:25px;text-align:center}@media(max-width:720px){.topbar{align-items:flex-start;flex-direction:column;gap:8px;padding:12px 16px}.nav{flex-wrap:wrap}.section{padding:44px 16px}.hero{padding-top:48px}h1{font-size:31px}.placeholder-grid,.metric-grid{grid-template-columns:1fr 1fr}}@media(max-width:480px){.placeholder-grid,.metric-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="logo">BX</span>BoardroomX</a>
+    <nav class="nav" aria-label="Primary"><a href="/">Portfolio</a><a href="/annuals.html">Annuals</a><a class="active" href="/mutual-funds.html">Mutual Funds</a></nav>
+  </header>
+  <main>
+    <section class="section hero">
+      <div class="eyebrow">Phase 1 · Analysis preview</div>
+      <h1>Small Cap Fund<br>Analyser</h1>
+      <p class="desc">A focused comparison skeleton for three approved Direct Growth funds. Value Research overview facts are populated first; portfolio and rolling-return analytics stay blank until verified.</p>
+      <a class="button" href="/mutual-funds-details.html">View analysis details →</a>
+      <div class="notice"><strong>Preview structure:</strong> rolling-return values are intentionally blank until the verified NAV release. Nippon India Nifty Smallcap 250 Index Fund is a <strong>benchmark fund proxy</strong>, not the actual Nifty Smallcap 250 TRI.</div>
+      <div class="checks" id="checksStrip"><span class="chip">4 instruments confirmed</span><span class="chip">Direct Growth plans</span><span class="chip">Value Research overview facts</span><span class="chip">Analytics not scored</span></div>
+    </section>
+    <section class="section">
+      <div class="eyebrow">Step 01</div><h2>Approved universe</h2>
+      <p class="desc">Only the confirmed Phase 1 instruments are included.</p>
+      <div class="card table-wrap" style="margin-top:24px"><table id="fTable"><thead><tr><th>Instrument</th><th>NAV</th><th>AUM (Cr)</th><th>Expense %</th><th>1Y %</th><th>3Y %</th><th>5Y %</th><th>Rating</th><th>Plan</th><th>Role</th></tr></thead><tbody>
+        <tr data-fund-key="bandhan-small-cap"><td class="fund">Bandhan Small Cap Fund</td><td data-field="nav">—</td><td data-field="aum">—</td><td data-field="expense">—</td><td data-field="return-1y">—</td><td data-field="return-3y">—</td><td data-field="return-5y">—</td><td data-field="rating">—</td><td>Direct · Growth</td><td>Fund</td></tr>
+        <tr data-fund-key="quant-small-cap"><td class="fund">Quant Small Cap Fund</td><td data-field="nav">—</td><td data-field="aum">—</td><td data-field="expense">—</td><td data-field="return-1y">—</td><td data-field="return-3y">—</td><td data-field="return-5y">—</td><td data-field="rating">—</td><td>Direct · Growth</td><td>Fund</td></tr>
+        <tr data-fund-key="bank-of-india-small-cap"><td class="fund">Bank of India Small Cap Fund</td><td data-field="nav">—</td><td data-field="aum">—</td><td data-field="expense">—</td><td data-field="return-1y">—</td><td data-field="return-3y">—</td><td data-field="return-5y">—</td><td data-field="rating">—</td><td>Direct · Growth</td><td>Fund</td></tr>
+        <tr><td class="fund">Nippon India Nifty Smallcap 250 Index Fund</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>Direct · Growth</td><td>Benchmark fund proxy</td></tr>
+      </tbody></table><p class="source-note" id="vrSourceNote">Loading Value Research overview facts...</p></div>
+    </section>
+    <section class="section">
+      <div class="eyebrow">Step 02</div><h2>Value Research analysis</h2>
+      <p class="desc">Verified overview facts are loaded from the local Value Research cache. Portfolio composition remains unavailable until holdings are captured with expansion evidence.</p>
+      <div class="placeholder-grid"><article class="card placeholder"><strong>Fund profile</strong><p>AUM, expense ratio, manager and tenure.</p><div class="bar"><span style="width:62%"></span></div></article><article class="card placeholder"><strong>Portfolio composition</strong><p>Holdings, sectors and valuation fields.</p><div class="bar"><span style="width:76%"></span></div></article><article class="card placeholder"><strong>Risk measures</strong><p>Source-labelled measures and dates.</p><div class="bar"><span style="width:48%"></span></div></article></div>
+      <div class="metric-grid" id="metricGrid"><div class="card metric"><b id="metricAum">—</b><span>Largest AUM</span></div><div class="card metric"><b id="metricExpense">—</b><span>Lowest Expense</span></div><div class="card metric"><b>—</b><span>Turnover</span></div><div class="card metric"><b id="metricNavDate">—</b><span>NAV date</span></div></div>
+    </section>
+    <section class="section">
+      <div class="eyebrow">Step 03 · Preview</div><h2>Rolling-return analysis</h2>
+      <p class="desc">The supplied analytical containers are retained. Values remain blank until the NAV dataset and calculations are verified.</p>
+      <div class="analysis-stack" style="margin-top:24px">
+        <div class="card table-wrap"><div class="table-head"><strong>Median Rolling Returns</strong><span class="status">Pending verified data</span></div><table id="medianReturnsTable"><thead><tr><th>Instrument</th><th>1Y median</th><th>3Y median</th></tr></thead><tbody><tr><td>Bandhan Small Cap</td><td>—</td><td>—</td></tr><tr><td>Quant Small Cap</td><td>—</td><td>—</td></tr><tr><td>Bank of India Small Cap</td><td>—</td><td>—</td></tr><tr><td>Nippon India benchmark fund proxy</td><td>—</td><td>—</td></tr></tbody></table></div>
+        <div class="card table-wrap"><div class="table-head"><strong>Consistency</strong><span class="status">Pending verified data</span></div><table id="consistencyTable"><thead><tr><th>Fund</th><th>1Y windows above proxy</th><th>3Y windows above proxy</th></tr></thead><tbody><tr><td colspan="3">No calculated values in Release A</td></tr></tbody></table></div>
+        <div class="card table-wrap"><div class="table-head"><strong>Return Distribution</strong><span class="status">Pending verified data</span></div><table id="distributionTable"><thead><tr><th>Fund</th><th>Minimum</th><th>25th percentile</th><th>Median</th><th>Maximum</th></tr></thead><tbody><tr><td colspan="5">No calculated values in Release A</td></tr></tbody></table></div>
+        <div class="card"><div class="table-head"><strong>Rolling-return visual</strong><span class="status">Chart preview · no values</span></div><div class="chart-placeholder" aria-label="Empty rolling-return chart placeholder"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></div></div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const formatNumber = (value) => value == null ? '—' : Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    const formatPercent = (item) => item?.parsed_value == null ? '—' : formatNumber(item.parsed_value);
+    const setText = (row, field, value) => {
+      const cell = row.querySelector(`[data-field="${field}"]`);
+      if (cell) cell.textContent = value ?? '—';
+    };
+
+    fetch('/data/mutual-funds/fund-facts.json')
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('fund facts unavailable')))
+      .then((payload) => {
+        const funds = payload.funds || [];
+        funds.forEach((fund) => {
+          const row = document.querySelector(`[data-fund-key="${fund.fund_key}"]`);
+          if (!row) return;
+          setText(row, 'nav', fund.nav?.parsed_value == null ? '—' : `₹${formatNumber(fund.nav.parsed_value)}`);
+          setText(row, 'aum', formatNumber(fund.aum?.parsed_value));
+          setText(row, 'expense', formatNumber(fund.expense_ratio?.parsed_value));
+          setText(row, 'return-1y', formatPercent(fund.returns?.['1Y']));
+          setText(row, 'return-3y', formatPercent(fund.returns?.['3Y']));
+          setText(row, 'return-5y', formatPercent(fund.returns?.['5Y']));
+          setText(row, 'rating', fund.rating?.raw_value ? `${fund.rating.raw_value}/${fund.rating.best}` : '—');
+        });
+
+        const withAum = funds.filter((fund) => fund.aum?.parsed_value != null);
+        const withExpense = funds.filter((fund) => fund.expense_ratio?.parsed_value != null);
+        const largest = withAum.sort((a, b) => b.aum.parsed_value - a.aum.parsed_value)[0];
+        const lowestExpense = withExpense.sort((a, b) => a.expense_ratio.parsed_value - b.expense_ratio.parsed_value)[0];
+        document.getElementById('metricAum').textContent = largest ? `₹${formatNumber(largest.aum.parsed_value)} Cr` : '—';
+        document.getElementById('metricExpense').textContent = lowestExpense ? `${formatNumber(lowestExpense.expense_ratio.parsed_value)}%` : '—';
+        document.getElementById('metricNavDate').textContent = funds[0]?.nav?.as_of || '—';
+        document.getElementById('vrSourceNote').innerHTML = `Source: ${payload.provider} overview JSON-LD · generated ${payload.generated_at} · <span class="warn">portfolio holdings unknown</span>`;
+      })
+      .catch(() => {
+        document.getElementById('vrSourceNote').textContent = 'Value Research overview facts unavailable in this build.';
+      });
+  </script>
+  <footer>BoardroomX · Phase 1 analytical preview · No investment recommendation</footer>
+</body>
+</html>
