@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TD Power Systems Ltd - Screener Fixture</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+        color: #18212f;
+        background: #f6f7f9;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        width: min(1080px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 56px;
+      }
+
+      header,
+      section {
+        background: #fff;
+        border: 1px solid #dfe4ea;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        padding: 20px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0 0 12px;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      h3 {
+        font-size: 16px;
+      }
+
+      .fixture-note {
+        color: #596579;
+        margin: 0;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+
+      #top-ratios {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        list-style: none;
+        margin: 20px 0 0;
+        padding: 0;
+      }
+
+      #top-ratios li {
+        border: 1px solid #edf0f3;
+        border-radius: 8px;
+        padding: 12px;
+      }
+
+      .name,
+      .title {
+        color: #596579;
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .value,
+      .sub {
+        display: block;
+        margin-top: 4px;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid #edf0f3;
+        padding: 10px;
+        text-align: left;
+      }
+
+      th {
+        background: #f9fafb;
+        font-weight: 700;
+      }
+
+      tfoot td {
+        font-weight: 700;
+      }
+
+      .document-list {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      a {
+        color: #2458d3;
+      }
+
+      button {
+        border: 1px solid #2458d3;
+        border-radius: 6px;
+        background: #2458d3;
+        color: #fff;
+        cursor: default;
+        font: inherit;
+        padding: 10px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>TD Power Systems Ltd</h1>
+        <p class="fixture-note">
+          Parser fixture covering every scraper section. It uses representative rows
+          but includes the full annual period shape through Mar 2026.
+        </p>
+        <div class="company-links" aria-label="Company links">
+          <a href="https://tdps.co.in/">Website</a>
+          <a href="https://www.nseindia.com/get-quotes/equity?symbol=TDPOWERSYS">NSE</a>
+        </div>
+        <p><span>Sector: Capital Goods</span></p>
+
+        <ul id="top-ratios" aria-label="Top ratios">
+          <li>
+            <span class="name">Market Cap</span>
+            <span class="value">₹ 6,500 Cr.</span>
+          </li>
+          <li>
+            <span class="name">Stock P/E</span>
+            <span class="value">28.4</span>
+          </li>
+          <li>
+            <span class="name">ROCE</span>
+            <span class="value">31.2 %</span>
+          </li>
+        </ul>
+      </header>
+
+      <section class="company-profile" aria-labelledby="profile-heading">
+        <h2 id="profile-heading">Company Profile</h2>
+        <div class="grid">
+          <div>
+            <span class="title">About</span>
+            <span class="sub">Makes AC generators.</span>
+          </div>
+          <div>
+            <span class="title">Key Points</span>
+            <span class="sub">Exports globally.</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="analysis" aria-labelledby="analysis-heading">
+        <h2 id="analysis-heading">Analysis</h2>
+        <div class="grid">
+          <div class="pros">
+            <h3>Pros</h3>
+            <ul>
+              <li>Debt free</li>
+            </ul>
+          </div>
+          <div class="cons">
+            <h3>Cons</h3>
+            <ul>
+              <li>Cyclical demand</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="peers" aria-labelledby="peers-heading">
+        <h2 id="peers-heading">Peer Comparison</h2>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>P/E</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Peer Ltd</td>
+              <td>25</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>Median</td>
+              <td>25</td>
+            </tr>
+          </tfoot>
+        </table>
+      </section>
+
+      <section id="quarters" aria-labelledby="quarters-heading">
+        <h2 id="quarters-heading">Quarterly Profit and Loss</h2>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Jun 2024</th>
+              <th>Sep 2024</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Sales</td>
+              <td>280</td>
+              <td>310</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="profit-loss" aria-labelledby="profit-loss-heading">
+        <h2 id="profit-loss-heading">Annual Profit and Loss</h2>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Mar 2015</th>
+              <th>Mar 2016</th>
+              <th>Mar 2017</th>
+              <th>Mar 2018</th>
+              <th>Mar 2019</th>
+              <th>Mar 2020</th>
+              <th>Mar 2021</th>
+              <th>Mar 2022</th>
+              <th>Mar 2023</th>
+              <th>Mar 2024</th>
+              <th>Mar 2025</th>
+              <th>Mar 2026</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Sales</td>
+              <td>500</td>
+              <td>520</td>
+              <td>540</td>
+              <td>560</td>
+              <td>580</td>
+              <td>600</td>
+              <td>650</td>
+              <td>720</td>
+              <td>940</td>
+              <td>1,200</td>
+              <td>1,500</td>
+              <td>1,856</td>
+            </tr>
+            <tr>
+              <td>Net Profit</td>
+              <td>25</td>
+              <td>28</td>
+              <td>32</td>
+              <td>36</td>
+              <td>42</td>
+              <td>48</td>
+              <td>60</td>
+              <td>84</td>
+              <td>108</td>
+              <td>120</td>
+              <td>180</td>
+              <td>240</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="grid" aria-label="Growth ranges">
+          <table class="ranges-table">
+            <tbody>
+              <tr>
+                <th colspan="2">Compounded Sales Growth</th>
+              </tr>
+              <tr>
+                <td>10 Years:</td>
+                <td>12%</td>
+              </tr>
+            </tbody>
+          </table>
+          <table class="ranges-table">
+            <tbody>
+              <tr>
+                <th colspan="2">Compounded Profit Growth</th>
+              </tr>
+              <tr>
+                <td>5 Years:</td>
+                <td>18%</td>
+              </tr>
+            </tbody>
+          </table>
+          <table class="ranges-table">
+            <tbody>
+              <tr>
+                <th colspan="2">Stock Price CAGR</th>
+              </tr>
+              <tr>
+                <td>3 Years:</td>
+                <td>22%</td>
+              </tr>
+            </tbody>
+          </table>
+          <table class="ranges-table">
+            <tbody>
+              <tr>
+                <th colspan="2">Return on Equity</th>
+              </tr>
+              <tr>
+                <td>Last Year:</td>
+                <td>25%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="balance-sheet" aria-labelledby="balance-sheet-heading">
+        <h2 id="balance-sheet-heading">Balance Sheet</h2>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Mar 2025</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Borrowings</td>
+              <td>10</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="cash-flow" aria-labelledby="cash-flow-heading">
+        <h2 id="cash-flow-heading">Cash Flow</h2>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Mar 2025</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Cash from Operating Activity</td>
+              <td>190</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="ratios" aria-labelledby="ratios-heading">
+        <h2 id="ratios-heading">Financial Ratios</h2>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Mar 2025</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ROCE %</td>
+              <td>31.2%</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="shareholding" aria-labelledby="shareholding-heading">
+        <h2 id="shareholding-heading">Shareholding Pattern</h2>
+        <h3>Quarterly</h3>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Mar 2024</th>
+              <th>Jun 2024</th>
+              <th>Sep 2024</th>
+              <th>Dec 2024</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Promoters</td>
+              <td>58%</td>
+              <td>58%</td>
+              <td>58%</td>
+              <td>58%</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Yearly</h3>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Mar 2024</th>
+              <th>Mar 2025</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Promoters</td>
+              <td>58%</td>
+              <td>58%</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="documents" aria-labelledby="documents-heading">
+        <h2 id="documents-heading">Documents</h2>
+        <div class="document-list">
+          <div>
+            <h3>Annual reports</h3>
+            <a href="/company/annual-report/1/">Financial Year 2025</a>
+          </div>
+          <div>
+            <h3>Credit ratings</h3>
+            <a href="https://example.com/rating.pdf">Rating update</a>
+          </div>
+          <div>
+            <h3>Concalls</h3>
+            <a href="/company/concalls/1/">May 2025 transcript</a>
+          </div>
+          <div>
+            <h3>Announcements</h3>
+            <a href="/exchange/announcement/1/">Order win</a>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="wiki-heading">
+        <h2 id="wiki-heading">Wiki Commentary</h2>
+        <button data-url="/wiki/company/123/commentary/">Read More</button>
+      </section>
+    </main>
+  </body>
+</html>
