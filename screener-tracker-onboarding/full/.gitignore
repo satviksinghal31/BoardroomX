@@ -10,5 +10,7 @@ data/mutual-funds/*
 !data/mutual-funds/value-research/**
 !data/mutual-funds/value-research/raw/
 !data/mutual-funds/value-research/raw/**
+!data/mutual-funds/nav-history/
+!data/mutual-funds/nav-history/**
 *.log
 .DS_Store

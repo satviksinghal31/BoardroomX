@@ -7,6 +7,8 @@ import test from 'node:test';
 const manifestUrl = new URL('../data/mutual-funds/fund-universe.json', import.meta.url);
 const valueResearchFactsUrl = new URL('../data/mutual-funds/value-research/fund-facts.json', import.meta.url);
 const publicValueResearchFactsUrl = new URL('../public/data/mutual-funds/fund-facts.json', import.meta.url);
+const navSummaryUrl = new URL('../data/mutual-funds/nav-history/nav-history-summary.json', import.meta.url);
+const publicNavSummaryUrl = new URL('../public/data/mutual-funds/nav-history/nav-history-summary.json', import.meta.url);
 const execFileAsync = promisify(execFile);
 
 test('fund universe contains only the three approved funds and benchmark proxy', async () => {
@@ -176,4 +178,54 @@ test('Value Research parser is idempotent for the cached raw evidence', async ()
 
   assert.equal(await readFile(valueResearchFactsUrl, 'utf8'), beforePrivate);
   assert.equal(await readFile(publicValueResearchFactsUrl, 'utf8'), beforePublic);
+});
+
+test('MFAPI NAV history is stored since inception for every approved instrument', async () => {
+  const manifest = JSON.parse(await readFile(manifestUrl, 'utf8'));
+  const summary = JSON.parse(await readFile(navSummaryUrl, 'utf8'));
+
+  assert.equal(summary.schema_version, '1.0');
+  assert.equal(summary.provider, 'MFAPI');
+  assert.equal(summary.funds.length, manifest.instruments.length);
+
+  for (const instrument of manifest.instruments) {
+    const summaryRow = summary.funds.find((row) => row.fund_key === instrument.fund_key);
+    assert.ok(summaryRow, `missing NAV summary for ${instrument.fund_key}`);
+    assert.equal(summaryRow.mfapi_scheme_code, instrument.mfapi_scheme_code);
+    assert.equal(summaryRow.status, 'SUCCESS');
+    assert.match(summaryRow.first_nav_date, /^\d{4}-\d{2}-\d{2}$/);
+    assert.match(summaryRow.latest_nav_date, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(summaryRow.nav_count > 500, `${instrument.fund_key} should have meaningful NAV history`);
+    assert.equal(summaryRow.duplicate_dates, 0);
+
+    const historyUrl = new URL(`../data/mutual-funds/nav-history/${instrument.fund_key}.json`, import.meta.url);
+    const history = JSON.parse(await readFile(historyUrl, 'utf8'));
+    assert.equal(history.schema_version, '1.0');
+    assert.equal(history.source.provider, 'MFAPI');
+    assert.equal(history.identity.fund_key, instrument.fund_key);
+    assert.equal(history.identity.mfapi_scheme_code, instrument.mfapi_scheme_code);
+    assert.equal(history.nav_history.length, summaryRow.nav_count);
+    assert.equal(history.quality.sorted_ascending, true);
+    assert.equal(history.quality.duplicate_dates, 0);
+    assert.equal(history.nav_history[0].date, summaryRow.first_nav_date);
+    assert.equal(history.nav_history.at(-1).date, summaryRow.latest_nav_date);
+
+    let previousDate = '';
+    for (const point of history.nav_history) {
+      assert.match(point.date, /^\d{4}-\d{2}-\d{2}$/);
+      assert.ok(point.date > previousDate, `${instrument.fund_key} dates must be strictly ascending`);
+      assert.equal(typeof point.nav, 'number');
+      assert.ok(point.nav > 0, `${instrument.fund_key} NAV must be positive`);
+      assert.match(point.nav_raw, /^\d+(\.\d+)?$/);
+      previousDate = point.date;
+    }
+  }
+});
+
+test('public MFAPI NAV summary mirrors private summary without full series duplication', async () => {
+  const privateSummary = JSON.parse(await readFile(navSummaryUrl, 'utf8'));
+  const publicSummary = JSON.parse(await readFile(publicNavSummaryUrl, 'utf8'));
+
+  assert.deepEqual(publicSummary, privateSummary);
+  assert.doesNotMatch(await readFile(publicNavSummaryUrl, 'utf8'), /nav_history/);
 });

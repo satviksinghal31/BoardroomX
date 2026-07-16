@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0",
+  "provider": "MFAPI",
+  "source_base_url": "https://api.mfapi.in/mf",
+  "source_data_as_of": "2026-07-15",
+  "funds": [
+    {
+      "fund_key": "bandhan-small-cap",
+      "display_name": "Bandhan Small Cap Fund - Direct Plan",
+      "role": "fund",
+      "mfapi_scheme_code": "147946",
+      "mfapi_scheme_name": "BANDHAN SMALL CAP FUND - DIRECT PLAN GROWTH",
+      "status": "SUCCESS",
+      "first_nav_date": "2020-02-26",
+      "latest_nav_date": "2026-07-15",
+      "nav_count": 1581,
+      "duplicate_dates": 0,
+      "source_url": "https://api.mfapi.in/mf/147946",
+      "canonical_sha256": "2aae65d41a1b2ce90c83c9775c58f418956b39dddda41f71d9ec2bb4581fde9d"
+    },
+    {
+      "fund_key": "quant-small-cap",
+      "display_name": "Quant Small Cap Fund - Direct Plan",
+      "role": "fund",
+      "mfapi_scheme_code": "120828",
+      "mfapi_scheme_name": "quant Small Cap Fund - Growth Option - Direct Plan",
+      "status": "SUCCESS",
+      "first_nav_date": "2013-01-07",
+      "latest_nav_date": "2026-07-15",
+      "nav_count": 3328,
+      "duplicate_dates": 0,
+      "source_url": "https://api.mfapi.in/mf/120828",
+      "canonical_sha256": "6a8c9fd54241066bf21cd1760514030840ad124b73248ad995b2c451e3fefb0f"
+    },
+    {
+      "fund_key": "bank-of-india-small-cap",
+      "display_name": "Bank of India Small Cap Fund - Direct Plan",
+      "role": "fund",
+      "mfapi_scheme_code": "145678",
+      "mfapi_scheme_name": "BANK OF INDIA Small Cap Fund Direct Plan Growth",
+      "status": "SUCCESS",
+      "first_nav_date": "2018-12-27",
+      "latest_nav_date": "2026-07-15",
+      "nav_count": 1859,
+      "duplicate_dates": 0,
+      "source_url": "https://api.mfapi.in/mf/145678",
+      "canonical_sha256": "c61d59ef5565736e54e9bc67a6a2b5526ef14ec7a5eeaecb0e41e2c536c7fc79"
+    },
+    {
+      "fund_key": "nippon-smallcap-250-proxy",
+      "display_name": "Nippon India Nifty Smallcap 250 Index Fund - Direct Plan",
+      "role": "benchmark_proxy",
+      "mfapi_scheme_code": "148519",
+      "mfapi_scheme_name": "Nippon India Nifty Smallcap 250 Index Fund - Direct Plan - Growth Option",
+      "status": "SUCCESS",
+      "first_nav_date": "2020-10-19",
+      "latest_nav_date": "2026-07-15",
+      "nav_count": 1413,
+      "duplicate_dates": 0,
+      "source_url": "https://api.mfapi.in/mf/148519",
+      "canonical_sha256": "63ffad29d00a4ebbb7a7685283dcde5d779c73a550d52f218bc29f383a49c569"
+    }
+  ]
+}
