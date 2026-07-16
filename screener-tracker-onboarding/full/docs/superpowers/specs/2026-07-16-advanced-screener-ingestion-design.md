@@ -2,26 +2,54 @@
 
 ## Goal
 
-Integrate the supplied Python Screener scraper into BoardroomX as a reusable library, command-line tool, and Railway-ready bulk worker. Capture every requested Screener section without expanding the project into unrelated UI or platform work.
+Integrate the supplied Python Screener scraper into BoardroomX through three independently testable and deployable milestones: a robust single-ticker scraper, a resumable bulk ingestion worker, and a God Mode manual-refresh experience with progress reporting. Capture every requested Screener section while deferring automated quarterly refresh scheduling.
 
 ## Scope and Priorities
 
 The implementation is intentionally limited to the highest-impact changes:
 
-1. Make parsing reliable enough for repeated unattended use.
+1. Prove that one ticker can be scraped reliably before adding bulk behavior.
 2. Store every parsed section without losing fields when Screener changes its page.
-3. Preserve the existing typed annual-financial tables used by BoardroomX.
-4. Add a polite, resumable, one-symbol Railway worker for bulk ingestion.
-5. Add fixture-driven tests that detect parser drift before deployment.
+3. Add a sequential, resumable bulk run with a configurable delay and visible progress.
+4. Expose one manual full-universe refresh action in God Mode.
+5. Deploy and verify each milestone before beginning the next one.
 
 The following are out of scope:
 
-- new frontend screens or redesigns;
 - replacing existing DB-backed APIs;
 - broad refactors of the Node server or unrelated cron jobs;
 - one dedicated SQL table for every nested field;
-- parallel Screener requests or a long-running high-throughput scraper;
+- parallel Screener requests or an unbounded high-throughput scraper;
 - historical retention of every unchanged full-page snapshot.
+- automatic quarterly refresh cadence or announcement-driven refresh triggers;
+- multiple concurrent scraper workers;
+- redesigning God Mode beyond the minimum refresh control and progress panel.
+
+## Delivery Milestones
+
+### Milestone 1: Single-ticker scraper
+
+Build and deploy the scraper library and single-ticker CLI first. It must fetch all available sections for one company, return a stable versioned result, and report partial section failures without disguising them as success.
+
+Verification uses saved HTML fixtures plus a small live sample drawn from the BoardroomX universe. The sample should include a standard industrial company such as `TDPOWERSYS`, a large-cap, a bank or NBFC, a recent listing, and a small/mid-cap. A live test is successful only when annual P&L is present and each optional section is either populated or explicitly marked unavailable/failed.
+
+Deployment for this milestone is a Railway-compatible command that can run a single ticker as a one-off task. No bulk queue or UI is required yet.
+
+### Milestone 2: Bulk ingestion and persistence
+
+After Milestone 1 is verified in production, add Supabase persistence and a background bulk runner. A manual run creates a durable run record and a queue containing the selected universe. One worker processes symbols sequentially; the request that starts the run returns immediately and does not remain open for hours.
+
+The inter-company delay is configurable, with two seconds as the initial production default. The worker honors `Retry-After`, slows down after `429` or temporary server errors, and never runs symbols in parallel. At roughly 2,100 symbols, network and parsing time—not just the configured delay—will determine total duration; a practical target is completion within approximately two to four hours, subject to Screener response times and backoff.
+
+The run is resumable after a Railway restart because claimed, completed, retry, and failed symbols are stored in Supabase. Re-running an interrupted job continues pending work rather than starting from zero. This milestone also adds status APIs that return total, pending, running, completed, partial, failed, elapsed time, and the current symbol.
+
+Deploy and verify the worker using a small batch, then a larger controlled batch, before attempting the full universe.
+
+### Milestone 3: God Mode manual refresh
+
+Add one minimal God Mode panel with a `Refresh Screener Data` action. Clicking it creates a full-universe bulk run unless another run is active. The UI polls the status API and displays a progressive loader with counts, percentage, current symbol, elapsed time, and failures. It must be safe to close the browser; the Railway worker continues independently.
+
+The first version always fetches the full requested payload, including quarterly and annual sections. Automatic quarterly refresh frequency is a later decision and is not part of these milestones.
 
 ## Architecture
 
@@ -55,7 +83,7 @@ The scraper returns one versioned dictionary containing:
 
 ### CLI
 
-Add a thin CLI entry point supporting the requested single-ticker, batch, statement, output-directory, delay, credentials, section-filtering, and verbosity flags.
+Add a thin CLI entry point supporting the requested single-ticker, batch, statement, output-directory, delay, credentials, section-filtering, and verbosity flags. Single-ticker mode is completed and deployed in Milestone 1; batch mode is enabled in Milestone 2.
 
 Batch input uses Python's CSV parser rather than splitting on commas. Duplicate and invalid tickers are reported explicitly. Results are written atomically so interruption cannot leave a valid-looking truncated JSON file. The summary records successes, partial successes, failures, duration, and output path.
 
@@ -63,7 +91,7 @@ The CLI remains useful without a database. Local JSON output is an export/debugg
 
 ### Persistence adapter
 
-Add a separate Supabase persistence adapter. It receives a scraper result and performs idempotent upserts.
+Add a separate Supabase persistence adapter in Milestone 2. It receives a scraper result and performs idempotent upserts.
 
 Existing typed tables remain authoritative for queryable annual data:
 
@@ -84,22 +112,23 @@ This hybrid model keeps important financial fields typed while guaranteeing that
 
 Documents are stored in the lossless payload with absolute URLs. Dedicated document, peer, or commentary tables are deferred until a concrete query or UI requires them.
 
-### Railway worker
+### Railway bulk worker
 
-Replace the external scraper dependency in the existing annual worker path with the Python library and persistence adapter. The production command processes exactly one eligible queue item and exits.
+Replace the external scraper dependency in the existing annual worker path with the Python library and persistence adapter. A manually started bulk run is drained by one sequential worker process so a full universe can finish within hours rather than days.
 
-The worker retains the existing BoardroomX queue contract:
+The worker retains the useful parts of the existing BoardroomX queue contract:
 
 - seed missing active `market_universe` symbols;
-- acquire a Postgres advisory lock;
-- claim one eligible `pending` or `retry` symbol;
+- acquire a Postgres advisory lock so only one bulk worker runs;
+- claim one eligible `pending` or `retry` symbol at a time;
 - scrape consolidated statements first;
 - fall back to standalone only when consolidated annual P&L is unavailable;
 - validate and persist the result;
 - update queue and run-log status;
-- release the lock and exit.
+- wait for the configured delay and claim the next eligible symbol;
+- exit when the run has no eligible symbols or receives a termination signal.
 
-Railway schedules the command once per minute. There is no parallel fetching. Complete symbols are refreshed only after an explicit request, a freshness trigger, or a chosen long audit interval.
+There is no automatic schedule in this phase and no parallel fetching. God Mode starts the durable run; Railway hosts the sequential worker. Complete symbols are refreshed only when a new manual run explicitly includes them. Scheduled or higher-frequency quarterly refreshes are deferred.
 
 ## Data Integrity
 
@@ -134,7 +163,7 @@ Tests are fixture-driven and do not depend on Screener availability. Sanitized H
 - malformed or changed tables;
 - CSV batch input and CAGR edge cases.
 
-Persistence tests use a fake adapter or transaction-isolated database boundary to verify idempotent upserts, no overwrite on failed refresh, queue transitions, and one-symbol-per-run behavior.
+Persistence tests use a fake adapter or transaction-isolated database boundary to verify idempotent upserts, no overwrite on failed refresh, queue transitions, resumption after interruption, and single-worker sequential behavior.
 
 An opt-in live smoke command fetches `TDPOWERSYS`. It is not part of the default automated test suite because network state and Screener HTML can change independently of the code.
 
@@ -143,11 +172,12 @@ An opt-in live smoke command fetches `TDPOWERSYS`. It is not part of the default
 1. Reusable `ScreenerScraper` and `ScraperConfig` Python package.
 2. Single-ticker and batch CLI with the requested flags and JSON exports.
 3. Lossless, versioned result contract covering all requested sections.
-4. Supabase migration for the latest full-payload snapshot and operational metadata required by the worker.
+4. Supabase migration for the latest full-payload snapshot, bulk runs, queue items, and progress metadata.
 5. Persistence adapter that fills both existing typed financial tables and the full JSONB snapshot.
-6. Railway one-symbol worker integrated with the existing queue, locking, retry, and run-log model.
-7. Fixture-based unit and integration tests plus an optional live verification command.
-8. Dependency and deployment documentation, including environment variables and Railway cron command.
+6. Railway bulk worker with configurable delay, locking, retries, resumption, and run logs.
+7. Status/start APIs plus a minimal God Mode manual-refresh control and progressive loader.
+8. Fixture-based unit and integration tests plus an optional live verification command.
+9. Milestone-specific deployment and verification instructions.
 
 ## Acceptance Criteria
 
@@ -156,6 +186,9 @@ An opt-in live smoke command fetches `TDPOWERSYS`. It is not part of the default
 - Every returned field is present in the stored full payload after persistence.
 - Existing annual tables receive idempotent normalized rows.
 - A missing optional section is visible as partial status and does not delete older good data.
-- A production worker invocation claims at most one symbol and exits within its hard timeout.
+- Only one production worker is active, and it processes symbols sequentially with the configured delay.
+- An interrupted bulk run resumes from durable queue state.
+- God Mode can start a run and display accurate progress without holding the original HTTP request open.
+- Each milestone is deployable and verifiable without requiring the following milestone.
 - Default automated tests run without network access.
-- Existing Node tests continue to pass after the cron command integration changes.
+- Existing Node tests continue to pass after the worker and status API integration changes.
