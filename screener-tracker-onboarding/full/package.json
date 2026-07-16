@@ -9,6 +9,7 @@
     "cron:eod-market-cap": "node scripts/run-cron.mjs eod-market-cap",
     "cron:screener-annuals": "node scripts/run-cron.mjs screener-annuals",
     "screener:scrape": "PYTHONPATH=scripts python3 -m screener_scraper",
+    "screener:bulk": "node scripts/advanced-screener-bulk-worker.mjs",
     "cron:dhan-instrument-sync": "node scripts/run-cron.mjs dhan-instrument-sync",
     "cron:dhan-eod-update": "node scripts/run-cron.mjs dhan-eod-update",
     "dhan:backfill": "node scripts/dhan-historical-backfill.mjs",
