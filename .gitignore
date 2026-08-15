@@ -19,3 +19,6 @@ graphify-out/
 
 # Temporary Railway config pulls
 .railway-config-pull-*/
+
+# Isolated feature worktrees
+.worktrees/
