@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0",
+  "provider": "Value Research",
+  "generated_at": "2026-07-16T03:36:00+00:00",
+  "retrieval_note": "Phase-one overview facts parsed from cached Value Research JSON-LD. Portfolio holdings are not complete.",
+  "funds": [
+    {
+      "fund_key": "bandhan-small-cap",
+      "fund_id": "40564",
+      "name": "Bandhan Small Cap Fund - Direct Plan",
+      "amc": "Bandhan Mutual Fund",
+      "nav": {
+        "raw_value": "55.8650",
+        "parsed_value": 55.865,
+        "unit": "INR",
+        "as_of": "2026-07-15"
+      },
+      "aum": {
+        "raw_value": "28,466",
+        "parsed_value": 28466.0,
+        "unit": "Crore INR",
+        "as_of": null
+      },
+      "expense_ratio": {
+        "raw_value": "0.35",
+        "parsed_value": 0.35,
+        "unit": "Percent",
+        "as_of": null
+      },
+      "launch_date": "2020-02-25",
+      "rating": {
+        "raw_value": "5",
+        "best": 5
+      },
+      "returns": {
+        "1Y": {
+          "label": "1Y Return",
+          "raw_value": "6.67",
+          "parsed_value": 6.67,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "3Y": {
+          "label": "3Y Return",
+          "raw_value": "28.36",
+          "parsed_value": 28.36,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "5Y": {
+          "label": "5Y Return",
+          "raw_value": "20.71",
+          "parsed_value": 20.71,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "10Y": null
+      },
+      "manager": null,
+      "turnover": null,
+      "portfolio_status": "unknown",
+      "warnings": [
+        "Raw browser-rendered HTML hit the acquisition return-size limit; only JSON-LD overview fields are treated as audit-ready.",
+        "Portfolio holdings were not captured with expansion evidence; holdings completeness is unknown."
+      ]
+    },
+    {
+      "fund_key": "quant-small-cap",
+      "fund_id": "17366",
+      "name": "Quant Small Cap Fund - Direct Plan",
+      "amc": "Quant Mutual Fund",
+      "nav": {
+        "raw_value": "315.7711",
+        "parsed_value": 315.7711,
+        "unit": "INR",
+        "as_of": "2026-07-15"
+      },
+      "aum": {
+        "raw_value": "33,739",
+        "parsed_value": 33739.0,
+        "unit": "Crore INR",
+        "as_of": null
+      },
+      "expense_ratio": {
+        "raw_value": "0.58",
+        "parsed_value": 0.58,
+        "unit": "Percent",
+        "as_of": null
+      },
+      "launch_date": "2013-01-01",
+      "rating": {
+        "raw_value": "3",
+        "best": 5
+      },
+      "returns": {
+        "1Y": {
+          "label": "1Y Return",
+          "raw_value": "10.19",
+          "parsed_value": 10.19,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "3Y": {
+          "label": "3Y Return",
+          "raw_value": "21.35",
+          "parsed_value": 21.35,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "5Y": {
+          "label": "5Y Return",
+          "raw_value": "20.05",
+          "parsed_value": 20.05,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "10Y": {
+          "label": "10Y Return",
+          "raw_value": "21.04",
+          "parsed_value": 21.04,
+          "unit": "Percent",
+          "as_of": null
+        }
+      },
+      "manager": null,
+      "turnover": null,
+      "portfolio_status": "unknown",
+      "warnings": [
+        "Raw browser-rendered HTML hit the acquisition return-size limit; only JSON-LD overview fields are treated as audit-ready.",
+        "Portfolio holdings were not captured with expansion evidence; holdings completeness is unknown."
+      ]
+    },
+    {
+      "fund_key": "bank-of-india-small-cap",
+      "fund_id": "38283",
+      "name": "Bank of India Small Cap Fund - Direct Plan",
+      "amc": "Bank of India Mutual Fund",
+      "nav": {
+        "raw_value": "62.5300",
+        "parsed_value": 62.53,
+        "unit": "INR",
+        "as_of": "2026-07-15"
+      },
+      "aum": {
+        "raw_value": "2,572",
+        "parsed_value": 2572.0,
+        "unit": "Crore INR",
+        "as_of": null
+      },
+      "expense_ratio": {
+        "raw_value": "0.45",
+        "parsed_value": 0.45,
+        "unit": "Percent",
+        "as_of": null
+      },
+      "launch_date": "2018-12-19",
+      "rating": {
+        "raw_value": "4",
+        "best": 5
+      },
+      "returns": {
+        "1Y": {
+          "label": "1Y Return",
+          "raw_value": "16.79",
+          "parsed_value": 16.79,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "3Y": {
+          "label": "3Y Return",
+          "raw_value": "23.09",
+          "parsed_value": 23.09,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "5Y": {
+          "label": "5Y Return",
+          "raw_value": "20.09",
+          "parsed_value": 20.09,
+          "unit": "Percent",
+          "as_of": null
+        },
+        "10Y": null
+      },
+      "manager": null,
+      "turnover": null,
+      "portfolio_status": "unknown",
+      "warnings": [
+        "Raw browser-rendered HTML hit the acquisition return-size limit; only JSON-LD overview fields are treated as audit-ready.",
+        "Portfolio holdings were not captured with expansion evidence; holdings completeness is unknown."
+      ]
+    }
+  ]
+}
