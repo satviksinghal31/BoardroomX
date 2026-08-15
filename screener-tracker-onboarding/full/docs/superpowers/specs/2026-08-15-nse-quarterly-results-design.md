@@ -185,7 +185,7 @@ Add `quarterly-results` to the existing cron runner.
 - When NSE marks a submission as a revision for the same symbol, period, and basis, process the new sequence and set the older active row's `superseded_by_seq_id`.
 - Record the run outcome in the existing `scheduler_log` table.
 
-Temporary network/HTTP failures use bounded retries after 5, 15, and 60 minutes. After three failed attempts, mark the row `failed`. Unsupported taxonomies and invalid filing identities fail immediately. The worker does not refetch XBRL for rows already marked `processed` unless a new NSE sequence ID is published.
+Temporary network/HTTP failures use bounded retries after 5 and 15 minutes. The third failed attempt marks the row `failed`. Unsupported taxonomies and invalid filing identities fail immediately. The worker does not refetch XBRL for rows already marked `processed` unless a new NSE sequence ID is published.
 
 A separate one-time command backfills the latest results quarter already in progress when this feature is first deployed. It uses the same client, parser, table, and idempotency rules as the cron and stops when the feed reaches an older quarter. It does not backfill unrelated older quarters; required comparisons are fetched only through each discovered symbol's history.
 
