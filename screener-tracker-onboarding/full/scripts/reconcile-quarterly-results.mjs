@@ -47,7 +47,8 @@ export async function reconcileQuarterlyResults({
   const metrics = ['revenue', 'calculated_ebitda', 'net_profit', 'source'];
 
   for (const symbol of symbols) {
-    const history = await source.fetchHistory(symbol);
+    const history = (await source.fetchHistory(symbol)).filter((filing) => filing.publishedAt);
+    if (history.length === 0) throw new Error(`No timestamped NSE filing history for ${symbol}`);
     const newestPeriod = history.map((filing) => filing.periodEnd).sort().at(-1);
     const currentPeriodFilings = history.filter((filing) => filing.periodEnd === newestPeriod);
     const basis = currentPeriodFilings.some((filing) => filing.basis === 'consolidated')
