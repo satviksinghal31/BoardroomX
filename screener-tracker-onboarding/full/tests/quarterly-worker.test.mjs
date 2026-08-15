@@ -13,7 +13,7 @@ test('PostgreSQL date values are normalized to ISO period dates', async () => {
     async query(sql) {
       if (/RETURNING result\.\*/.test(sql)) {
         return { rows: [{
-          nse_seq_id: '102385', symbol: 'TCS', period_end: new Date('2025-06-30T00:00:00.000Z'),
+          nse_seq_id: '102385', symbol: 'TCS', period_end: new Date(2025, 5, 30),
           basis: 'consolidated', taxonomy: 'indas', source_xbrl_url: 'https://nsearchives.nseindia.com/corporate/xbrl/example.xml',
           reported_at: new Date('2025-07-10T10:00:00.000Z'), status: 'processing',
           attempt_count: 1, next_retry_at: null, last_attempt_at: new Date('2026-08-16T00:00:00.000Z'),
