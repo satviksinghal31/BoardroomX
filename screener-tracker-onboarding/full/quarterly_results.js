@@ -1,4 +1,4 @@
-import { growthPercent } from './scripts/lib/quarter-periods.mjs';
+import { calendarDate, growthPercent } from './scripts/lib/quarter-periods.mjs';
 
 const SORT_COLUMNS = {
   reported_at: 'reported_at',
@@ -24,9 +24,7 @@ function positiveInteger(value, name, fallback, maximum = Number.MAX_SAFE_INTEGE
 }
 
 function canonicalDate(value) {
-  if (value == null) return null;
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  return String(value).slice(0, 10);
+  return calendarDate(value);
 }
 
 function canonicalTimestamp(value) {
@@ -196,4 +194,3 @@ export function createQuarterlyResultsService({ dbPool }) {
     },
   };
 }
-

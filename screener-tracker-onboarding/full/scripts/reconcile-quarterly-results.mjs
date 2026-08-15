@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import pg from 'pg';
 
-import { comparisonPeriods } from './lib/quarter-periods.mjs';
+import { calendarDate, comparisonPeriods } from './lib/quarter-periods.mjs';
 import { createNseQuarterlySource } from './lib/nse-quarterly-source.mjs';
 import { parseQuarterlyXbrl } from './lib/nse-quarterly-xbrl.mjs';
 
@@ -96,7 +96,7 @@ export function createReconciliationRepository(pool) {
       return result.rows.map((row) => ({
         nseSeqId: row.nse_seq_id,
         symbol: row.symbol,
-        periodEnd: String(row.period_end).slice(0, 10),
+        periodEnd: calendarDate(row.period_end),
         basis: row.basis,
         reportedAt: new Date(row.reported_at).toISOString(),
         sourceXbrlUrl: row.source_xbrl_url,
@@ -134,4 +134,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exitCode = 1;
   });
 }
-

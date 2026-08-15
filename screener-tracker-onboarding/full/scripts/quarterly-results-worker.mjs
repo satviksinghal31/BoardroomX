@@ -1,4 +1,4 @@
-import { comparisonPeriods } from './lib/quarter-periods.mjs';
+import { calendarDate, comparisonPeriods } from './lib/quarter-periods.mjs';
 import { parseQuarterlyXbrl } from './lib/nse-quarterly-xbrl.mjs';
 
 const RETRY_DELAYS_MS = [5 * 60_000, 15 * 60_000];
@@ -63,15 +63,10 @@ function validateFilingIdentity(xml, row, parsed) {
 }
 
 function databaseRow(row) {
-  const periodEnd = row.period_end instanceof Date
-    ? [row.period_end.getFullYear(), row.period_end.getMonth() + 1, row.period_end.getDate()]
-      .map((value, index) => (index === 0 ? String(value) : String(value).padStart(2, '0')))
-      .join('-')
-    : String(row.period_end).slice(0, 10);
   return {
     nseSeqId: row.nse_seq_id,
     symbol: row.symbol,
-    periodEnd,
+    periodEnd: calendarDate(row.period_end),
     basis: row.basis,
     taxonomy: row.taxonomy,
     sourceXbrlUrl: row.source_xbrl_url,

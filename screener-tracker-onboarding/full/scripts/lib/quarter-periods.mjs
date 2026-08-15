@@ -69,4 +69,11 @@ export function growthPercent(current, comparison) {
   const tenthsOfPercent = roundRatio((currentValue - comparisonValue) * 1000n, denominator);
   return Number(tenthsOfPercent) / 10;
 }
+export function calendarDate(value) {
+  if (value == null) return null;
+  if (!(value instanceof Date)) return String(value).slice(0, 10);
+  return [value.getFullYear(), value.getMonth() + 1, value.getDate()]
+    .map((part, index) => (index === 0 ? String(part) : String(part).padStart(2, '0')))
+    .join('-');
+}
 
