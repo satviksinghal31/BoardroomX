@@ -83,6 +83,7 @@ export function createNseQuarterlySource({
   fetchImpl = fetch,
   sleepImpl = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
   retryDelaysMs = [500, 1_500],
+  requestTimeoutMs = 15_000,
 } = {}) {
   let cookieHeader;
 
@@ -90,7 +91,10 @@ export function createNseQuarterlySource({
     let requestOptions = options;
     for (let attempt = 0; ; attempt += 1) {
       try {
-        return await fetchImpl(url, requestOptions);
+        return await fetchImpl(url, {
+          ...requestOptions,
+          signal: AbortSignal.timeout(requestTimeoutMs),
+        });
       } catch (error) {
         if (attempt >= retryDelaysMs.length) {
           throw new Error(`${url} network error after ${attempt + 1} attempts: ${error.message}`, {

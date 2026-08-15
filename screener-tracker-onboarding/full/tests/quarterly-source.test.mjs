@@ -144,6 +144,7 @@ test('transient NSE network failures retry with endpoint context', async () => {
   const result = await source.fetchLatestPage({ page: 7, size: 3 });
   assert.equal(result.totalCount, page.totalCount);
   assert.equal(calls.length, 4);
+  assert.equal(calls[1].options.signal instanceof AbortSignal, true);
   assert.equal(calls[2].url, 'https://www.nseindia.com/');
   assert.equal(calls[3].options.headers.Cookie, 'nsit=fresh');
 
