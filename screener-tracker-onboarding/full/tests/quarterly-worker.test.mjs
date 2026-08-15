@@ -174,6 +174,17 @@ test('discovery filters the universe and inserts only three same-basis periods o
   assert.deepEqual(source.calls.history, ['SCI']);
 });
 
+test('active filings without an exact publication timestamp are rejected, not assumed', async () => {
+  const invalid = { ...filing({ seq: 800 }), publishedAt: null };
+  const repository = new MemoryRepository();
+  const source = sourceDouble({ latest: [invalid] });
+
+  const result = await discoverLatestFilings({ source, repository, pageSize: 10 });
+
+  assert.deepEqual(result, { discovered: 0, inserted: 0, rejected: 1 });
+  assert.equal(repository.rows.size, 0);
+});
+
 test('processed sequence IDs are never fetched twice', async () => {
   const current = filing({ seq: 183362 });
   const source = sourceDouble({ latest: [current], histories: { SCI: [current] } });

@@ -70,7 +70,7 @@ export function normalizeNseQuarterlyFiling(row) {
     companyName: String(row.smName ?? row.cmName ?? '').trim(),
     periodEnd: parseNsePeriodEnd(row.qe_Date),
     basis,
-    publishedAt: parseNseTimestamp(row.broadcast_Date),
+    publishedAt: optionalTimestamp(row.broadcast_Date),
     typeSub,
     revisedAt: optionalTimestamp(row.revised_Date),
     revisionRemark: row.revision_Remark == null ? null : String(row.revision_Remark),
@@ -141,4 +141,3 @@ export function createNseQuarterlySource({ fetchImpl = fetch } = {}) {
     },
   };
 }
-

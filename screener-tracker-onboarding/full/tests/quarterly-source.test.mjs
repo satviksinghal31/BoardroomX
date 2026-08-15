@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-import { createNseQuarterlySource } from '../scripts/lib/nse-quarterly-source.mjs';
+import { createNseQuarterlySource, normalizeNseQuarterlyFiling } from '../scripts/lib/nse-quarterly-source.mjs';
 
 const fixture = async (name) => JSON.parse(await readFile(
   new URL(`./fixtures/nse-quarterly/${name}`, import.meta.url),
@@ -126,3 +126,12 @@ test('HTTP and malformed JSON errors retain status and endpoint context', async 
   );
 });
 
+test('an archival filing with no publication timestamp remains explicit and unassumed', () => {
+  const normalized = normalizeNseQuarterlyFiling({
+    seq_Id: 'old-1', symbol: 'SCI', smName: 'SCI', qe_Date: '30-JUN-2025',
+    consolidated: 'Consolidated', broadcast_Date: null, type_Sub: 'Original',
+    revised_Date: null, revision_Remark: null,
+    xbrl: 'https://nsearchives.nseindia.com/corporate/xbrl/old.xml',
+  });
+  assert.equal(normalized.publishedAt, null);
+});

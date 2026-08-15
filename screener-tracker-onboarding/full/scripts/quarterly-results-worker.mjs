@@ -12,6 +12,9 @@ function taxonomyFromUrl(url) {
 }
 
 function pendingRow(filing) {
+  if (!filing.publishedAt) {
+    throw new PermanentFilingError(`Missing NSE publication timestamp for ${filing.nseSeqId}`);
+  }
   return {
     nseSeqId: filing.nseSeqId,
     symbol: filing.symbol,
