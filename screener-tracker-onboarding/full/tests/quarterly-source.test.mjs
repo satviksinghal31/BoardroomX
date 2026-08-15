@@ -126,6 +126,38 @@ test('HTTP and malformed JSON errors retain status and endpoint context', async 
   );
 });
 
+test('transient NSE network failures retry with endpoint context', async () => {
+  const page = await fixture('feed-page.json');
+  let calls = 0;
+  const source = createNseQuarterlySource({
+    retryDelaysMs: [0, 0],
+    sleepImpl: async () => {},
+    fetchImpl: async (url) => {
+      calls += 1;
+      if (calls === 1) return response({ cookies: [] });
+      if (calls === 2) throw new TypeError('fetch failed');
+      return response({ json: page });
+    },
+  });
+
+  const result = await source.fetchLatestPage({ page: 7, size: 3 });
+  assert.equal(result.totalCount, page.totalCount);
+  assert.equal(calls, 3);
+
+  const failed = createNseQuarterlySource({
+    retryDelaysMs: [0],
+    sleepImpl: async () => {},
+    fetchImpl: async (url) => {
+      if (url.toString() === 'https://www.nseindia.com/') return response({ cookies: [] });
+      throw new TypeError('fetch failed');
+    },
+  });
+  await assert.rejects(
+    () => failed.fetchLatestPage({ page: 9, size: 3 }),
+    /integrated-filing-results.*page=9.*network error.*fetch failed/i,
+  );
+});
+
 test('an archival filing with no publication timestamp remains explicit and unassumed', () => {
   const normalized = normalizeNseQuarterlyFiling({
     seq_Id: 'old-1', symbol: 'SCI', smName: 'SCI', qe_Date: '30-JUN-2025',

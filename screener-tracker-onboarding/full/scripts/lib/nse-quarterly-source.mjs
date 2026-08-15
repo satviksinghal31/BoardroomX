@@ -79,12 +79,31 @@ export function normalizeNseQuarterlyFiling(row) {
   };
 }
 
-export function createNseQuarterlySource({ fetchImpl = fetch } = {}) {
+export function createNseQuarterlySource({
+  fetchImpl = fetch,
+  sleepImpl = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+  retryDelaysMs = [500, 1_500],
+} = {}) {
   let cookieHeader;
+
+  async function fetchNse(url, options) {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await fetchImpl(url, options);
+      } catch (error) {
+        if (attempt >= retryDelaysMs.length) {
+          throw new Error(`${url} network error after ${attempt + 1} attempts: ${error.message}`, {
+            cause: error,
+          });
+        }
+        await sleepImpl(retryDelaysMs[attempt]);
+      }
+    }
+  }
 
   async function warmSession() {
     if (cookieHeader !== undefined) return;
-    const response = await fetchImpl(NSE_HOME, { headers: BASE_HEADERS });
+    const response = await fetchNse(NSE_HOME, { headers: BASE_HEADERS });
     await assertHttpOk(response, NSE_HOME);
     cookieHeader = cookiesFrom(response);
   }
@@ -100,7 +119,7 @@ export function createNseQuarterlySource({ fetchImpl = fetch } = {}) {
 
     const headers = { ...BASE_HEADERS };
     if (cookieHeader) headers.Cookie = cookieHeader;
-    const response = await fetchImpl(url, { headers });
+    const response = await fetchNse(url, { headers });
     const payload = await parseJson(response, url.toString());
     if (!payload || !Array.isArray(payload.data) || !Number.isFinite(Number(payload.totalCount))) {
       throw new Error(`${url} returned status ${response.status} with malformed JSON: invalid result shape`);
@@ -129,7 +148,7 @@ export function createNseQuarterlySource({ fetchImpl = fetch } = {}) {
       if (!String(url).startsWith(NSE_XBRL_PREFIX)) {
         throw new Error(`Expected an official NSE XBRL URL: ${url}`);
       }
-      const response = await fetchImpl(url, {
+      const response = await fetchNse(url, {
         headers: {
           Accept: 'application/xml,text/xml,*/*',
           Referer: NSE_HOME,
