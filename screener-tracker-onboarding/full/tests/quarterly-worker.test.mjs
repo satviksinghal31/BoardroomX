@@ -9,9 +9,11 @@ import {
 } from '../scripts/quarterly-results-worker.mjs';
 
 test('PostgreSQL date values are normalized to ISO period dates', async () => {
+  let claimSql = '';
   const client = {
     async query(sql) {
       if (/RETURNING result\.\*/.test(sql)) {
+        claimSql = sql;
         return { rows: [{
           nse_seq_id: '102385', symbol: 'TCS', period_end: new Date(2025, 5, 30),
           basis: 'consolidated', taxonomy: 'indas', source_xbrl_url: 'https://nsearchives.nseindia.com/corporate/xbrl/example.xml',
@@ -28,6 +30,7 @@ test('PostgreSQL date values are normalized to ISO period dates', async () => {
 
   const row = await repository.claimNextDue(new Date('2026-08-16T00:00:00.000Z'));
   assert.equal(row.periodEnd, '2025-06-30');
+  assert.match(claimSql, /ORDER BY period_end DESC, reported_at DESC, nse_seq_id DESC/);
 });
 
 const INDAS_XML = `
