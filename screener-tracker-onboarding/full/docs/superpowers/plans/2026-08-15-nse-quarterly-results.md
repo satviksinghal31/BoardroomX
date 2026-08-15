@@ -379,7 +379,7 @@ Expect the cron registry to include:
 ['quarterly-results', 'Every 5 minutes', '*/5 * * * *']
 ```
 
-Test that bootstrap pagination stops as soon as `qe_Date` becomes older than the newest quarter found on page one, while each selected symbol history inserts only the three required period ends.
+Test that bootstrap scans the publication-ordered feed completely, retains only the newest quarter found on page one, and inserts only the three required period ends from each selected symbol history. This avoids missing current-quarter filings when late older-quarter filings are interleaved by publication time.
 
 - [ ] **Step 2: Verify RED**
 

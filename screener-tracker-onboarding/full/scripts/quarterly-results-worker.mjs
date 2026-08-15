@@ -205,54 +205,70 @@ export function createQuarterlyRepository(pool) {
   };
 }
 
-export async function discoverLatestFilings({ source, repository, pageSize = 200 }) {
+export async function ingestDiscoveredFilings({ filings, source, repository }) {
   const activeSymbols = new Set(await repository.getActiveSymbols());
+  const counts = { discovered: 0, inserted: 0, rejected: 0 };
+  const candidates = [];
+  for (const filing of filings) {
+    if (!activeSymbols.has(filing.symbol)) continue;
+    try {
+      candidates.push(pendingRow(filing));
+    } catch (error) {
+      if (!(error instanceof PermanentFilingError)) throw error;
+      counts.rejected += 1;
+    }
+  }
+
+  const existing = new Set(await repository.getExistingSeqIds(
+    candidates.map((candidate) => candidate.nseSeqId),
+  ));
+  const newCurrent = candidates.filter((candidate) => !existing.has(candidate.nseSeqId));
+  const rowsToInsert = [...newCurrent];
+  const historyBySymbol = new Map();
+  const historyKeys = new Set();
+
+  for (const current of newCurrent) {
+    const key = `${current.symbol}|${current.periodEnd}|${current.basis}`;
+    if (historyKeys.has(key)) continue;
+    historyKeys.add(key);
+    if (!historyBySymbol.has(current.symbol)) {
+      historyBySymbol.set(current.symbol, await source.fetchHistory(current.symbol));
+    }
+    const history = historyBySymbol.get(current.symbol);
+    if (!history.some((filing) => filing.nseSeqId === current.nseSeqId)) {
+      throw new Error(`NSE history for ${current.symbol} does not yet contain ${current.nseSeqId}`);
+    }
+
+    const periods = new Set(Object.values(comparisonPeriods(current.periodEnd)));
+    for (const filing of history) {
+      if (filing.basis !== current.basis || !periods.has(filing.periodEnd)) continue;
+      try {
+        rowsToInsert.push(pendingRow(filing));
+      } catch (error) {
+        if (!(error instanceof PermanentFilingError)) throw error;
+        counts.rejected += 1;
+      }
+    }
+  }
+
+  const inserted = await repository.insertFilings(rowsToInsert);
+  const currentIds = new Set(newCurrent.map((current) => current.nseSeqId));
+  counts.discovered = inserted.filter((row) => currentIds.has(row.nseSeqId)).length;
+  counts.inserted = inserted.length;
+  return counts;
+}
+
+export async function discoverLatestFilings({ source, repository, pageSize = 200 }) {
   const watermark = await repository.getDiscoveryWatermark();
   const counts = { discovered: 0, inserted: 0, rejected: 0 };
   let page = 1;
 
   while (true) {
     const result = await source.fetchLatestPage({ page, size: pageSize });
-    const candidates = [];
-    for (const filing of result.filings) {
-      if (!activeSymbols.has(filing.symbol)) continue;
-      try {
-        candidates.push(pendingRow(filing));
-      } catch (error) {
-        if (!(error instanceof PermanentFilingError)) throw error;
-        counts.rejected += 1;
-      }
-    }
-
-    const existing = new Set(await repository.getExistingSeqIds(
-      candidates.map((candidate) => candidate.nseSeqId),
-    ));
-    const newCurrent = candidates.filter((candidate) => !existing.has(candidate.nseSeqId));
-    const rowsToInsert = [...newCurrent];
-    const historyKeys = new Set();
-    for (const current of newCurrent) {
-      const key = `${current.symbol}|${current.periodEnd}|${current.basis}`;
-      if (historyKeys.has(key)) continue;
-      historyKeys.add(key);
-      const periods = new Set(Object.values(comparisonPeriods(current.periodEnd)));
-      const history = await source.fetchHistory(current.symbol);
-      const required = [];
-      for (const filing of history) {
-        if (filing.basis !== current.basis || !periods.has(filing.periodEnd)) continue;
-        try {
-          required.push(pendingRow(filing));
-        } catch (error) {
-          if (!(error instanceof PermanentFilingError)) throw error;
-          counts.rejected += 1;
-        }
-      }
-      rowsToInsert.push(...required);
-    }
-
-    const inserted = await repository.insertFilings(rowsToInsert);
-    const currentIds = new Set(newCurrent.map((current) => current.nseSeqId));
-    counts.discovered += inserted.filter((row) => currentIds.has(row.nseSeqId)).length;
-    counts.inserted += inserted.length;
+    const pageCounts = await ingestDiscoveredFilings({ filings: result.filings, source, repository });
+    counts.discovered += pageCounts.discovered;
+    counts.inserted += pageCounts.inserted;
+    counts.rejected += pageCounts.rejected;
 
     const reachedWatermark = watermark && result.filings.some((filing) => filing.publishedAt <= watermark);
     const reachedEnd = page * pageSize >= result.totalCount || result.filings.length === 0;

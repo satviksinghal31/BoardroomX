@@ -13,6 +13,8 @@ import { runEodMarketCap } from './eod-market-cap.mjs';
 import { main as runScreenerAnnualsWorker } from './screener-worker.mjs';
 import { runDhanInstrumentSync } from './dhan-instrument-sync.mjs';
 import { runDhanEodUpdate } from './dhan-eod-update.mjs';
+import { createNseQuarterlySource } from './lib/nse-quarterly-source.mjs';
+import { createQuarterlyRepository, runQuarterlyResultsWorker } from './quarterly-results-worker.mjs';
 
 const HARD_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -30,6 +32,11 @@ export const JOB_DEFS = {
   'screener-annuals': {
     scheduleIst: 'Every minute',
     cronUtc: '* * * * *',
+    times: [],
+  },
+  'quarterly-results': {
+    scheduleIst: 'Every 5 minutes',
+    cronUtc: '*/5 * * * *',
     times: [],
   },
   'dhan-instrument-sync': {
@@ -163,6 +170,12 @@ async function runJob(job) {
         const exitCode = await runScreenerAnnualsWorker();
         if (exitCode !== 0) throw new Error(`screener-annuals worker exited ${exitCode}`);
         return { exitCode };
+      }
+      if (job === 'quarterly-results') {
+        return runQuarterlyResultsWorker({
+          source: createNseQuarterlySource(),
+          repository: createQuarterlyRepository(pool),
+        });
       }
       if (job === 'dhan-instrument-sync') return runDhanInstrumentSync({ supabase });
       if (job === 'dhan-eod-update') return runDhanEodUpdate({ supabase });

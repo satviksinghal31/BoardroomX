@@ -187,7 +187,7 @@ Add `quarterly-results` to the existing cron runner.
 
 Temporary network/HTTP failures use bounded retries after 5 and 15 minutes. The third failed attempt marks the row `failed`. Unsupported taxonomies and invalid filing identities fail immediately. The worker does not refetch XBRL for rows already marked `processed` unless a new NSE sequence ID is published.
 
-A separate one-time command backfills the latest results quarter already in progress when this feature is first deployed. It uses the same client, parser, table, and idempotency rules as the cron and stops when the feed reaches an older quarter. It does not backfill unrelated older quarters; required comparisons are fetched only through each discovered symbol's history.
+A separate one-time command backfills the latest results quarter already in progress when this feature is first deployed. It uses the same client, parser, table, and idempotency rules as the cron. Because NSE orders the feed by publication time and late older-quarter filings can be interleaved with current-quarter filings, bootstrap scans every feed page and retains only the newest quarter found on page one. It does not ingest unrelated older quarters; required comparisons are fetched only through each discovered symbol's history.
 
 ## 8. Read API
 
