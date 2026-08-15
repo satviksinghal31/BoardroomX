@@ -13,6 +13,8 @@ import { scrapeAndStore } from "./scraper.js";
 import { getCronJobs } from "./scripts/run-cron.mjs";
 import { createDhanMarketData } from "./dhan_market_data.js";
 import { registerDhanRoutes } from "./dhan_routes.js";
+import { createQuarterlyResultsService } from "./quarterly_results.js";
+import { registerQuarterlyResultsRoutes } from "./quarterly_results_routes.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -152,6 +154,15 @@ registerDhanRoutes(app, {
       .filter(Boolean);
     return [...new Set([..._portfolioSymbols, ...extra])];
   },
+});
+
+registerQuarterlyResultsRoutes(app, {
+  auth,
+  service: createQuarterlyResultsService({
+    dbPool: {
+      query: async (...args) => (await getRequiredDbPool()).query(...args),
+    },
+  }),
 });
 
 // ── SPA page routes ────────────────────────────────────────────────────────
