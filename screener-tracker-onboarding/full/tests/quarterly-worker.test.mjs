@@ -2,10 +2,33 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  createQuarterlyRepository,
   discoverLatestFilings,
   processDueFilings,
   runQuarterlyResultsWorker,
 } from '../scripts/quarterly-results-worker.mjs';
+
+test('PostgreSQL date values are normalized to ISO period dates', async () => {
+  const client = {
+    async query(sql) {
+      if (/RETURNING result\.\*/.test(sql)) {
+        return { rows: [{
+          nse_seq_id: '102385', symbol: 'TCS', period_end: new Date('2025-06-30T00:00:00.000Z'),
+          basis: 'consolidated', taxonomy: 'indas', source_xbrl_url: 'https://nsearchives.nseindia.com/corporate/xbrl/example.xml',
+          reported_at: new Date('2025-07-10T10:00:00.000Z'), status: 'processing',
+          attempt_count: 1, next_retry_at: null, last_attempt_at: new Date('2026-08-16T00:00:00.000Z'),
+          superseded_by_seq_id: null,
+        }] };
+      }
+      return { rows: [] };
+    },
+    release() {},
+  };
+  const repository = createQuarterlyRepository({ connect: async () => client });
+
+  const row = await repository.claimNextDue(new Date('2026-08-16T00:00:00.000Z'));
+  assert.equal(row.periodEnd, '2025-06-30');
+});
 
 const INDAS_XML = `
   <xbrli:xbrl xmlns:in-capmkt-ent="http://www.sebi.gov.in/xbrl/IntegratedFinance_IndAS/2026/in-capmkt-ent">

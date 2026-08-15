@@ -66,7 +66,9 @@ function databaseRow(row) {
   return {
     nseSeqId: row.nse_seq_id,
     symbol: row.symbol,
-    periodEnd: String(row.period_end).slice(0, 10),
+    periodEnd: row.period_end instanceof Date
+      ? row.period_end.toISOString().slice(0, 10)
+      : String(row.period_end).slice(0, 10),
     basis: row.basis,
     taxonomy: row.taxonomy,
     sourceXbrlUrl: row.source_xbrl_url,
