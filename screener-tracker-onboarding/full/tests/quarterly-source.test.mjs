@@ -128,21 +128,24 @@ test('HTTP and malformed JSON errors retain status and endpoint context', async 
 
 test('transient NSE network failures retry with endpoint context', async () => {
   const page = await fixture('feed-page.json');
-  let calls = 0;
+  const calls = [];
   const source = createNseQuarterlySource({
     retryDelaysMs: [0, 0],
     sleepImpl: async () => {},
-    fetchImpl: async (url) => {
-      calls += 1;
-      if (calls === 1) return response({ cookies: [] });
-      if (calls === 2) throw new TypeError('fetch failed');
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url: url.toString(), options });
+      if (calls.length === 1) return response({ cookies: ['nsit=expired; Path=/'] });
+      if (calls.length === 2) throw new TypeError('fetch failed');
+      if (calls.length === 3) return response({ cookies: ['nsit=fresh; Path=/'] });
       return response({ json: page });
     },
   });
 
   const result = await source.fetchLatestPage({ page: 7, size: 3 });
   assert.equal(result.totalCount, page.totalCount);
-  assert.equal(calls, 3);
+  assert.equal(calls.length, 4);
+  assert.equal(calls[2].url, 'https://www.nseindia.com/');
+  assert.equal(calls[3].options.headers.Cookie, 'nsit=fresh');
 
   const failed = createNseQuarterlySource({
     retryDelaysMs: [0],

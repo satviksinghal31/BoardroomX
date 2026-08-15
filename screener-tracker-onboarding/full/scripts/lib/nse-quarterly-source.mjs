@@ -86,10 +86,11 @@ export function createNseQuarterlySource({
 } = {}) {
   let cookieHeader;
 
-  async function fetchNse(url, options) {
+  async function fetchNse(url, options, { refreshSessionOnRetry = false } = {}) {
+    let requestOptions = options;
     for (let attempt = 0; ; attempt += 1) {
       try {
-        return await fetchImpl(url, options);
+        return await fetchImpl(url, requestOptions);
       } catch (error) {
         if (attempt >= retryDelaysMs.length) {
           throw new Error(`${url} network error after ${attempt + 1} attempts: ${error.message}`, {
@@ -97,6 +98,14 @@ export function createNseQuarterlySource({
           });
         }
         await sleepImpl(retryDelaysMs[attempt]);
+        if (refreshSessionOnRetry) {
+          cookieHeader = undefined;
+          await warmSession();
+          const headers = { ...requestOptions.headers };
+          if (cookieHeader) headers.Cookie = cookieHeader;
+          else delete headers.Cookie;
+          requestOptions = { ...requestOptions, headers };
+        }
       }
     }
   }
@@ -119,7 +128,7 @@ export function createNseQuarterlySource({
 
     const headers = { ...BASE_HEADERS };
     if (cookieHeader) headers.Cookie = cookieHeader;
-    const response = await fetchNse(url, { headers });
+    const response = await fetchNse(url, { headers }, { refreshSessionOnRetry: true });
     const payload = await parseJson(response, url.toString());
     if (!payload || !Array.isArray(payload.data) || !Number.isFinite(Number(payload.totalCount))) {
       throw new Error(`${url} returned status ${response.status} with malformed JSON: invalid result shape`);
