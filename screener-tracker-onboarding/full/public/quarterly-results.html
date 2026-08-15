@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Quarterly Results — BoardroomX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="auth.css" />
+  <link rel="stylesheet" href="quarterly-results.css" />
+</head>
+<body class="quarterly-page">
+  <header>
+    <a class="hdr-brand" href="/">
+      <div class="hdr-logo">BX</div>
+      <div class="hdr-name">BoardroomX</div>
+    </a>
+    <nav class="hdr-nav">
+      <a class="hdr-nav-item" href="/">
+        <span class="material-symbols-outlined">bar_chart</span>Portfolio
+      </a>
+      <a class="hdr-nav-item" href="/annuals.html">
+        <span class="material-symbols-outlined">table_chart</span>Annuals
+      </a>
+      <a class="hdr-nav-item active" href="/quarterly-results.html">
+        <span class="material-symbols-outlined">finance_mode</span>Quarterly Results
+      </a>
+    </nav>
+    <div class="hdr-spacer"></div>
+    <div class="hdr-actions" id="quarterlyHeaderActions"></div>
+  </header>
+
+  <main class="quarterly-shell">
+    <div class="quarterly-heading">
+      <div>
+        <p class="quarterly-kicker">Results season</p>
+        <h1>Latest quarterly results</h1>
+      </div>
+      <p id="quarterlyCount" class="quarterly-count">Loading…</p>
+    </div>
+
+    <section class="quarterly-source" aria-label="Data source">
+      <span class="material-symbols-outlined">verified</span>
+      <div>
+        <strong>Source: NSE India Integrated Filing API and NSE XBRL.</strong>
+        Historical comparisons use the corresponding historical NSE XBRL filings. Values are consolidated-first; standalone is used only when consolidated is unavailable. EBITDA is calculated from reported XBRL components.
+      </div>
+      <div class="ebitda-info">
+        <button type="button" data-ebitda-info aria-expanded="false" aria-controls="ebitdaSourceTooltip" aria-label="How calculated EBITDA is derived">i</button>
+        <div class="ebitda-tooltip" id="ebitdaSourceTooltip" role="tooltip">
+          One fixed formula is used per NSE taxonomy. Open an individual company tooltip to see its exact formula.
+        </div>
+      </div>
+    </section>
+
+    <section class="quarterly-controls" aria-label="Search and sorting">
+      <label class="quarterly-search">
+        <span class="material-symbols-outlined">search</span>
+        <input id="quarterlySearch" type="search" placeholder="Search symbol or company" autocomplete="off" />
+      </label>
+      <label>
+        <span>Sort by</span>
+        <select id="quarterlySort">
+          <option value="reported_at">Latest reported</option>
+          <option value="revenue_yoy">Revenue YoY growth</option>
+          <option value="profit_yoy">Net profit YoY growth</option>
+        </select>
+      </label>
+      <label>
+        <span>Order</span>
+        <select id="quarterlyOrder">
+          <option value="desc">Highest first</option>
+          <option value="asc">Lowest first</option>
+        </select>
+      </label>
+    </section>
+
+    <div id="quarterlyError" class="quarterly-error" hidden></div>
+    <section id="quarterlyResults" class="quarterly-results" aria-live="polite"></section>
+    <nav class="quarterly-pagination" aria-label="Results pages">
+      <button id="quarterlyPrevious" type="button">Previous</button>
+      <span id="quarterlyPage">Page 1</span>
+      <button id="quarterlyNext" type="button">Next</button>
+    </nav>
+  </main>
+
+  <script src="auth.js"></script>
+  <script src="quarterly-results.js"></script>
+</body>
+</html>

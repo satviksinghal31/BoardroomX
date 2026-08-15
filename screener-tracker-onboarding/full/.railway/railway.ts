@@ -29,6 +29,7 @@ export default defineRailway(() => {
     replicas: 1,
     deploy: { cronSchedule: "30 2,14 * * *", restartPolicyType: "NEVER" },
     env: {
+      DISABLE_JOBS: preserve(),
       SCREENER_EMAIL: portfolioTrackerService.env.SCREENER_EMAIL,
       SCREENER_PASSWORD: portfolioTrackerService.env.SCREENER_PASSWORD,
       SUPABASE_ANON_KEY: portfolioTrackerService.env.SUPABASE_ANON_KEY,
@@ -43,6 +44,7 @@ export default defineRailway(() => {
     replicas: 1,
     deploy: { cronSchedule: "0 13 * * *", restartPolicyType: "NEVER" },
     env: {
+      DISABLE_JOBS: preserve(),
       SUPABASE_ANON_KEY: portfolioTrackerService.env.SUPABASE_ANON_KEY,
       SUPABASE_DB_URL: portfolioTrackerService.env.SUPABASE_DB_URL,
       SUPABASE_SERVICE_ROLE_KEY: portfolioTrackerService.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -72,6 +74,7 @@ export default defineRailway(() => {
     replicas: 1,
     deploy: { cronSchedule: "30 10 * * *", restartPolicyType: "NEVER" },
     env: {
+      DISABLE_JOBS: preserve(),
       SUPABASE_ANON_KEY: portfolioTrackerService.env.SUPABASE_ANON_KEY,
       SUPABASE_DB_URL: portfolioTrackerService.env.SUPABASE_DB_URL,
       SUPABASE_SERVICE_ROLE_KEY: portfolioTrackerService.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -99,8 +102,21 @@ export default defineRailway(() => {
     replicas: 1,
     deploy: { cronSchedule: "* * * * *", restartPolicyType: "NEVER" },
     env: {
+      DISABLE_JOBS: preserve(),
       SCREENER_EMAIL: portfolioTrackerService.env.SCREENER_EMAIL,
       SCREENER_PASSWORD: portfolioTrackerService.env.SCREENER_PASSWORD,
+      SUPABASE_ANON_KEY: portfolioTrackerService.env.SUPABASE_ANON_KEY,
+      SUPABASE_DB_URL: portfolioTrackerService.env.SUPABASE_DB_URL,
+      SUPABASE_SERVICE_ROLE_KEY: portfolioTrackerService.env.SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_URL: portfolioTrackerService.env.SUPABASE_URL,
+    },
+  });
+  const quarterlyResults = service("quarterly-results", {
+    source: portfolioRepo,
+    start: "npm run cron:quarterly-results",
+    replicas: 1,
+    deploy: { cronSchedule: "*/5 * * * *", restartPolicyType: "NEVER" },
+    env: {
       SUPABASE_ANON_KEY: portfolioTrackerService.env.SUPABASE_ANON_KEY,
       SUPABASE_DB_URL: portfolioTrackerService.env.SUPABASE_DB_URL,
       SUPABASE_SERVICE_ROLE_KEY: portfolioTrackerService.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -114,6 +130,7 @@ export default defineRailway(() => {
       eodMarketCap,
       portfolioTrackerService,
       screenerAnnuals,
+      quarterlyResults,
       dhanInstrumentSync,
       dhanEodUpdate,
       dhanLiveFeed,

@@ -25,6 +25,7 @@ test('getCronJobs exposes the Railway Cron schedules used by God Mode', () => {
       ['events-cron', '08:00, 20:00 IST', '30 2,14 * * *'],
       ['eod-market-cap', '18:30 IST', '0 13 * * *'],
       ['screener-annuals', 'Every minute', '* * * * *'],
+      ['quarterly-results', 'Every 5 minutes', '*/5 * * * *'],
       ['dhan-instrument-sync', '07:30 IST', '0 2 * * *'],
       ['dhan-eod-update', '16:00 IST', '30 10 * * *'],
     ],
@@ -32,8 +33,9 @@ test('getCronJobs exposes the Railway Cron schedules used by God Mode', () => {
   assert.equal(jobs[0].next_run, '2026-05-27T02:30:00.000Z');
   assert.equal(jobs[1].next_run, '2026-05-27T13:00:00.000Z');
   assert.equal(jobs[2].next_run, null);
-  assert.equal(jobs[3].next_run, '2026-05-27T02:00:00.000Z');
-  assert.equal(jobs[4].next_run, '2026-05-27T10:30:00.000Z');
+  assert.equal(jobs[3].next_run, null);
+  assert.equal(jobs[4].next_run, '2026-05-27T02:00:00.000Z');
+  assert.equal(jobs[5].next_run, '2026-05-27T10:30:00.000Z');
 });
 
 test('isJobDisabled supports global, list, and per-job environment switches', () => {
