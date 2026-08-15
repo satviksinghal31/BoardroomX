@@ -44,6 +44,7 @@ const filings = [
   filing(3, '2026-06-30', '2026-08-06T14:00:00.000Z'),
   filing(2, '2026-03-31', '2026-05-08T14:00:00.000Z'),
   filing(1, '2025-06-30', '2025-08-08T14:00:00.000Z'),
+  filing(0, '2025-06-30', null),
 ];
 
 function storedRows(overrides = {}) {
