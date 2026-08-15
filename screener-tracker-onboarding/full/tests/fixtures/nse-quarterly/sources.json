@@ -1,0 +1,29 @@
+[
+  {
+    "file": "sbi-jun-2026.xml",
+    "symbol": "SBIN",
+    "periodEnd": "2026-06-30",
+    "basis": "consolidated",
+    "nseSeqId": "183614",
+    "url": "https://nsearchives.nseindia.com/corporate/xbrl/INTEGRATED_FILING_BANKING_1709692_07082026034917_WEB.xml",
+    "sha256": "e08b6df4029e2d00dd80a9f6312991c4eaf9b6ecea16fc5abdf28d8805279f4b"
+  },
+  {
+    "file": "hindalco-jun-2026.xml",
+    "symbol": "HINDALCO",
+    "periodEnd": "2026-06-30",
+    "basis": "consolidated",
+    "nseSeqId": "183733",
+    "url": "https://nsearchives.nseindia.com/corporate/xbrl/INTEGRATED_FILING_INDAS_1709879_07082026052455_WEB.xml",
+    "sha256": "44ba838b58434cef5284cc20ad82f95a68d316f295cc6680de4542d7055f72e2"
+  },
+  {
+    "file": "ongc-jun-2026.xml",
+    "symbol": "ONGC",
+    "periodEnd": "2026-06-30",
+    "basis": "consolidated",
+    "nseSeqId": "182431",
+    "url": "https://nsearchives.nseindia.com/corporate/xbrl/INTEGRATED_FILING_INDAS_1707992_04082026081922_WEB.xml",
+    "sha256": "2f5e2ffc5a6871d41edd8f81a39628aca1db8dad417d7a3ccbbe9ff14bdf6fc4"
+  }
+]
