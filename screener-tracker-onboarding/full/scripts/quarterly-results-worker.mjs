@@ -139,7 +139,7 @@ export function createQuarterlyRepository(pool) {
                 OR (status = 'retry' AND next_retry_at <= $1)
                 OR (status = 'processing' AND last_attempt_at <= $1::timestamptz - interval '15 minutes')
               )
-            ORDER BY reported_at, nse_seq_id
+            ORDER BY period_end DESC, reported_at DESC, nse_seq_id DESC
             FOR UPDATE SKIP LOCKED
             LIMIT 1
           )
