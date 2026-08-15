@@ -1,7 +1,26 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { reconcileQuarterlyResults } from '../scripts/reconcile-quarterly-results.mjs';
+import {
+  createReconciliationRepository,
+  reconcileQuarterlyResults,
+} from '../scripts/reconcile-quarterly-results.mjs';
+
+test('reconciliation repository preserves PostgreSQL calendar dates in IST', async () => {
+  const repository = createReconciliationRepository({
+    async query() {
+      return { rows: [{
+        nse_seq_id: '1', symbol: 'SCI', period_end: new Date(2025, 5, 30),
+        basis: 'consolidated', reported_at: new Date('2025-08-08T14:00:00.000Z'),
+        source_xbrl_url: 'https://nsearchives.nseindia.com/corporate/xbrl/1.xml',
+        revenue_inr: '1000', calculated_ebitda_inr: '510', net_profit_inr: '300',
+      }] };
+    },
+  });
+
+  const rows = await repository.getRowsForSymbols(['SCI']);
+  assert.equal(rows[0].periodEnd, '2025-06-30');
+});
 
 const xml = ({ revenue = 1000, profit = 300 } = {}) => `
   <xbrli:xbrl xmlns:in-capmkt-ent="http://www.sebi.gov.in/xbrl/IntegratedFinance_IndAS/2026/in-capmkt-ent">
@@ -78,4 +97,3 @@ test('reconciliation blocks a metric mismatch and a missing stored period', asyn
   assert.equal(lines.some((line) => line === 'MISMATCH SCI 2026-06-30 net_profit expected=300 actual=301'), true);
   assert.equal(lines.some((line) => line.startsWith('MISSING SCI 2026-03-31 revenue')), true);
 });
-
