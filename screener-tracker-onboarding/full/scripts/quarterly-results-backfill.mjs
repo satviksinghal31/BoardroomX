@@ -46,9 +46,13 @@ export async function bootstrapLatestQuarterFilings({ source, repository, pageSi
   };
 }
 
-export async function runQuarterlyResultsBackfill({ source, repository, now = new Date(), pageSize = 200 }) {
+export async function runQuarterlyResultsBackfill({
+  source, repository, now = new Date(), pageSize = 200, processingConcurrency = 8,
+}) {
   const bootstrap = await bootstrapLatestQuarterFilings({ source, repository, pageSize });
-  const processing = await processDueFilings({ source, repository, now });
+  const processing = await processDueFilings({
+    source, repository, now, concurrency: processingConcurrency,
+  });
   return { ...bootstrap, processing };
 }
 

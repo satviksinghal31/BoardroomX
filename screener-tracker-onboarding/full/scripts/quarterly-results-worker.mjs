@@ -284,38 +284,42 @@ export async function discoverLatestFilings({ source, repository, pageSize = 200
   return counts;
 }
 
-export async function processDueFilings({ source, repository, now = new Date() }) {
+export async function processDueFilings({ source, repository, now = new Date(), concurrency = 1 }) {
   const counts = { processed: 0, retried: 0, failed: 0 };
 
-  while (true) {
-    const row = await repository.claimNextDue(now);
-    if (!row) break;
+  async function processQueue() {
+    while (true) {
+      const row = await repository.claimNextDue(now);
+      if (!row) break;
 
-    try {
-      const xml = await source.fetchXbrl(row.sourceXbrlUrl);
-      let parsed;
       try {
-        parsed = parseQuarterlyXbrl(xml);
-        validateFilingIdentity(xml, row, parsed);
+        const xml = await source.fetchXbrl(row.sourceXbrlUrl);
+        let parsed;
+        try {
+          parsed = parseQuarterlyXbrl(xml);
+          validateFilingIdentity(xml, row, parsed);
+        } catch (error) {
+          throw error instanceof PermanentFilingError
+            ? error
+            : new PermanentFilingError(error.message);
+        }
+        await repository.markProcessed(row.nseSeqId, parsed, now);
+        counts.processed += 1;
       } catch (error) {
-        throw error instanceof PermanentFilingError
-          ? error
-          : new PermanentFilingError(error.message);
-      }
-      await repository.markProcessed(row.nseSeqId, parsed, now);
-      counts.processed += 1;
-    } catch (error) {
-      if (error instanceof PermanentFilingError || row.attemptCount >= 3) {
-        await repository.markFailed(row.nseSeqId, error.message, now);
-        counts.failed += 1;
-      } else {
-        const delay = RETRY_DELAYS_MS[row.attemptCount - 1];
-        await repository.markRetry(row.nseSeqId, error.message, new Date(now.getTime() + delay), now);
-        counts.retried += 1;
+        if (error instanceof PermanentFilingError || row.attemptCount >= 3) {
+          await repository.markFailed(row.nseSeqId, error.message, now);
+          counts.failed += 1;
+        } else {
+          const delay = RETRY_DELAYS_MS[row.attemptCount - 1];
+          await repository.markRetry(row.nseSeqId, error.message, new Date(now.getTime() + delay), now);
+          counts.retried += 1;
+        }
       }
     }
   }
 
+  const workerCount = Math.max(1, Math.floor(Number(concurrency) || 1));
+  await Promise.all(Array.from({ length: workerCount }, () => processQueue()));
   return counts;
 }
 

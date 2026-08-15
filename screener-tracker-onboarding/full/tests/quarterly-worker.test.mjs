@@ -221,6 +221,31 @@ test('processed sequence IDs are never fetched twice', async () => {
   assert.equal(repository.rows.get('183362').status, 'processed');
 });
 
+test('bootstrap processing supports bounded XBRL concurrency', async () => {
+  const items = [filing({ seq: 701, symbol: 'SCI' }), filing({ seq: 702, symbol: 'TCS' })];
+  const repository = new MemoryRepository({ rows: items.map((item) => ({
+    ...item, taxonomy: 'indas', sourceXbrlUrl: item.xbrlUrl, reportedAt: item.publishedAt,
+  })) });
+  let active = 0;
+  let maxActive = 0;
+  const source = {
+    async fetchXbrl() {
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      active -= 1;
+      return INDAS_XML;
+    },
+  };
+
+  const result = await processDueFilings({
+    source, repository, now: new Date('2026-08-06T14:10:00.000Z'), concurrency: 2,
+  });
+
+  assert.equal(maxActive, 2);
+  assert.deepEqual(result, { processed: 2, retried: 0, failed: 0 });
+});
+
 test('a history fetch failure does not strand the current filing without comparisons', async () => {
   const current = filing({ seq: 183362 });
   const repository = new MemoryRepository();
