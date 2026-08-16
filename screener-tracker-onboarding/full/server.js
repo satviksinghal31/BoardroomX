@@ -15,6 +15,7 @@ import { createDhanMarketData } from "./dhan_market_data.js";
 import { registerDhanRoutes } from "./dhan_routes.js";
 import { createQuarterlyResultsService } from "./quarterly_results.js";
 import { registerQuarterlyResultsRoutes } from "./quarterly_results_routes.js";
+import { observePoolErrors } from "./scripts/lib/pg-pool.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -69,7 +70,7 @@ const supabaseAuth = createClient(
 // `let` (not const) so _verifyDbPool() can null it out if connectivity fails.
 const { Pool } = pg;
 let dbPool = process.env.SUPABASE_DB_URL
-  ? new Pool({ connectionString: process.env.SUPABASE_DB_URL, ssl: { rejectUnauthorized: false }, max: 3 })
+  ? observePoolErrors(new Pool({ connectionString: process.env.SUPABASE_DB_URL, ssl: { rejectUnauthorized: false }, max: 3 }))
   : null;
 
 /** Fired once at startup. Tests a real connection to catch bad URLs, firewall
@@ -102,11 +103,11 @@ async function getRequiredDbPool() {
     throw new Error('Annuals requires SUPABASE_DB_URL / direct DB pool');
   }
 
-  const candidate = new Pool({
+  const candidate = observePoolErrors(new Pool({
     connectionString: process.env.SUPABASE_DB_URL,
     ssl: { rejectUnauthorized: false },
     max: 3,
-  });
+  }));
 
   let client;
   try {
