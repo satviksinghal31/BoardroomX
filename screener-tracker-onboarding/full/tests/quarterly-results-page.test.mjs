@@ -16,7 +16,7 @@ async function loadFrontendHelpers() {
     globalThis: null,
   };
   context.globalThis = context;
-  vm.runInNewContext(`${js}\n;globalThis.__helpers = { initialState, requestParamsFor, stateAfterQuarterChange, stateAfterFilterRemoval, clearedState, filterChipsFor, emptyResultsMessage, toggleFilterPanel, shouldClearResultsOnFailure };`, context);
+  vm.runInNewContext(`${js}\n;globalThis.__helpers = { initialState, requestParamsFor, stateAfterQuarterChange, stateAfterFilterRemoval, clearedState, filterChipsFor, emptyResultsMessage, toggleFilterPanel, shouldClearResultsOnFailure, marketCapValidationError };`, context);
   return context.__helpers;
 }
 
@@ -35,6 +35,9 @@ async function loadFrontendRuntime() {
   vm.runInNewContext(`${js}\n;globalThis.__runtime = {
     state,
     loadResults,
+    renderMeta,
+    requestParamsFor,
+    stateAfterQuarterChange,
     setElements(next) { Object.assign(els, next); },
     setRendered(value) { hasRendered = value; },
   };`, context);
@@ -182,6 +185,42 @@ test('state helpers serialize exact params and enforce quarter, chip, and Clear 
   assert.deepEqual(helpers.clearedState(), helpers.initialState());
 });
 
+test('selecting latest clears the quarter pin and follows a later metadata rollover', async () => {
+  const { runtime } = await loadFrontendRuntime();
+  const elements = {
+    heading: fakeElement(), quarters: fakeElement(), reportedDates: fakeElement(),
+    watchlistLabel: fakeElement(),
+  };
+  runtime.setElements(elements);
+  const pinned = {
+    ...runtime.state,
+    quarter: '2026-03-31', reportedDate: '2026-08-15', page: 4, q: 'bank', watchlist: true,
+  };
+  const selectedLatest = runtime.stateAfterQuarterChange(pinned, '2026-06-30', '2026-06-30');
+  assert.equal(selectedLatest.quarter, '');
+  assert.equal(selectedLatest.reportedDate, '');
+  assert.equal(selectedLatest.page, 1);
+  assert.equal(selectedLatest.q, 'bank');
+  assert.equal(selectedLatest.watchlist, true);
+  assert.equal(runtime.requestParamsFor(selectedLatest).has('quarter'), false);
+
+  Object.assign(runtime.state, selectedLatest);
+  runtime.renderMeta({
+    activeQuarter: '2026-09-30', activeQuarterLabel: 'September 2026', watchlistCompanies: 0,
+    quarters: [
+      { periodEnd: '2026-09-30', label: 'September 2026', companies: 10 },
+      { periodEnd: '2026-06-30', label: 'June 2026', companies: 9 },
+    ],
+    reportedDates: [],
+  });
+  assert.equal(elements.heading.textContent, 'September 2026 quarterly results');
+  assert.match(elements.quarters.innerHTML, /data-quarter="2026-09-30" aria-pressed="true"/);
+  assert.doesNotMatch(elements.quarters.innerHTML, /data-quarter="2026-06-30" aria-pressed="true"/);
+  const js = await readPublic('quarterly-results.js');
+  assert.match(js, /stateAfterQuarterChange\(state, quarterButton\.dataset\.quarter, latestMeta\?\.quarters\?\.\[0\]\?\.periodEnd\)/);
+  assert.match(js, /state\.quarter \|\| latestMeta\.quarters\?\.\[0\]\?\.periodEnd \|\| latestMeta\.activeQuarter/);
+});
+
 test('refreshes abort stale requests, preserve rendered cards, and expose retry feedback', async () => {
   const js = await readPublic('quarterly-results.js');
   assert.match(js, /new AbortController\(\)/);
@@ -307,6 +346,24 @@ test('source and facet labels identify their exact data provenance and presentat
   assert.match(js, /\$\{esc\(item\.label\)\} — \$\{Number\(item\.companies\)\.toLocaleString\('en-IN'\)\} companies/);
 });
 
+test('custom market-cap bounds match API precision and maximum before requests', async () => {
+  const [html, helpers] = await Promise.all([readPublic('quarterly-results.html'), loadFrontendHelpers()]);
+  const customInputs = [...html.matchAll(/id="quarterlyMarketCap(?:Min|Max)"[^>]+/g)].map((match) => match[0]);
+  assert.equal(customInputs.length, 2);
+  for (const input of customInputs) {
+    assert.match(input, /min="0"/);
+    assert.match(input, /max="100000000"/);
+    assert.match(input, /step="0\.01"/);
+  }
+  assert.equal(helpers.marketCapValidationError('0', '100000000'), '');
+  assert.equal(helpers.marketCapValidationError('50.25', ''), '');
+  assert.match(helpers.marketCapValidationError('0.001', '50'), /2 decimal places/);
+  assert.match(helpers.marketCapValidationError('0', '100000000.01'), /100,000,000/);
+  assert.match(helpers.marketCapValidationError('-1', '50'), /0–100,000,000/);
+  assert.match(helpers.marketCapValidationError('51', '50'), /minimum no greater than maximum/);
+  assert.match(helpers.marketCapValidationError('', ''), /Enter at least one/);
+});
+
 test('local control synchronization clears stale reported-date and quarter selections before refresh succeeds', async () => {
   const js = await readPublic('quarterly-results.js');
   assert.match(js, /querySelectorAll\('\[name="quarterlyReportedDate"\]'\)[\s\S]*input\.checked = input\.value === state\.reportedDate/);
@@ -328,8 +385,6 @@ test('metadata drives heading, quarter/date counts, watchlist count, chips, and 
   assert.match(js, /meta\.watchlistCompanies/);
   assert.match(js, /data-remove-filter/);
   assert.match(js, /clearAllFilters/);
-  assert.match(js, /minNumber > maxNumber/);
-  assert.match(js, /minNumber < 0/);
   for (const label of ['All reporting dates', 'All companies', 'My watchlist', 'Under ₹50 Cr', '₹50–&lt;₹500 Cr', '₹500–&lt;₹5,000 Cr', '₹5,000 Cr and above', 'Custom min/max crore']) {
     assert.match(html, new RegExp(label));
   }

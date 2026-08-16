@@ -27,10 +27,30 @@ function resultRow(overrides = {}) {
     current_source: 'https://nsearchives.nseindia.com/corporate/xbrl/current.xml',
     previous_source: 'https://nsearchives.nseindia.com/corporate/xbrl/previous.xml',
     prior_year_source: null,
-    total_count: '1',
     ...overrides,
   };
 }
+
+function isPaginatedResultQuery(sql) {
+  return /FROM sortable[\s\S]*LIMIT\s+\$\d+\s+OFFSET\s+\$\d+/i.test(sql);
+}
+
+test('paginated result query does not compute a window total', async () => {
+  const calls = [];
+  const service = createQuarterlyResultsService({
+    dbPool: { async query(sql, params) {
+      calls.push({ sql, params });
+      if (/count\(\*\)::int AS total/i.test(sql)) return { rows: [{ total: '0' }] };
+      if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
+      return { rows: [] };
+    } },
+  });
+
+  await service.list({ quarter: '2026-06-30' }, { userId: 'user-1' });
+  const resultCall = calls.find(({ sql }) => isPaginatedResultQuery(sql));
+
+  assert.doesNotMatch(resultCall.sql, /count\(\*\)\s+OVER\s*\(\)|total_count/i);
+});
 
 test('service scopes current and historical rows to exact quarter dates', async () => {
   const calls = [];
@@ -47,7 +67,7 @@ test('service scopes current and historical rows to exact quarter dates', async 
   });
 
   const response = await service.list({ quarter: '2026-06-30' }, { userId: 'user-1' });
-  const resultCall = calls.find(({ sql }) => /total_count/i.test(sql));
+  const resultCall = calls.find(({ sql }) => isPaginatedResultQuery(sql));
 
   assert.equal(response.meta.activeQuarter, '2026-06-30');
   assert.equal(response.meta.activeQuarterLabel, 'June 2026');
@@ -161,7 +181,7 @@ test('IST reporting-date contract converts timestamps before applying the calend
   });
 
   await service.list({ quarter: '2026-06-30', reported_date: '2026-08-16' }, { userId: 'user-1' });
-  const result = calls.find(({ sql }) => /total_count/i.test(sql));
+  const result = calls.find(({ sql }) => isPaginatedResultQuery(sql));
   const facet = calls.find(({ sql }) => /AS date,[\s\S]*AS companies/i.test(sql));
 
   assert.match(result.sql, /\(current\.reported_at AT TIME ZONE 'Asia\/Kolkata'\)::date\s*=\s*\$\d+::date/i);
@@ -176,7 +196,7 @@ test('an empty trusted-user watchlist returns zero results without falling back 
   let resultSql;
   const service = createQuarterlyResultsService({
     dbPool: { async query(sql) {
-      if (/total_count/i.test(sql)) resultSql = sql;
+      if (isPaginatedResultQuery(sql)) resultSql = sql;
       if (/count\(\*\)::int AS total/i.test(sql)) return { rows: [{ total: '0' }] };
       if (/FROM watchlists\s+WHERE/i.test(sql)) return { rows: [{ companies: '0' }] };
       return { rows: [] };
@@ -214,7 +234,7 @@ test('reported-date, watchlist, search, and custom market-cap filters combine wi
     market_cap_max: '500',
     q: 'bank',
   }, { userId: 'trusted-user' });
-  const resultCall = calls.find(({ sql }) => /total_count/i.test(sql));
+  const resultCall = calls.find(({ sql }) => isPaginatedResultQuery(sql));
 
   assert.match(resultCall.sql, /reported_at AT TIME ZONE 'Asia\/Kolkata'/i);
   assert.match(resultCall.sql, /JOIN watchlists AS watchlist[\s\S]*watchlist\.user_id\s*=\s*\$\d+/i);
@@ -256,7 +276,7 @@ test('fixed market-cap buckets use non-overlapping rupee boundaries while All in
     let captured;
     const service = createQuarterlyResultsService({
       dbPool: { async query(sql, values) {
-        if (/total_count/i.test(sql)) captured = { sql, values };
+        if (isPaginatedResultQuery(sql)) captured = { sql, values };
         if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
         return { rows: [] };
       } },
@@ -306,11 +326,47 @@ test('filter validation rejects invalid dates, values, ranges, and combinations 
   }
 });
 
+test('custom market-cap bounds reject overflow and excess decimal precision', async () => {
+  const service = createQuarterlyResultsService({
+    dbPool: { async query() { return { rows: [] }; } },
+  });
+
+  for (const params of [
+    { market_cap_min: '100000000.01' },
+    { market_cap_max: '1.001' },
+  ]) {
+    await assert.rejects(
+      () => service.list({ quarter: '2026-06-30', ...params }, { userId: 'user-1' }),
+      (error) => error.statusCode === 400,
+    );
+  }
+});
+
+test('two-decimal custom market-cap bounds convert to safe integer rupees', async () => {
+  let resultParams;
+  const service = createQuarterlyResultsService({
+    dbPool: { async query(sql, params) {
+      if (isPaginatedResultQuery(sql)) resultParams = params;
+      if (/count\(\*\)::int AS total/i.test(sql)) return { rows: [{ total: '0' }] };
+      if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
+      return { rows: [] };
+    } },
+  });
+
+  await service.list(
+    { quarter: '2026-06-30', market_cap_min: '50.25', market_cap_max: '500.75' },
+    { userId: 'user-1' },
+  );
+
+  assert.ok(resultParams.includes(502_500_000));
+  assert.ok(resultParams.includes(5_007_500_000));
+});
+
 test('pagination defaults to 25 and retains a maximum of 50', async () => {
   let resultParams;
   const service = createQuarterlyResultsService({
     dbPool: { async query(sql, params) {
-      if (/total_count/i.test(sql)) resultParams = params;
+      if (isPaginatedResultQuery(sql)) resultParams = params;
       if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
       return { rows: [] };
     } },
@@ -371,10 +427,11 @@ test('service assembles exact same-basis periods and converts INR only in the re
   const service = createQuarterlyResultsService({
     dbPool: {
       async query(sql, params) {
-        if (/total_count/i.test(sql)) {
+        if (isPaginatedResultQuery(sql)) {
           captured = { sql, params };
           return { rows: [resultRow()] };
         }
+        if (/count\(\*\)::int AS total/i.test(sql)) return { rows: [{ total: '1' }] };
         if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
         return { rows: [] };
       },
@@ -426,7 +483,7 @@ test('service assembles exact same-basis periods and converts INR only in the re
 test('standalone and banking rows retain their selected basis and formula', async () => {
   const service = createQuarterlyResultsService({
     dbPool: { async query(sql) {
-      if (/total_count/i.test(sql)) return { rows: [resultRow({ basis: 'standalone', taxonomy: 'banking' })] };
+      if (isPaginatedResultQuery(sql)) return { rows: [resultRow({ basis: 'standalone', taxonomy: 'banking' })] };
       if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
       return { rows: [] };
     } },
@@ -440,7 +497,7 @@ test('sort and pagination inputs are validated and null growth sorts last', asyn
   let sql;
   const service = createQuarterlyResultsService({
     dbPool: { async query(value) {
-      if (/total_count/i.test(value)) sql = value;
+      if (isPaginatedResultQuery(value)) sql = value;
       if (/FROM watchlists/i.test(value)) return { rows: [{ companies: '0' }] };
       return { rows: [] };
     } },

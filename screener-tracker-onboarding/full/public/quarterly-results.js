@@ -121,8 +121,9 @@ function requestParams() {
   return requestParamsFor(state);
 }
 
-function stateAfterQuarterChange(current, quarterValue) {
-  return { ...current, quarter: quarterValue, reportedDate: '', page: 1 };
+function stateAfterQuarterChange(current, quarterValue, defaultQuarter) {
+  const quarterPin = quarterValue === defaultQuarter ? '' : quarterValue;
+  return { ...current, quarter: quarterPin, reportedDate: '', page: 1 };
 }
 
 function stateAfterFilterRemoval(current, key) {
@@ -227,6 +228,18 @@ function shouldClearResultsOnFailure(alreadyRendered) {
   return !alreadyRendered;
 }
 
+function marketCapValidationError(min, max) {
+  if (min === '' && max === '') return 'Enter at least one market-cap bound.';
+  const validNumber = (value) => value === '' || (/^\d+(?:\.\d{1,2})?$/.test(value) && Number(value) <= 100_000_000);
+  if (!validNumber(min) || !validNumber(max)) {
+    return 'Use values from 0–100,000,000 crore with up to 2 decimal places.';
+  }
+  if (min !== '' && max !== '' && Number(min) > Number(max)) {
+    return 'Enter a minimum no greater than maximum.';
+  }
+  return '';
+}
+
 function clearFilter(key) {
   Object.assign(state, stateAfterFilterRemoval(state, key));
   filterChanged();
@@ -247,7 +260,7 @@ function syncControls() {
   document.querySelectorAll('[name="quarterlyWatchlist"]').forEach((input) => { input.checked = input.value === watchlistValue; });
   document.querySelectorAll('[name="quarterlyReportedDate"]').forEach((input) => { input.checked = input.value === state.reportedDate; });
   if (latestMeta) {
-    const activeQuarter = state.quarter || latestMeta.activeQuarter;
+    const activeQuarter = state.quarter || latestMeta.quarters?.[0]?.periodEnd || latestMeta.activeQuarter;
     document.querySelectorAll('[data-quarter]').forEach((button) => {
       const active = button.dataset.quarter === activeQuarter;
       button.classList.toggle('active', active);
@@ -369,7 +382,7 @@ function init() {
   document.addEventListener('click', (event) => {
     const quarterButton = event.target.closest('[data-quarter]');
     if (quarterButton) {
-      Object.assign(state, stateAfterQuarterChange(state, quarterButton.dataset.quarter));
+      Object.assign(state, stateAfterQuarterChange(state, quarterButton.dataset.quarter, latestMeta?.quarters?.[0]?.periodEnd));
       filterChanged();
     }
     const removeButton = event.target.closest('[data-remove-filter]');
@@ -379,13 +392,9 @@ function init() {
   document.getElementById('quarterlyApplyMarketCap').addEventListener('click', () => {
     const min = els.marketCapMin.value.trim();
     const max = els.marketCapMax.value.trim();
-    const minNumber = min === '' ? null : Number(min);
-    const maxNumber = max === '' ? null : Number(max);
-    const invalid = (minNumber != null && (!Number.isFinite(minNumber) || minNumber < 0))
-      || (maxNumber != null && (!Number.isFinite(maxNumber) || maxNumber < 0))
-      || (minNumber != null && maxNumber != null && minNumber > maxNumber);
-    if (invalid || (minNumber == null && maxNumber == null)) {
-      els.marketCapError.textContent = 'Enter non-negative values with minimum no greater than maximum.';
+    const validationError = marketCapValidationError(min, max);
+    if (validationError) {
+      els.marketCapError.textContent = validationError;
       els.marketCapError.hidden = false;
       return;
     }

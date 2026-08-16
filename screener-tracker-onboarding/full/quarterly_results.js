@@ -18,6 +18,9 @@ const MARKET_CAP_BUCKETS = {
   '5000_plus': [50_000_000_000, null],
 };
 
+// Keeps crore-to-rupee conversion integral and below Number.MAX_SAFE_INTEGER.
+const MAX_CUSTOM_MARKET_CAP_CRORE = 100_000_000;
+
 function inputError(message) {
   return Object.assign(new Error(message), { statusCode: 400 });
 }
@@ -63,10 +66,18 @@ function exactDate(value, name) {
 
 function nonnegativeNumber(value, name) {
   const text = String(value).trim();
-  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(text)) throw inputError(`Invalid ${name}`);
+  if (!/^\d+(?:\.\d{1,2})?$/.test(text)) throw inputError(`Invalid ${name}`);
   const parsed = Number(text);
-  if (!Number.isFinite(parsed) || parsed < 0) throw inputError(`Invalid ${name}`);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_CUSTOM_MARKET_CAP_CRORE) {
+    throw inputError(`Invalid ${name}`);
+  }
   return parsed;
+}
+
+function croreToRupees(value) {
+  const rupees = Math.round(value * 10_000_000);
+  if (!Number.isSafeInteger(rupees)) throw inputError('Invalid market cap');
+  return rupees;
 }
 
 function canonicalDate(value) {
@@ -204,7 +215,7 @@ function querySql(sortColumn, order, { watchlistJoin, predicates, limitPlacehold
           ELSE ((current_profit - prior_year_profit) / abs(prior_year_profit)) * 100 END AS profit_yoy
       FROM assembled
     )
-    SELECT sortable.*, count(*) OVER () AS total_count
+    SELECT sortable.*
     FROM sortable
     ORDER BY ${sortColumn} ${order} NULLS LAST, reported_at DESC, symbol ASC
     LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}
@@ -302,8 +313,8 @@ export function createQuarterlyResultsService({ dbPool }) {
       let marketCapBounds = marketCapBucket ? MARKET_CAP_BUCKETS[marketCapBucket] : null;
       if (!marketCapBounds && (marketCapMin != null || marketCapMax != null)) {
         marketCapBounds = [
-          marketCapMin == null ? null : marketCapMin * 10_000_000,
-          marketCapMax == null ? null : marketCapMax * 10_000_000,
+          marketCapMin == null ? null : croreToRupees(marketCapMin),
+          marketCapMax == null ? null : croreToRupees(marketCapMax),
         ];
       }
       if (marketCapBounds) {
@@ -369,7 +380,7 @@ export function createQuarterlyResultsService({ dbPool }) {
           WHERE user_id = $1
         `, [_context.userId]),
       ]);
-      const total = Number(countResult.rows[0]?.total ?? result.rows[0]?.total_count ?? 0);
+      const total = Number(countResult.rows[0]?.total ?? 0);
       return {
         meta: {
           activeQuarter,
