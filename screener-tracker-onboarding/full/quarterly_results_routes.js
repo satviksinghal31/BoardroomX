@@ -5,10 +5,13 @@ export function registerQuarterlyResultsRoutes(app, { auth, service } = {}) {
   app.get('/api/quarterly-results', auth, async (req, res) => {
     res.set?.('Cache-Control', 'no-store');
     try {
-      res.json(await service.list(req.query));
+      res.json(await service.list(req.query, { userId: req.user.id }));
     } catch (error) {
-      res.status(error.statusCode === 400 ? 400 : 500).json({ error: error.message });
+      if (error.statusCode === 400) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Unable to load quarterly results' });
+      }
     }
   });
 }
-

@@ -37,7 +37,8 @@
     <div class="quarterly-heading">
       <div>
         <p class="quarterly-kicker">Results season</p>
-        <h1>Latest quarterly results</h1>
+        <h1 id="quarterlyHeading">Quarterly results</h1>
+        <div id="quarterlyQuarters" class="quarterly-quarters" aria-label="Result quarter"></div>
       </div>
       <p id="quarterlyCount" class="quarterly-count">Loading…</p>
     </div>
@@ -45,8 +46,9 @@
     <section class="quarterly-source" aria-label="Data source">
       <span class="material-symbols-outlined">verified</span>
       <div>
-        <strong>Source: NSE India Integrated Filing API and NSE XBRL.</strong>
+        <strong>Financial values and filing timestamps: NSE India Integrated Filing API and NSE XBRL.</strong>
         Historical comparisons use the corresponding historical NSE XBRL filings. Values are consolidated-first; standalone is used only when consolidated is unavailable. EBITDA is calculated from reported XBRL components.
+        Market cap filters use the latest stored NSE EOD market-cap data. Watchlist filters use BoardroomX user state.
       </div>
       <div class="ebitda-info">
         <button type="button" data-ebitda-info aria-expanded="false" aria-controls="ebitdaSourceTooltip" aria-label="How calculated EBITDA is derived">i</button>
@@ -56,35 +58,80 @@
       </div>
     </section>
 
-    <section class="quarterly-controls" aria-label="Search and sorting">
-      <label class="quarterly-search">
-        <span class="material-symbols-outlined">search</span>
-        <input id="quarterlySearch" type="search" placeholder="Search symbol or company" autocomplete="off" />
-      </label>
-      <label>
-        <span>Sort by</span>
-        <select id="quarterlySort">
-          <option value="reported_at">Latest reported</option>
-          <option value="revenue_yoy">Revenue YoY growth</option>
-          <option value="profit_yoy">Net profit YoY growth</option>
-        </select>
-      </label>
-      <label>
-        <span>Order</span>
-        <select id="quarterlyOrder">
-          <option value="desc">Highest first</option>
-          <option value="asc">Lowest first</option>
-        </select>
-      </label>
-    </section>
+    <div class="quarterly-content">
+      <div class="quarterly-results-column">
+        <div class="quarterly-toolbar">
+          <label class="quarterly-search">
+            <span class="material-symbols-outlined">search</span>
+            <input id="quarterlySearch" type="search" placeholder="Search symbol or company" autocomplete="off" />
+          </label>
+          <button id="quarterlyFilterToggle" class="quarterly-filter-toggle" type="button" aria-expanded="false" aria-controls="quarterlyFilters">
+            <span class="material-symbols-outlined">tune</span> Filters
+          </button>
+        </div>
+        <div class="quarterly-applied">
+          <div id="quarterlyFilterChips" class="quarterly-filter-chips" aria-live="polite"></div>
+          <button id="quarterlyClearFilters" class="quarterly-clear-filters" type="button" hidden>Clear all</button>
+        </div>
+        <div id="quarterlyBusy" class="quarterly-busy" role="status" hidden>Updating results…</div>
+        <div id="quarterlyError" class="quarterly-error" hidden></div>
+        <section id="quarterlyResults" class="quarterly-results" aria-live="polite" aria-busy="false"></section>
+        <nav class="quarterly-pagination" aria-label="Results pages">
+          <button id="quarterlyPrevious" type="button">Previous</button>
+          <span id="quarterlyPage">Page 1</span>
+          <button id="quarterlyNext" type="button">Next</button>
+        </nav>
+      </div>
 
-    <div id="quarterlyError" class="quarterly-error" hidden></div>
-    <section id="quarterlyResults" class="quarterly-results" aria-live="polite"></section>
-    <nav class="quarterly-pagination" aria-label="Results pages">
-      <button id="quarterlyPrevious" type="button">Previous</button>
-      <span id="quarterlyPage">Page 1</span>
-      <button id="quarterlyNext" type="button">Next</button>
-    </nav>
+      <aside id="quarterlyFilters" class="quarterly-filters" aria-label="Quarterly result filters">
+        <section class="quarterly-filter-section">
+          <h2>Reported date</h2>
+          <div id="quarterlyReportedDates" class="quarterly-filter-options">
+            <label><input type="radio" name="quarterlyReportedDate" value="" checked /> All reporting dates</label>
+          </div>
+        </section>
+        <section class="quarterly-filter-section">
+          <h2>Watchlist</h2>
+          <div class="quarterly-filter-options">
+            <label><input type="radio" name="quarterlyWatchlist" value="all" checked /> All companies</label>
+            <label><input type="radio" name="quarterlyWatchlist" value="watchlist" /> <span id="quarterlyWatchlistLabel">My watchlist — 0</span></label>
+          </div>
+        </section>
+        <section class="quarterly-filter-section">
+          <h2>Market cap</h2>
+          <div class="quarterly-filter-options">
+            <label><input type="radio" name="quarterlyMarketCap" value="all" checked /> All market caps</label>
+            <label><input type="radio" name="quarterlyMarketCap" value="under_50" /> Under ₹50 Cr</label>
+            <label><input type="radio" name="quarterlyMarketCap" value="50_500" /> ₹50–&lt;₹500 Cr</label>
+            <label><input type="radio" name="quarterlyMarketCap" value="500_5000" /> ₹500–&lt;₹5,000 Cr</label>
+            <label><input type="radio" name="quarterlyMarketCap" value="5000_plus" /> ₹5,000 Cr and above</label>
+            <label><input type="radio" name="quarterlyMarketCap" value="custom" /> Custom min/max crore</label>
+          </div>
+          <div id="quarterlyCustomMarketCap" class="quarterly-custom-cap" hidden>
+            <label>Minimum <input id="quarterlyMarketCapMin" type="number" min="0" step="any" inputmode="decimal" /></label>
+            <label>Maximum <input id="quarterlyMarketCapMax" type="number" min="0" step="any" inputmode="decimal" /></label>
+            <button id="quarterlyApplyMarketCap" type="button">Apply</button>
+            <p id="quarterlyMarketCapError" class="quarterly-field-error" role="alert" hidden></p>
+          </div>
+        </section>
+        <section class="quarterly-filter-section">
+          <h2>Sorting</h2>
+          <label class="quarterly-select-label">Sort by
+            <select id="quarterlySort">
+              <option value="reported_at">Latest reported</option>
+              <option value="revenue_yoy">Revenue YoY growth</option>
+              <option value="profit_yoy">Net profit YoY growth</option>
+            </select>
+          </label>
+          <label class="quarterly-select-label">Order
+            <select id="quarterlyOrder">
+              <option value="desc">Highest first</option>
+              <option value="asc">Lowest first</option>
+            </select>
+          </label>
+        </section>
+      </aside>
+    </div>
   </main>
 
   <script src="auth.js"></script>
