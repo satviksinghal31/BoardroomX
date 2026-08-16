@@ -166,6 +166,17 @@
 .quarterly-filter-options label { display: flex; align-items: center; gap: 8px; color: #435363; font-size: 12px; cursor: pointer; }
 .quarterly-filter-options label > span { margin-left: auto; color: var(--muted); }
 .quarterly-filter-options input { accent-color: var(--primary); }
+.quarterly-reported-dates-toggle {
+  justify-self: start;
+  min-height: 32px;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: 700 12px Lato, sans-serif;
+  cursor: pointer;
+}
+.quarterly-reported-dates-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .quarterly-select-label { display: grid; gap: 5px; margin-top: 9px; color: var(--muted); font-size: 11px; font-weight: 700; }
 .quarterly-custom-cap { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
 .quarterly-custom-cap label { display: grid; gap: 4px; color: var(--muted); font-size: 11px; }

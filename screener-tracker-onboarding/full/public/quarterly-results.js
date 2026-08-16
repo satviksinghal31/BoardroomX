@@ -23,6 +23,7 @@ let activeRequest;
 let requestSequence = 0;
 let hasRendered = false;
 let latestMeta;
+let reportedDatesExpanded = false;
 
 function esc(value) {
   return String(value ?? '')
@@ -126,6 +127,16 @@ function stateAfterQuarterChange(current, quarterValue, defaultQuarter) {
   return { ...current, quarter: quarterPin, reportedDate: '', page: 1 };
 }
 
+function visibleReportedDates(dates, expanded, selectedDate) {
+  const distinctDates = [...new Map((dates || []).map((item) => [item.date, item])).values()]
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (expanded) return distinctDates;
+  const visible = distinctDates.slice(0, 7);
+  const selected = distinctDates.find((item) => item.date === selectedDate);
+  if (selected && !visible.some((item) => item.date === selectedDate)) visible.push(selected);
+  return visible;
+}
+
 function stateAfterFilterRemoval(current, key) {
   const next = { ...current, page: 1 };
   if (key === 'q') next.q = '';
@@ -155,7 +166,39 @@ function filterChanged() {
   state.page = 1;
   syncControls();
   renderChips();
-  loadResults();
+  return loadResults();
+}
+
+function renderReportedDates(meta = latestMeta) {
+  if (!meta) return;
+  const allDates = visibleReportedDates(meta.reportedDates, true, state.reportedDate);
+  const dates = visibleReportedDates(meta.reportedDates, reportedDatesExpanded, state.reportedDate);
+  const toggle = allDates.length > 7
+    ? `<button type="button" class="quarterly-reported-dates-toggle" data-toggle-reported-dates aria-expanded="${reportedDatesExpanded}">${reportedDatesExpanded ? 'Show less' : 'View more'}</button>`
+    : '';
+  els.reportedDates.innerHTML = [
+    `<label><input type="radio" name="quarterlyReportedDate" value="" ${state.reportedDate ? '' : 'checked'} /> All reporting dates</label>`,
+    ...dates.map((item) => `<label><input type="radio" name="quarterlyReportedDate" value="${esc(item.date)}" ${state.reportedDate === item.date ? 'checked' : ''} /> ${esc(item.label)} — ${Number(item.companies).toLocaleString('en-IN')} companies</label>`),
+    toggle,
+  ].join('');
+}
+
+function toggleReportedDates(restoreFocus = false) {
+  reportedDatesExpanded = !reportedDatesExpanded;
+  renderReportedDates();
+  if (restoreFocus) els.reportedDates.querySelector('[data-toggle-reported-dates]')?.focus();
+}
+
+function handleReportedDatesToggle(target) {
+  if (!target.closest('[data-toggle-reported-dates]')) return false;
+  toggleReportedDates(true);
+  return true;
+}
+
+function selectQuarter(quarterValue, defaultQuarter) {
+  Object.assign(state, stateAfterQuarterChange(state, quarterValue, defaultQuarter));
+  reportedDatesExpanded = false;
+  renderReportedDates();
 }
 
 function renderMeta(meta) {
@@ -165,13 +208,7 @@ function renderMeta(meta) {
     const active = (state.quarter || meta.activeQuarter) === item.periodEnd;
     return `<button type="button" class="quarterly-quarter-tag${active ? ' active' : ''}" data-quarter="${esc(item.periodEnd)}" aria-pressed="${active}">${esc(item.label)} <span>${Number(item.companies).toLocaleString('en-IN')}</span></button>`;
   }).join('');
-  els.reportedDates.innerHTML = [
-    `<label><input type="radio" name="quarterlyReportedDate" value="" ${state.reportedDate ? '' : 'checked'} /> All reporting dates</label>`,
-    ...(meta.reportedDates || [])
-      .slice()
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .map((item) => `<label><input type="radio" name="quarterlyReportedDate" value="${esc(item.date)}" ${state.reportedDate === item.date ? 'checked' : ''} /> ${esc(item.label)} — ${Number(item.companies).toLocaleString('en-IN')} companies</label>`),
-  ].join('');
+  renderReportedDates(meta);
   els.watchlistLabel.textContent = `My watchlist — ${Number(meta.watchlistCompanies || 0).toLocaleString('en-IN')}`;
 }
 
@@ -242,14 +279,20 @@ function marketCapValidationError(min, max) {
 
 function clearFilter(key) {
   Object.assign(state, stateAfterFilterRemoval(state, key));
-  filterChanged();
+  if (key === 'quarter') {
+    reportedDatesExpanded = false;
+    renderReportedDates();
+  }
+  return filterChanged();
 }
 
 function clearAllFilters() {
   Object.assign(state, clearedState());
+  reportedDatesExpanded = false;
+  renderReportedDates();
   syncControls();
   renderChips();
-  loadResults();
+  return loadResults();
 }
 
 function syncControls() {
@@ -380,9 +423,10 @@ function init() {
     }
   });
   document.addEventListener('click', (event) => {
+    handleReportedDatesToggle(event.target);
     const quarterButton = event.target.closest('[data-quarter]');
     if (quarterButton) {
-      Object.assign(state, stateAfterQuarterChange(state, quarterButton.dataset.quarter, latestMeta?.quarters?.[0]?.periodEnd));
+      selectQuarter(quarterButton.dataset.quarter, latestMeta?.quarters?.[0]?.periodEnd);
       filterChanged();
     }
     const removeButton = event.target.closest('[data-remove-filter]');

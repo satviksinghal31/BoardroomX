@@ -44,6 +44,41 @@ async function loadFrontendRuntime() {
   return { context, runtime: context.__runtime };
 }
 
+async function loadReportedDateRuntime() {
+  const js = await readPublic('quarterly-results.js');
+  const context = {
+    AbortController,
+    URLSearchParams,
+    authGuard() {},
+    document: { addEventListener() {}, querySelectorAll() { return []; } },
+    globalThis: null,
+    requestCount: 0,
+    requestObserver: null,
+  };
+  context.globalThis = context;
+  context.bxFetch = () => {
+    context.requestCount += 1;
+    context.requestObserver?.();
+    return Promise.resolve(apiResponse('June 2026'));
+  };
+  vm.runInNewContext(`${js}\n;globalThis.__reportedDates = {
+    state,
+    visibleReportedDates,
+    renderMeta,
+    toggleReportedDates,
+    handleReportedDatesToggle,
+    selectQuarter,
+    clearFilter,
+    clearAllFilters,
+    isExpanded() { return reportedDatesExpanded; },
+    requests() { return globalThis.requestCount; },
+    resetRequests() { globalThis.requestCount = 0; },
+    setRequestObserver(observer) { globalThis.requestObserver = observer; },
+    setElements(next) { Object.assign(els, next); },
+  };`, context);
+  return context.__reportedDates;
+}
+
 function fakeElement(overrides = {}) {
   return {
     hidden: true,
@@ -111,6 +146,166 @@ test('search and applied chips live in the left results column instead of spanni
   const results = html.indexOf('id="quarterlyResults"', content);
   const filters = html.indexOf('id="quarterlyFilters"', content);
   assert.ok(content < left && left < search && search < chips && chips < results && results < filters);
+});
+
+test('filter rail orders watchlist, market cap, sorting, then reported date', async () => {
+  const html = await readPublic('quarterly-results.html');
+  const filters = html.indexOf('id="quarterlyFilters"');
+  const watchlist = html.indexOf('<h2>Watchlist</h2>', filters);
+  const marketCap = html.indexOf('<h2>Market cap</h2>', filters);
+  const sorting = html.indexOf('<h2>Sorting</h2>', filters);
+  const reportedDate = html.indexOf('<h2>Reported date</h2>', filters);
+  assert.ok(filters < watchlist && watchlist < marketCap && marketCap < sorting && sorting < reportedDate);
+});
+
+test('visible reported dates return latest seven, all dates, and an older selected date', async () => {
+  const runtime = await loadReportedDateRuntime();
+  const dates = [
+    { date: '2026-08-01' }, { date: '2026-08-09' }, { date: '2026-08-08' },
+    { date: '2026-08-07' }, { date: '2026-08-06' }, { date: '2026-08-05' },
+    { date: '2026-08-04' }, { date: '2026-08-03' }, { date: '2026-08-02' },
+    { date: '2026-08-09' },
+  ];
+  assert.deepEqual(
+    Array.from(runtime.visibleReportedDates(dates, false, ''), (item) => item.date),
+    ['2026-08-09', '2026-08-08', '2026-08-07', '2026-08-06', '2026-08-05', '2026-08-04', '2026-08-03'],
+  );
+  assert.deepEqual(
+    Array.from(runtime.visibleReportedDates(dates, true, ''), (item) => item.date),
+    ['2026-08-09', '2026-08-08', '2026-08-07', '2026-08-06', '2026-08-05', '2026-08-04', '2026-08-03', '2026-08-02', '2026-08-01'],
+  );
+  assert.deepEqual(
+    Array.from(runtime.visibleReportedDates(dates, false, '2026-08-01'), (item) => item.date),
+    ['2026-08-09', '2026-08-08', '2026-08-07', '2026-08-06', '2026-08-05', '2026-08-04', '2026-08-03', '2026-08-01'],
+  );
+});
+
+test('reported-date renderer toggles View more and Show less and hides control for seven dates', async () => {
+  const runtime = await loadReportedDateRuntime();
+  const elements = {
+    heading: fakeElement(), quarters: fakeElement(), reportedDates: fakeElement(), watchlistLabel: fakeElement(),
+  };
+  runtime.setElements(elements);
+  const reportedDates = Array.from({ length: 8 }, (_, index) => ({
+    date: `2026-08-${String(8 - index).padStart(2, '0')}`,
+    label: `August ${8 - index}`,
+    companies: index + 1,
+  }));
+  const meta = {
+    activeQuarter: '2026-06-30', activeQuarterLabel: 'June 2026', quarters: [],
+    reportedDates, watchlistCompanies: 0,
+  };
+
+  runtime.renderMeta(meta);
+  assert.equal((elements.reportedDates.innerHTML.match(/name="quarterlyReportedDate"/g) || []).length, 8);
+  assert.match(elements.reportedDates.innerHTML, /type="button"[^>]*data-toggle-reported-dates[^>]*aria-expanded="false"[^>]*>View more</);
+
+  runtime.state.reportedDate = '2026-08-01';
+  runtime.renderMeta(meta);
+  assert.match(elements.reportedDates.innerHTML, /value="2026-08-01" checked/);
+  runtime.state.reportedDate = '';
+  runtime.renderMeta(meta);
+
+  runtime.toggleReportedDates();
+  assert.equal((elements.reportedDates.innerHTML.match(/name="quarterlyReportedDate"/g) || []).length, 9);
+  assert.match(elements.reportedDates.innerHTML, /aria-expanded="true"[^>]*>Show less</);
+
+  runtime.renderMeta({ ...meta, reportedDates: reportedDates.slice(0, 7) });
+  assert.doesNotMatch(elements.reportedDates.innerHTML, /data-toggle-reported-dates/);
+});
+
+test('reported-date delegated toggle is client-only, restores focus, and quarter selection collapses it', async () => {
+  const runtime = await loadReportedDateRuntime();
+  const replacementToggle = fakeElement({ focus() { this.focused = true; } });
+  const elements = {
+    heading: fakeElement(), quarters: fakeElement(),
+    reportedDates: fakeElement({ querySelector(selector) { return selector === '[data-toggle-reported-dates]' ? replacementToggle : null; } }),
+    watchlistLabel: fakeElement(),
+  };
+  runtime.setElements(elements);
+  runtime.renderMeta({
+    activeQuarter: '2026-06-30', activeQuarterLabel: 'June 2026', quarters: [], watchlistCompanies: 0,
+    reportedDates: Array.from({ length: 8 }, (_, index) => ({
+      date: `2026-08-${String(8 - index).padStart(2, '0')}`, label: `August ${8 - index}`, companies: 1,
+    })),
+  });
+  const clickTarget = { closest(selector) { return selector === '[data-toggle-reported-dates]' ? this : null; } };
+  assert.equal(runtime.handleReportedDatesToggle(clickTarget), true);
+  assert.equal(runtime.isExpanded(), true);
+  assert.equal(runtime.requests(), 0);
+  assert.equal(replacementToggle.focused, true);
+  runtime.state.reportedDate = '2026-08-01';
+  runtime.selectQuarter('2026-03-31', '2026-06-30');
+  assert.equal(runtime.isExpanded(), false);
+  assert.equal(runtime.state.reportedDate, '');
+  assert.equal(runtime.state.quarter, '2026-03-31');
+});
+
+test('clear all filters also collapses the reported-date list', async () => {
+  const runtime = await loadReportedDateRuntime();
+  const elements = {
+    heading: fakeElement(), quarters: fakeElement(), reportedDates: fakeElement(), watchlistLabel: fakeElement(),
+    search: fakeElement(), sort: fakeElement(), order: fakeElement(), chips: fakeElement(), clearFilters: fakeElement(),
+    busy: fakeElement(), error: fakeElement(), results: fakeElement(), count: fakeElement(), page: fakeElement(),
+    previous: fakeElement(), next: fakeElement(), customMarketCap: fakeElement(), marketCapMin: fakeElement(),
+    marketCapMax: fakeElement(),
+  };
+  runtime.setElements(elements);
+  runtime.renderMeta({
+    activeQuarter: '2026-06-30', activeQuarterLabel: 'June 2026', quarters: [], watchlistCompanies: 0,
+    reportedDates: Array.from({ length: 8 }, (_, index) => ({
+      date: `2026-08-${String(8 - index).padStart(2, '0')}`, label: `August ${8 - index}`, companies: 1,
+    })),
+  });
+  runtime.toggleReportedDates();
+  assert.equal(runtime.isExpanded(), true);
+  await runtime.clearAllFilters();
+  assert.equal(runtime.isExpanded(), false);
+});
+
+test('removing the Quarter chip collapses dates before its one request while other chips preserve expansion', async () => {
+  const runtime = await loadReportedDateRuntime();
+  const elements = {
+    heading: fakeElement(), quarters: fakeElement(), reportedDates: fakeElement(), watchlistLabel: fakeElement(),
+    search: fakeElement(), sort: fakeElement(), order: fakeElement(), chips: fakeElement(), clearFilters: fakeElement(),
+    busy: fakeElement(), error: fakeElement(), results: fakeElement(), count: fakeElement(), page: fakeElement(),
+    previous: fakeElement(), next: fakeElement(), customMarketCap: fakeElement(), marketCapMin: fakeElement(),
+    marketCapMax: fakeElement(),
+  };
+  runtime.setElements(elements);
+  runtime.renderMeta({
+    activeQuarter: '2026-06-30', activeQuarterLabel: 'June 2026', quarters: [], watchlistCompanies: 0,
+    reportedDates: Array.from({ length: 8 }, (_, index) => ({
+      date: `2026-08-${String(8 - index).padStart(2, '0')}`, label: `August ${8 - index}`, companies: 1,
+    })),
+  });
+  runtime.toggleReportedDates();
+  runtime.state.q = 'bank';
+  await runtime.clearFilter('q');
+  assert.equal(runtime.isExpanded(), true);
+
+  runtime.state.quarter = '2026-03-31';
+  runtime.state.reportedDate = '2026-08-01';
+  runtime.resetRequests();
+  const requestSnapshots = [];
+  runtime.setRequestObserver(() => requestSnapshots.push({
+    expanded: runtime.isExpanded(),
+    rendered: elements.reportedDates.innerHTML,
+  }));
+  await runtime.clearFilter('quarter');
+
+  assert.equal(runtime.isExpanded(), false);
+  assert.equal(runtime.state.quarter, '');
+  assert.equal(runtime.state.reportedDate, '');
+  assert.equal(runtime.requests(), 1);
+  assert.equal(requestSnapshots.length, 1);
+  assert.equal(requestSnapshots[0].expanded, false);
+  assert.doesNotMatch(requestSnapshots[0].rendered, />Show less</);
+});
+
+test('reported-date toggle has a compact touch target at least 24px tall', async () => {
+  const css = await readPublic('quarterly-results.css');
+  assert.match(css, /\.quarterly-reported-dates-toggle\s*\{[^}]*min-height:\s*(?:2[4-9]|[3-9]\d|\d{3,})px/s);
 });
 
 test('frontend uses only the BoardroomX API and renders all three periods and sources', async () => {
@@ -217,7 +412,7 @@ test('selecting latest clears the quarter pin and follows a later metadata rollo
   assert.match(elements.quarters.innerHTML, /data-quarter="2026-09-30" aria-pressed="true"/);
   assert.doesNotMatch(elements.quarters.innerHTML, /data-quarter="2026-06-30" aria-pressed="true"/);
   const js = await readPublic('quarterly-results.js');
-  assert.match(js, /stateAfterQuarterChange\(state, quarterButton\.dataset\.quarter, latestMeta\?\.quarters\?\.\[0\]\?\.periodEnd\)/);
+  assert.match(js, /selectQuarter\(quarterButton\.dataset\.quarter, latestMeta\?\.quarters\?\.\[0\]\?\.periodEnd\)/);
   assert.match(js, /state\.quarter \|\| latestMeta\.quarters\?\.\[0\]\?\.periodEnd \|\| latestMeta\.activeQuarter/);
 });
 

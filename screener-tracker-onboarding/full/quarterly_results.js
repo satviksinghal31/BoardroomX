@@ -248,8 +248,102 @@ function countSql({ watchlistJoin, predicates }) {
   `;
 }
 
-export function createQuarterlyResultsService({ dbPool }) {
+export function createQuarterlyResultsService({ dbPool, now = Date.now }) {
   if (!dbPool?.query) throw new Error('dbPool is required');
+
+  const metadataTtlMs = 60_000;
+  const datesCacheMaxEntries = 16;
+  let globalMetadataCache;
+  let globalMetadataInFlight;
+  let availableQuarterKeys = new Set();
+  const datesCache = new Map();
+  const datesInFlight = new Map();
+
+  async function availableQuarters() {
+    const timestamp = now();
+    if (globalMetadataCache && timestamp < globalMetadataCache.expiresAt) {
+      return globalMetadataCache.value;
+    }
+    if (globalMetadataInFlight) return globalMetadataInFlight;
+    const request = (async () => {
+      const value = await dbPool.query(`
+        SELECT period_end::text AS period_end, count(DISTINCT symbol)::int AS companies
+        FROM quarterly_results
+        WHERE status = 'processed' AND superseded_by_seq_id IS NULL
+        GROUP BY period_end
+        ORDER BY period_end DESC
+      `);
+      availableQuarterKeys = new Set(value.rows.map((row) => calendarDate(row.period_end)));
+      for (const key of datesCache.keys()) {
+        if (!availableQuarterKeys.has(key)) datesCache.delete(key);
+      }
+      globalMetadataCache = { value, expiresAt: now() + metadataTtlMs };
+      return value;
+    })();
+    globalMetadataInFlight = request;
+    try {
+      return await request;
+    } finally {
+      if (globalMetadataInFlight === request) globalMetadataInFlight = undefined;
+    }
+  }
+
+  function queryReportedDates(periodEnd) {
+    return dbPool.query(`
+        WITH ranked_current AS (
+          SELECT current_row.*,
+                 row_number() OVER (
+                   PARTITION BY symbol
+                   ORDER BY CASE WHEN basis = 'consolidated' THEN 0 ELSE 1 END,
+                            reported_at DESC,
+                            nse_seq_id DESC
+                 ) AS choice_rank
+          FROM quarterly_results AS current_row
+          WHERE current_row.status = 'processed'
+            AND current_row.superseded_by_seq_id IS NULL
+            AND current_row.period_end = $1
+        ),
+        current_choice AS (
+          SELECT * FROM ranked_current WHERE choice_rank = 1
+        )
+        SELECT (reported_at AT TIME ZONE 'Asia/Kolkata')::date::text AS date,
+               count(*)::int AS companies
+        FROM current_choice
+        GROUP BY (reported_at AT TIME ZONE 'Asia/Kolkata')::date
+        ORDER BY date DESC
+      `, [periodEnd]);
+  }
+
+  async function reportedDates(periodEnd, cacheable) {
+    if (!cacheable) return queryReportedDates(periodEnd);
+    const timestamp = now();
+    for (const [key, entry] of datesCache) {
+      if (timestamp >= entry.expiresAt) datesCache.delete(key);
+    }
+    const cached = datesCache.get(periodEnd);
+    if (cached) return cached.value;
+    if (datesInFlight.has(periodEnd)) return datesInFlight.get(periodEnd);
+    const request = (async () => {
+      const value = await queryReportedDates(periodEnd);
+      const cacheTime = now();
+      for (const [key, entry] of datesCache) {
+        if (cacheTime >= entry.expiresAt) datesCache.delete(key);
+      }
+      if (availableQuarterKeys.has(periodEnd)) {
+        while (datesCache.size >= datesCacheMaxEntries) {
+          datesCache.delete(datesCache.keys().next().value);
+        }
+        datesCache.set(periodEnd, { value, expiresAt: cacheTime + metadataTtlMs });
+      }
+      return value;
+    })();
+    datesInFlight.set(periodEnd, request);
+    try {
+      return await request;
+    } finally {
+      if (datesInFlight.get(periodEnd) === request) datesInFlight.delete(periodEnd);
+    }
+  }
 
   return {
     async list(params = {}, _context = {}) {
@@ -283,18 +377,17 @@ export function createQuarterlyResultsService({ dbPool }) {
       if (marketCapMin != null && marketCapMax != null && marketCapMin > marketCapMax) {
         throw inputError('Invalid market cap range');
       }
+      const quartersResult = await availableQuarters();
       let activeQuarter;
       if (!hasParam('quarter')) {
-        const activeResult = await dbPool.query(`
-          SELECT max(period_end)::text AS period_end
-          FROM quarterly_results
-          WHERE status = 'processed' AND superseded_by_seq_id IS NULL
-        `);
-        if (!activeResult.rows[0]?.period_end) throw new Error('No processed quarterly results available');
-        activeQuarter = exactQuarter(calendarDate(activeResult.rows[0].period_end));
+        if (!quartersResult.rows[0]?.period_end) throw new Error('No processed quarterly results available');
+        activeQuarter = exactQuarter(calendarDate(quartersResult.rows[0].period_end));
       } else {
         activeQuarter = exactQuarter(params.quarter);
       }
+      const cacheableDates = quartersResult.rows.some(
+        (row) => calendarDate(row.period_end) === activeQuarter,
+      );
       const periods = comparisonPeriods(activeQuarter);
       const queryParams = [periods.current, periods.previous, periods.priorYear, q, `%${q}%`];
       const bind = (value) => {
@@ -333,7 +426,7 @@ export function createQuarterlyResultsService({ dbPool }) {
       const countPredicates = predicates.map(compactCountPlaceholders);
       const limitPlaceholder = bind(limit);
       const offsetPlaceholder = bind((page - 1) * limit);
-      const [result, countResult, quartersResult, datesResult, watchlistResult] = await Promise.all([
+      const [result, countResult, datesResult, watchlistResult] = await Promise.all([
         dbPool.query(
           querySql(sortColumn, order.toUpperCase(), {
             watchlistJoin, predicates, limitPlaceholder, offsetPlaceholder,
@@ -344,36 +437,7 @@ export function createQuarterlyResultsService({ dbPool }) {
           watchlistJoin: countWatchlistJoin,
           predicates: countPredicates,
         }), countParams),
-        dbPool.query(`
-          SELECT period_end::text AS period_end, count(DISTINCT symbol)::int AS companies
-          FROM quarterly_results
-          WHERE status = 'processed' AND superseded_by_seq_id IS NULL
-          GROUP BY period_end
-          ORDER BY period_end DESC
-        `),
-        dbPool.query(`
-          WITH ranked_current AS (
-            SELECT current_row.*,
-                   row_number() OVER (
-                     PARTITION BY symbol
-                     ORDER BY CASE WHEN basis = 'consolidated' THEN 0 ELSE 1 END,
-                              reported_at DESC,
-                              nse_seq_id DESC
-                   ) AS choice_rank
-            FROM quarterly_results AS current_row
-            WHERE current_row.status = 'processed'
-              AND current_row.superseded_by_seq_id IS NULL
-              AND current_row.period_end = $1
-          ),
-          current_choice AS (
-            SELECT * FROM ranked_current WHERE choice_rank = 1
-          )
-          SELECT (reported_at AT TIME ZONE 'Asia/Kolkata')::date::text AS date,
-                 count(*)::int AS companies
-          FROM current_choice
-          GROUP BY (reported_at AT TIME ZONE 'Asia/Kolkata')::date
-          ORDER BY date DESC
-        `, [activeQuarter]),
+        reportedDates(activeQuarter, cacheableDates),
         dbPool.query(`
           SELECT count(DISTINCT symbol)::int AS companies
           FROM watchlists

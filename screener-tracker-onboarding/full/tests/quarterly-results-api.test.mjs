@@ -82,7 +82,6 @@ test('omitted quarter resolves newest processed period and returns independent m
     dbPool: {
       async query(sql, params) {
         calls.push({ sql, params });
-        if (/SELECT max\(period_end\)/i.test(sql)) return { rows: [{ period_end: '2026-06-30' }] };
         if (/GROUP BY period_end/i.test(sql)) return { rows: [
           { period_end: '2026-06-30', companies: '1949' },
           { period_end: '2026-03-31', companies: '1901' },
@@ -116,19 +115,38 @@ test('omitted quarter resolves newest processed period and returns independent m
   assert.deepEqual(watchlistFacet.params, ['user-1']);
 });
 
-test('omitted quarter rolls over immediately when a newer processed period appears', async () => {
-  const newestPeriods = ['2026-06-30', '2026-09-30'];
+test('omitted quarter preserves the empty processed-results error', async () => {
+  const service = createQuarterlyResultsService({
+    dbPool: { async query(sql) {
+      if (/GROUP BY period_end/i.test(sql)) return { rows: [] };
+      throw new Error('unexpected query');
+    } },
+  });
+
+  await assert.rejects(
+    () => service.list({}, { userId: 'user-1' }),
+    /No processed quarterly results available/,
+  );
+});
+
+test('one metadata snapshot keeps active quarter coherent with quarters across the exact TTL boundary', async () => {
+  let clock = 1_000;
+  const quarterSnapshots = [
+    [
+      { period_end: '2026-06-30', companies: '2' },
+      { period_end: '2026-03-31', companies: '1' },
+    ],
+    [
+      { period_end: '2026-09-30', companies: '1' },
+      { period_end: '2026-06-30', companies: '2' },
+    ],
+  ];
   const calls = [];
   const service = createQuarterlyResultsService({
+    now: () => clock,
     dbPool: { async query(sql, params) {
       calls.push({ sql, params });
-      if (/SELECT max\(period_end\)/i.test(sql)) {
-        return { rows: [{ period_end: newestPeriods.shift() }] };
-      }
-      if (/GROUP BY period_end/i.test(sql)) return { rows: [
-        { period_end: '2026-09-30', companies: '1' },
-        { period_end: '2026-06-30', companies: '1949' },
-      ] };
+      if (/GROUP BY period_end/i.test(sql)) return { rows: quarterSnapshots.shift() };
       if (/AS date,[\s\S]*AS companies/i.test(sql)) return { rows: [] };
       if (/count\(\*\)::int AS total/i.test(sql)) return { rows: [{ total: '0' }] };
       if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
@@ -137,16 +155,220 @@ test('omitted quarter rolls over immediately when a newer processed period appea
   });
 
   const first = await service.list({}, { userId: 'user-1' });
-  const second = await service.list({}, { userId: 'user-1' });
+  clock += 59_999;
+  const second = await service.list({}, { userId: 'user-2' });
 
   assert.equal(first.meta.activeQuarter, '2026-06-30');
-  assert.equal(first.meta.activeQuarterLabel, 'June 2026');
-  assert.equal(second.meta.activeQuarter, '2026-09-30');
-  assert.equal(second.meta.activeQuarterLabel, 'September 2026');
-  const facetPeriods = calls
-    .filter(({ sql }) => /AS date,[\s\S]*AS companies/i.test(sql))
-    .map(({ params }) => params[0]);
-  assert.deepEqual(facetPeriods, ['2026-06-30', '2026-09-30']);
+  assert.equal(first.meta.quarters[0].periodEnd, '2026-06-30');
+  assert.equal(second.meta.activeQuarter, '2026-06-30');
+  assert.equal(second.meta.quarters[0].periodEnd, '2026-06-30');
+  assert.equal(calls.filter(({ sql }) => /SELECT max\(period_end\)/i.test(sql)).length, 0);
+  assert.equal(calls.filter(({ sql }) => /GROUP BY period_end/i.test(sql)).length, 1);
+  assert.equal(calls.filter(({ sql }) => /AS date,[\s\S]*AS companies/i.test(sql)).length, 1);
+  assert.equal(calls.filter(({ sql }) => isPaginatedResultQuery(sql)).length, 2);
+  assert.equal(calls.filter(({ sql }) => /count\(\*\)::int AS total/i.test(sql)).length, 2);
+  assert.deepEqual(
+    calls.filter(({ sql }) => /FROM watchlists/i.test(sql)).map(({ params }) => params),
+    [['user-1'], ['user-2']],
+  );
+
+  clock += 1;
+  const third = await service.list({}, { userId: 'user-1' });
+
+  assert.equal(third.meta.activeQuarter, '2026-09-30');
+  assert.equal(third.meta.quarters[0].periodEnd, '2026-09-30');
+  assert.equal(calls.filter(({ sql }) => /SELECT max\(period_end\)/i.test(sql)).length, 0);
+  assert.equal(calls.filter(({ sql }) => /GROUP BY period_end/i.test(sql)).length, 2);
+  assert.equal(calls.filter(({ sql }) => /AS date,[\s\S]*AS companies/i.test(sql)).length, 2);
+  assert.equal(calls.filter(({ sql }) => isPaginatedResultQuery(sql)).length, 3);
+  assert.equal(calls.filter(({ sql }) => /count\(\*\)::int AS total/i.test(sql)).length, 3);
+  assert.equal(calls.filter(({ sql }) => /FROM watchlists/i.test(sql)).length, 3);
+});
+
+test('concurrent cold and expired requests share active-quarter, quarters, and same-quarter date queries', async () => {
+  let clock = 10_000;
+  const calls = [];
+  const service = createQuarterlyResultsService({
+    now: () => clock,
+    dbPool: { async query(sql, params) {
+      calls.push({ sql, params });
+      if (/GROUP BY period_end/i.test(sql)) return { rows: [
+        { period_end: '2026-06-30', companies: '1' },
+      ] };
+      if (/AS date,[\s\S]*AS companies/i.test(sql)) return { rows: [] };
+      if (/count\(\*\)::int AS total/i.test(sql)) return { rows: [{ total: '0' }] };
+      if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
+      return { rows: [] };
+    } },
+  });
+
+  await Promise.all([
+    service.list({}, { userId: 'user-1' }),
+    service.list({}, { userId: 'user-2' }),
+  ]);
+
+  assert.equal(calls.filter(({ sql }) => /SELECT max\(period_end\)/i.test(sql)).length, 0);
+  assert.equal(calls.filter(({ sql }) => /GROUP BY period_end/i.test(sql)).length, 1);
+  assert.equal(calls.filter(({ sql }) => /AS date,[\s\S]*AS companies/i.test(sql)).length, 1);
+  assert.equal(calls.filter(({ sql }) => isPaginatedResultQuery(sql)).length, 2);
+  assert.equal(calls.filter(({ sql }) => /count\(\*\)::int AS total/i.test(sql)).length, 2);
+  assert.deepEqual(
+    calls.filter(({ sql }) => /FROM watchlists/i.test(sql)).map(({ params }) => params),
+    [['user-1'], ['user-2']],
+  );
+
+  clock += 60_000;
+  await Promise.all([
+    service.list({}, { userId: 'user-1' }),
+    service.list({}, { userId: 'user-2' }),
+  ]);
+
+  assert.equal(calls.filter(({ sql }) => /SELECT max\(period_end\)/i.test(sql)).length, 0);
+  assert.equal(calls.filter(({ sql }) => /GROUP BY period_end/i.test(sql)).length, 2);
+  assert.equal(calls.filter(({ sql }) => /AS date,[\s\S]*AS companies/i.test(sql)).length, 2);
+  assert.equal(calls.filter(({ sql }) => isPaginatedResultQuery(sql)).length, 4);
+  assert.equal(calls.filter(({ sql }) => /count\(\*\)::int AS total/i.test(sql)).length, 4);
+  assert.equal(calls.filter(({ sql }) => /FROM watchlists/i.test(sql)).length, 4);
+});
+
+test('rejected metadata queries clear shared in-flight state and retry successfully', async () => {
+  const attempts = { quarters: 0, dates: 0 };
+  const service = createQuarterlyResultsService({
+    now: () => 20_000,
+    dbPool: { async query(sql) {
+      if (/GROUP BY period_end/i.test(sql)) {
+        attempts.quarters += 1;
+        if (attempts.quarters === 1) throw new Error('quarters unavailable');
+        return { rows: [{ period_end: '2026-06-30', companies: '1' }] };
+      }
+      if (/AS date,[\s\S]*AS companies/i.test(sql)) {
+        attempts.dates += 1;
+        if (attempts.dates === 1) throw new Error('dates unavailable');
+        return { rows: [] };
+      }
+      if (/count\(\*\)::int AS total/i.test(sql)) return { rows: [{ total: '0' }] };
+      if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
+      return { rows: [] };
+    } },
+  });
+
+  const quarterFailures = await Promise.allSettled([
+    service.list({}, { userId: 'user-1' }),
+    service.list({}, { userId: 'user-2' }),
+  ]);
+  assert.deepEqual(quarterFailures.map(({ status }) => status), ['rejected', 'rejected']);
+  assert.equal(attempts.quarters, 1);
+
+  const dateFailures = await Promise.allSettled([
+    service.list({}, { userId: 'user-1' }),
+    service.list({}, { userId: 'user-2' }),
+  ]);
+  assert.deepEqual(dateFailures.map(({ status }) => status), ['rejected', 'rejected']);
+  assert.equal(attempts.quarters, 2);
+  assert.equal(attempts.dates, 1);
+
+  await service.list({}, { userId: 'user-1' });
+  assert.deepEqual(attempts, { quarters: 2, dates: 2 });
+});
+
+test('reported-date metadata cache is keyed by exact historical quarter', async () => {
+  let clock = 5_000;
+  const calls = [];
+  const service = createQuarterlyResultsService({
+    now: () => clock,
+    dbPool: { async query(sql, params) {
+      calls.push({ sql, params });
+      if (/GROUP BY period_end/i.test(sql)) return { rows: [
+        { period_end: '2026-06-30', companies: '1' },
+        { period_end: '2026-03-31', companies: '1' },
+      ] };
+      if (/AS date,[\s\S]*AS companies/i.test(sql)) {
+        return { rows: [{
+          date: params[0] === '2026-06-30' ? '2026-08-15' : '2026-05-15',
+          companies: '1',
+        }] };
+      }
+      if (/count\(\*\)::int AS total/i.test(sql)) return { rows: [{ total: '0' }] };
+      if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
+      return { rows: [] };
+    } },
+  });
+
+  const latest = await service.list({}, { userId: 'user-1' });
+  clock += 1;
+  const historical = await service.list({ quarter: '2026-03-31' }, { userId: 'user-1' });
+  clock += 1;
+  const historicalAgain = await service.list({ quarter: '2026-03-31' }, { userId: 'user-1' });
+
+  assert.deepEqual(latest.meta.reportedDates.map(({ date }) => date), ['2026-08-15']);
+  assert.deepEqual(historical.meta.reportedDates.map(({ date }) => date), ['2026-05-15']);
+  assert.deepEqual(historicalAgain.meta.reportedDates.map(({ date }) => date), ['2026-05-15']);
+  assert.deepEqual(
+    calls.filter(({ sql }) => /AS date,[\s\S]*AS companies/i.test(sql)).map(({ params }) => params[0]),
+    ['2026-06-30', '2026-03-31'],
+  );
+});
+
+test('unavailable explicit quarters bypass both completed and in-flight reporting-date caches', async () => {
+  const dateFacetPeriods = [];
+  const service = createQuarterlyResultsService({
+    now: () => 30_000,
+    dbPool: { async query(sql, params) {
+      if (/GROUP BY period_end/i.test(sql)) return { rows: [
+        { period_end: '2026-06-30', companies: '1' },
+      ] };
+      if (/AS date,[\s\S]*AS companies/i.test(sql)) {
+        dateFacetPeriods.push(params[0]);
+        return { rows: [] };
+      }
+      if (/count\(\*\)::int AS total/i.test(sql)) return { rows: [{ total: '0' }] };
+      if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
+      return { rows: [] };
+    } },
+  });
+
+  await Promise.all([
+    service.list({ quarter: '2025-12-31' }, { userId: 'user-1' }),
+    service.list({ quarter: '2025-12-31' }, { userId: 'user-2' }),
+  ]);
+  await service.list({ quarter: '2025-12-31' }, { userId: 'user-1' });
+
+  assert.deepEqual(dateFacetPeriods, ['2025-12-31', '2025-12-31', '2025-12-31']);
+});
+
+test('reported-date cache evicts the oldest entry after 16 available quarters', async () => {
+  const quarters = [
+    '2022-03-31', '2022-06-30', '2022-09-30', '2022-12-31',
+    '2023-03-31', '2023-06-30', '2023-09-30', '2023-12-31',
+    '2024-03-31', '2024-06-30', '2024-09-30', '2024-12-31',
+    '2025-03-31', '2025-06-30', '2025-09-30', '2025-12-31',
+    '2026-03-31',
+  ];
+  const dateFacetPeriods = [];
+  const service = createQuarterlyResultsService({
+    now: () => 30_000,
+    dbPool: { async query(sql, params) {
+      if (/GROUP BY period_end/i.test(sql)) return { rows: quarters.map((period_end) => ({
+        period_end,
+        companies: '1',
+      })).reverse() };
+      if (/AS date,[\s\S]*AS companies/i.test(sql)) {
+        dateFacetPeriods.push(params[0]);
+        return { rows: [] };
+      }
+      if (/count\(\*\)::int AS total/i.test(sql)) return { rows: [{ total: '0' }] };
+      if (/FROM watchlists/i.test(sql)) return { rows: [{ companies: '0' }] };
+      return { rows: [] };
+    } },
+  });
+
+  for (const quarter of quarters) {
+    await service.list({ quarter }, { userId: 'user-1' });
+  }
+  await service.list({ quarter: quarters[0] }, { userId: 'user-1' });
+
+  assert.equal(dateFacetPeriods.length, quarters.length + 1);
+  assert.equal(dateFacetPeriods.filter((quarter) => quarter === quarters[0]).length, 2);
 });
 
 test('reported-date facets count only the consolidated-first current choice per symbol', async () => {
