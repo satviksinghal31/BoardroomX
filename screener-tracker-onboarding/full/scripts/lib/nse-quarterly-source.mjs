@@ -21,7 +21,9 @@ function cookiesFrom(response) {
 async function assertHttpOk(response, endpoint) {
   if (response.ok) return;
   const body = typeof response.text === 'function' ? await response.text() : '';
-  throw new Error(`${endpoint} failed with status ${response.status}: ${body}`);
+  throw Object.assign(new Error(`${endpoint} failed with status ${response.status}: ${body}`), {
+    statusCode: response.status,
+  });
 }
 
 async function parseJson(response, endpoint) {
