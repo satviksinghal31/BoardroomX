@@ -304,7 +304,7 @@ export async function processDueFilings({ source, repository, now = new Date(), 
         await repository.markProcessed(row.nseSeqId, parsed, now);
         counts.processed += 1;
       } catch (error) {
-        if (error instanceof PermanentFilingError || row.attemptCount >= 3) {
+        if (error instanceof PermanentFilingError || error.statusCode === 404 || row.attemptCount >= 3) {
           await repository.markFailed(row.nseSeqId, error.message, now);
           counts.failed += 1;
         } else {

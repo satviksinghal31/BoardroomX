@@ -320,6 +320,22 @@ test('unsupported XBRL identity fails immediately without retry', async () => {
   assert.equal(repository.rows.get('3').nextRetryAt, null);
 });
 
+test('an NSE archive 404 fails immediately without retry', async () => {
+  const item = filing({ seq: 31 });
+  const row = {
+    ...item, taxonomy: 'indas', sourceXbrlUrl: item.xbrlUrl, reportedAt: item.publishedAt,
+  };
+  const missing = Object.assign(new Error('NSE archive returned 404'), { statusCode: 404 });
+  const repository = new MemoryRepository({ rows: [row] });
+  const source = sourceDouble({ xbrl: { [item.xbrlUrl]: missing } });
+
+  await processDueFilings({ source, repository, now: new Date('2026-08-06T14:10:00.000Z') });
+
+  assert.equal(repository.rows.get('31').status, 'failed');
+  assert.equal(repository.rows.get('31').attemptCount, 1);
+  assert.equal(repository.rows.get('31').nextRetryAt, null);
+});
+
 test('a newer processed revision supersedes the older same-basis row', async () => {
   const oldItem = filing({ seq: 4, publishedAt: '2026-08-06T14:00:00.000Z' });
   const newItem = filing({ seq: 5, publishedAt: '2026-08-06T15:00:00.000Z' });
