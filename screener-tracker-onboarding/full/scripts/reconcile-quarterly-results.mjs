@@ -4,6 +4,7 @@ import pg from 'pg';
 import { calendarDate, comparisonPeriods } from './lib/quarter-periods.mjs';
 import { createNseQuarterlySource } from './lib/nse-quarterly-source.mjs';
 import { parseQuarterlyXbrl } from './lib/nse-quarterly-xbrl.mjs';
+import { observePoolErrors } from './lib/pg-pool.mjs';
 
 export const RECONCILIATION_SYMBOLS = ['SBIN', 'HINDALCO', 'ONGC', 'CASTROLIND', 'RITES'];
 
@@ -112,11 +113,11 @@ export function createReconciliationRepository(pool) {
 export async function main() {
   if (!process.env.SUPABASE_DB_URL) throw new Error('SUPABASE_DB_URL is required');
   const { Pool } = pg;
-  const pool = new Pool({
+  const pool = observePoolErrors(new Pool({
     connectionString: process.env.SUPABASE_DB_URL,
     ssl: { rejectUnauthorized: false },
     max: 1,
-  });
+  }));
   try {
     const result = await reconcileQuarterlyResults({
       repository: createReconciliationRepository(pool),

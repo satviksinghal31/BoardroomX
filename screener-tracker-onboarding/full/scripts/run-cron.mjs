@@ -14,6 +14,7 @@ import { main as runScreenerAnnualsWorker } from './screener-worker.mjs';
 import { runDhanInstrumentSync } from './dhan-instrument-sync.mjs';
 import { runDhanEodUpdate } from './dhan-eod-update.mjs';
 import { createNseQuarterlySource } from './lib/nse-quarterly-source.mjs';
+import { observePoolErrors } from './lib/pg-pool.mjs';
 import { createQuarterlyRepository, runQuarterlyResultsWorker } from './quarterly-results-worker.mjs';
 
 const HARD_TIMEOUT_MS = 10 * 60 * 1000;
@@ -119,11 +120,11 @@ function createSupabaseClient() {
 
 function createPool() {
   const { Pool } = pg;
-  return new Pool({
+  return observePoolErrors(new Pool({
     connectionString: requireEnv('SUPABASE_DB_URL'),
     ssl: { rejectUnauthorized: false },
     max: 1,
-  });
+  }));
 }
 
 async function writeLog(supabase, job, status, message) {

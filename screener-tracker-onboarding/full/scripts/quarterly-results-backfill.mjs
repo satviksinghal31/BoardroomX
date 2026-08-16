@@ -2,6 +2,7 @@ import 'dotenv/config';
 import pg from 'pg';
 
 import { createNseQuarterlySource } from './lib/nse-quarterly-source.mjs';
+import { observePoolErrors } from './lib/pg-pool.mjs';
 import {
   createQuarterlyRepository,
   ingestDiscoveredFilings,
@@ -58,11 +59,11 @@ export async function runQuarterlyResultsBackfill({
 
 export async function main() {
   const { Pool } = pg;
-  const pool = new Pool({
+  const pool = observePoolErrors(new Pool({
     connectionString: requireEnv('SUPABASE_DB_URL'),
     ssl: { rejectUnauthorized: false },
     max: 1,
-  });
+  }));
   try {
     const result = await runQuarterlyResultsBackfill({
       source: createNseQuarterlySource(),
