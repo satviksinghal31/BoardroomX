@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS nse_universe CASCADE;

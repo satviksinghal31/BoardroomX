@@ -1,42 +1,9 @@
 # BoardroomX
 
-BoardroomX is a stock intelligence platform for NSE equities. It combines user watchlists, quarterly and annual fundamentals, price charts, RSI/EMA chart intelligence, NSE event-calendar tracking, and internal operations dashboards.
+The previous application has been retired. The canonical app is `screener-tracker-onboarding/full`.
 
-## App Location
+This cleanup retains authentication and the existing database stock universe. There are no scraping routes, background workers, cron jobs, Dhan calls, or legacy dashboards in this application. The new worker is a separate implementation step.
 
-The deployable app is:
+Run `npm ci`, `npm test`, and `npm start` from the canonical app directory. Set the variables in `.env.example`. `/health` reports process health, not database connectivity.
 
-```text
-screener-tracker-onboarding/full
-```
-
-Railway should either deploy from that directory or use it as the service root.
-
-## Production
-
-```text
-https://portfolio-tracker-production-fe7d.up.railway.app/
-```
-
-## Local Development
-
-```bash
-cd screener-tracker-onboarding/full
-npm install
-npm start
-```
-
-The app listens on `PORT`, defaulting to `3001`.
-
-## Tests
-
-```bash
-cd screener-tracker-onboarding/full
-npm test
-```
-
-## Agent Handoff
-
-Use `AGENT_HANDOFF.md` for module ownership, deployment notes, and safe boundaries for outsourced development agents.
-
-Use `screener-tracker-onboarding/full/CLAUDE.md` for deeper architecture context.
+Database cleanup: `database/cleanup-legacy.sql` is an explicit transactional removal list. It keeps profiles, Supabase Auth, stock-universe tables, and the existing market_universe view and market-cap dependency. Apply only after old deployed workers are stopped. No automatic cleanup runs on server startup.
