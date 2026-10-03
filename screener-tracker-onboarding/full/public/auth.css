@@ -1,6 +1,8 @@
+:root{--accent:#4b41e1;--bg:#f0f2f3;--card:#fff;--card-border:#dde3e2;--green:#16a34a;--green-dim:rgba(22,163,74,.10);--muted:#6d7a77;--red:#dc2626;--red-dim:rgba(220,38,38,.10);--rs:8px;--surface:#edeef0;--text:#191c1d}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Lato,system-ui,sans-serif;color:var(--text)}
 /* ─────────────────────────────────────────────────────────────────────────────
    BoardroomX — Auth page styles
-   Depends on :root CSS variables defined in style.css
+   Self-contained authentication styles
    ───────────────────────────────────────────────────────────────────────────── */
 
 /* ── Page shell ────────────────────────────────────────────────────────────── */

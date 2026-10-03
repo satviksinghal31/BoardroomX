@@ -12,7 +12,9 @@ test('clean server keeps auth and health while removed scrape routes return JSON
   assert.equal((await fetch(url+'/api/auth/me')).status,401);
   const invalidSignIn=await fetch(url+'/api/auth/signin',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
   assert.equal(invalidSignIn.status,400);
-  assert.match(await (await fetch(url+'/auth.html')).text(),/auth.js/);
+  const authHtml=await (await fetch(url+'/auth.html')).text();
+  assert.match(authHtml,/auth.js/); assert.doesNotMatch(authHtml,/href="style.css"/);
+  assert.equal((await fetch(url+'/auth.css')).status,200);
   for (const path of ['/api/annuals/status','/api/financials/LAURUSLABS','/api/scheduler/log','/api/refresh/LAURUSLABS']) {
    const response=await fetch(url+path); assert.equal(response.status,404); assert.equal((await response.json()).error,'Not found');
   }
