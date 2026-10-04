@@ -1,15 +1,12 @@
 {
-  "contract_version": "2.0.0",
-  "supersedes": "1.0.0",
+  "contract_version": "3.0.0",
+  "supersedes": "2.0.0",
   "locked_shape": true,
   "qa_policy": "section_level",
+  "collector": "playwright@1.61.0",
   "sample_status": "pass",
   "files": {
-    "company.schema.v2.json": "e5d5e22230a27192d1f2744437ab78f55d0ca4a02015e3f626e503cbcf2a8d42",
-    "LAURUSLABS.sample.json": "57f1578dea503cf5bf255bc5785e4f99c3f9e40f375ca7193894aac61cde9cd3",
-    "charts/LAURUSLABS.1y.png": "227a99d2653ae34b94f5783eb67b17d284a767377291a64e952c2df883b901e5",
-    "charts/LAURUSLABS.3y.png": "fd3c42f74ff98894f757ca310272fc9a6c2f749b2133a1862bbe18b5d74cdd10",
-    "charts/LAURUSLABS.5y.png": "585d9269dd35f3349f8fb3c5530bc998e1402b3710467127038c08f36abe4635",
-    "charts/LAURUSLABS.max.png": "df3bc182f6b0a26170592f0b660b05dcca305edb857d1feffd09612939f637bc"
+    "company.schema.v3.json": "596453c4f2e773e65f8493fd40732eb26b44301f5b2912319902006f3df4c9ab",
+    "company.sample.v3.json": "3eaa6e294b7b80197cd630959b02b9e9c214ad7dbeb84b3522f7a899984cc12f"
   }
 }

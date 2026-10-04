@@ -1,0 +1,43 @@
+{
+  "deployment_id": "fc91d4b7-24d2-47be-a0f8-17060972d5ff",
+  "implementation_commit": "14cb3d5d857966e8cdc4ca1c481f3f6e31967a1a",
+  "url": "https://portfolio-tracker-production-fe7d.up.railway.app/",
+  "verified_at": "2026-10-04T06:13:03.659Z",
+  "batch": {
+    "id": "2e5d9f74-1bef-4f7d-a8b3-bb235fdeae52",
+    "status": "completed",
+    "pass": "retry",
+    "total": 2,
+    "started_at": "2026-10-04T06:11:24.121Z",
+    "finished_at": "2026-10-04T06:11:54.404Z",
+    "error": null,
+    "processed": 2,
+    "successful": 2,
+    "failed": 0,
+    "awaiting_retry": 0,
+    "current_company": null,
+    "failures": []
+  },
+  "universe_total": 2913,
+  "stored_companies": [
+    {
+      "symbol": "SBIN",
+      "updated_at": "2026-10-04T06:11:36.742Z",
+      "contract_version": "3.0.0",
+      "charts": 4
+    },
+    {
+      "symbol": "TCS",
+      "updated_at": "2026-10-04T06:11:51.700Z",
+      "contract_version": "3.0.0",
+      "charts": 4
+    }
+  ],
+  "checks": {
+    "duplicate_start_http_status": 409,
+    "json_contract": "pass",
+    "storage_images": "8 PNG URLs readable",
+    "production_ui": "Completed 2/2, Start enabled, no browser errors",
+    "full_universe_started": false
+  }
+}

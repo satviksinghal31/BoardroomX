@@ -1,1 +1,133 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BoardroomX</title><style>body{font:16px system-ui;background:#f7f6fa;color:#25232b;max-width:650px;margin:100px auto;padding:24px}main{background:white;border:1px solid #e5e2ec;border-radius:20px;padding:40px}a{color:#6651a4}</style><main><h1>Cleanup complete</h1><p>The previous application has been retired. The new Screener worker will be implemented next.</p><p>The stock universe is retained.</p></main></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Workers · BoardroomX</title>
+    <link rel="stylesheet" href="workers.css" />
+    <script src="workers.js" defer></script>
+  </head>
+  <body>
+    <aside class="rail" id="rail">
+      <a class="brand" href="/" aria-label="BoardroomX"
+        ><span class="brand-mark">B</span
+        ><span class="nav-label">BoardroomX</span></a
+      >
+      <nav>
+        <a href="/" class="active"
+          ><svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 3h6l1 4 4 2v6l-4 2-1 4H9l-1-4-4-2V9l4-2z" />
+            <circle cx="12" cy="12" r="3" /></svg
+          ><span class="nav-label">Workers</span></a
+        >
+      </nav>
+      <button
+        class="collapse"
+        id="collapse"
+        aria-label="Collapse navigation"
+        aria-expanded="true"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m14 7-5 5 5 5" /></svg
+        ><span class="nav-label">Collapse</span>
+      </button>
+    </aside>
+    <div class="workspace">
+      <header class="top">
+        <span>Data workspace</span><span class="top-meta">BoardroomX</span>
+      </header>
+      <main>
+        <div class="heading">
+          <div class="eyebrow">WORKERS</div>
+          <h1>Screener refresh</h1>
+          <p class="intro">
+            Fetch company data from Screener and save it to the database.
+          </p>
+        </div>
+        <section class="worker" aria-labelledby="worker-title">
+          <div class="worker-head">
+            <div>
+              <div class="worker-name">
+                <span class="worker-icon" aria-hidden="true">↻</span>
+                <h2 id="worker-title">Company data</h2>
+                <span class="tag" id="status">Connecting</span>
+              </div>
+              <p class="muted">
+                One company at a time · 2-second gap · One retry after the first
+                pass
+              </p>
+            </div>
+            <button class="primary" id="start" disabled>
+              <span aria-hidden="true">▶</span> Start refresh
+            </button>
+          </div>
+          <div class="kpis" aria-live="polite">
+            <div>
+              <div class="kpi-label">Processed</div>
+              <div class="kpi-value" id="processed">— <span>/ —</span></div>
+            </div>
+            <div>
+              <div class="kpi-label">Successful</div>
+              <div class="kpi-value good" id="successful">—</div>
+            </div>
+            <div>
+              <div class="kpi-label">Failed</div>
+              <div class="kpi-value" id="failed">—</div>
+            </div>
+            <div>
+              <div class="kpi-label">Awaiting retry</div>
+              <div class="kpi-value" id="retry">—</div>
+            </div>
+          </div>
+          <progress
+            id="progress"
+            value="0"
+            max="1"
+            aria-label="Companies processed"
+          ></progress>
+          <div class="progress-caption">
+            <span id="current">Connecting to worker…</span
+            ><span id="percent">0%</span>
+          </div>
+          <div class="details">
+            <div>
+              <span class="muted">Pass</span><strong id="pass">—</strong>
+            </div>
+            <div>
+              <span class="muted">Started</span><strong id="started">—</strong>
+            </div>
+            <div>
+              <span class="muted">Finished</span
+              ><strong id="finished">—</strong>
+            </div>
+            <button class="quiet" id="failures" disabled>
+              View failures <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+          <p class="message" id="message" role="status"></p>
+        </section>
+        <p class="footnote">
+          Closing this page does not stop the worker. If Railway restarts, the
+          run is marked Not completed. Start again manually.
+        </p>
+      </main>
+    </div>
+    <dialog id="drawer">
+      <div class="drawer-head">
+        <div>
+          <div class="eyebrow">RUN DETAILS</div>
+          <h2>Companies needing attention</h2>
+        </div>
+        <button class="quiet" id="close" aria-label="Close failure details">
+          ✕
+        </button>
+      </div>
+      <div class="drawer-body">
+        <p class="muted">
+          Failures get one more attempt after all companies have been visited.
+        </p>
+        <div id="failure-list"></div>
+      </div>
+    </dialog>
+  </body>
+</html>
