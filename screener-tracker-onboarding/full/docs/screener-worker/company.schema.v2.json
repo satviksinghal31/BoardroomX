@@ -1,0 +1,709 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boardroomx.local/contracts/screener-company-v2",
+  "title": "Locked Screener company JSON v2 \u2014 section-level QA",
+  "description": "Required sections and stable shape; blank individual values are allowed. No universal financial row list.",
+  "type": "object",
+  "required": [
+    "contract_version",
+    "source",
+    "overview",
+    "chart_snapshots",
+    "quarterly_results",
+    "profit_and_loss",
+    "balance_sheet",
+    "cash_flows",
+    "ratios",
+    "shareholding_pattern"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "2.0.0"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "basis": {
+          "enum": [
+            "consolidated",
+            "standalone"
+          ]
+        },
+        "fetched_at": {
+          "type": "string"
+        },
+        "scraper_name": {
+          "const": "screener-scraper-pro"
+        },
+        "scraper_version": {
+          "const": "1.0.0"
+        }
+      },
+      "additionalProperties": false
+    },
+    "overview": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "symbol": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "company_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "website": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nse_symbol": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bse_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "logo_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "price_change_percent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "price_as_of": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "market_cap": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "current_price": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "high_low": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stock_pe": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "book_value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dividend_yield": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "roce": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "roe": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "face_value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "about": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "key_points": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "chart_snapshots": {
+      "type": "object",
+      "required": [
+        "1y",
+        "3y",
+        "5y",
+        "max"
+      ],
+      "properties": {
+        "1y": {
+          "type": "object",
+          "properties": {
+            "range": {
+              "type": "string"
+            },
+            "image": {
+              "type": "string"
+            },
+            "captured_at": {
+              "type": "string"
+            },
+            "source_url": {
+              "type": "string"
+            },
+            "price_label": {
+              "type": "string"
+            },
+            "volume_included": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "3y": {
+          "type": "object",
+          "properties": {
+            "range": {
+              "type": "string"
+            },
+            "image": {
+              "type": "string"
+            },
+            "captured_at": {
+              "type": "string"
+            },
+            "source_url": {
+              "type": "string"
+            },
+            "price_label": {
+              "type": "string"
+            },
+            "volume_included": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "5y": {
+          "type": "object",
+          "properties": {
+            "range": {
+              "type": "string"
+            },
+            "image": {
+              "type": "string"
+            },
+            "captured_at": {
+              "type": "string"
+            },
+            "source_url": {
+              "type": "string"
+            },
+            "price_label": {
+              "type": "string"
+            },
+            "volume_included": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "max": {
+          "type": "object",
+          "properties": {
+            "range": {
+              "type": "string"
+            },
+            "image": {
+              "type": "string"
+            },
+            "captured_at": {
+              "type": "string"
+            },
+            "source_url": {
+              "type": "string"
+            },
+            "price_label": {
+              "type": "string"
+            },
+            "volume_included": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "quarterly_results": {
+      "type": "object",
+      "required": [
+        "periods",
+        "rows"
+      ],
+      "properties": {
+        "basis": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "periods": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "values"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "filing_links": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "profit_and_loss": {
+      "type": "object",
+      "required": [
+        "periods",
+        "rows"
+      ],
+      "properties": {
+        "basis": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "periods": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "values"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "filing_links": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "growth_metrics": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "balance_sheet": {
+      "type": "object",
+      "required": [
+        "periods",
+        "rows"
+      ],
+      "properties": {
+        "basis": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "periods": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "values"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "filing_links": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "cash_flows": {
+      "type": "object",
+      "required": [
+        "periods",
+        "rows"
+      ],
+      "properties": {
+        "basis": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "periods": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "values"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "filing_links": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ratios": {
+      "type": "object",
+      "required": [
+        "periods",
+        "rows"
+      ],
+      "properties": {
+        "basis": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "periods": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "values"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "filing_links": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "shareholding_pattern": {
+      "type": "object",
+      "required": [
+        "quarterly",
+        "yearly"
+      ],
+      "properties": {
+        "unit": {
+          "type": "string"
+        },
+        "quarterly": {
+          "type": "object",
+          "required": [
+            "periods",
+            "rows"
+          ],
+          "properties": {
+            "basis": {
+              "type": "string"
+            },
+            "unit": {
+              "type": "string"
+            },
+            "periods": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "rows": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "label",
+                  "values"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "values": {
+                    "type": "array",
+                    "items": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "filing_links": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "yearly": {
+          "type": "object",
+          "required": [
+            "periods",
+            "rows"
+          ],
+          "properties": {
+            "basis": {
+              "type": "string"
+            },
+            "unit": {
+              "type": "string"
+            },
+            "periods": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "rows": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "label",
+                  "values"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "values": {
+                    "type": "array",
+                    "items": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "filing_links": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

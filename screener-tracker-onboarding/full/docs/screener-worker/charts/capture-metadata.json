@@ -1,0 +1,118 @@
+{
+  "1y": {
+    "image_path": "charts/LAURUSLABS.1y.png",
+    "range": "1Yr",
+    "captured_at": "2026-10-04T05:00:21.788Z",
+    "active": "1Yr",
+    "charts": [
+      {
+        "datasets": [
+          {
+            "label": "Price on NSE",
+            "points": 246
+          },
+          {
+            "label": "50 DMA",
+            "points": 246
+          },
+          {
+            "label": "200 DMA",
+            "points": 246
+          },
+          {
+            "label": "Volume",
+            "points": 246
+          }
+        ],
+        "labels": 0
+      }
+    ]
+  },
+  "3y": {
+    "image_path": "charts/LAURUSLABS.3y.png",
+    "range": "3Yr",
+    "captured_at": "2026-10-04T05:00:24.456Z",
+    "active": "3Yr",
+    "charts": [
+      {
+        "datasets": [
+          {
+            "label": "Price on NSE",
+            "points": 157
+          },
+          {
+            "label": "50 DMA",
+            "points": 157
+          },
+          {
+            "label": "200 DMA",
+            "points": 157
+          },
+          {
+            "label": "Volume",
+            "points": 157
+          }
+        ],
+        "labels": 0
+      }
+    ]
+  },
+  "5y": {
+    "image_path": "charts/LAURUSLABS.5y.png",
+    "range": "5Yr",
+    "captured_at": "2026-10-04T05:00:27.089Z",
+    "active": "5Yr",
+    "charts": [
+      {
+        "datasets": [
+          {
+            "label": "Price on NSE",
+            "points": 261
+          },
+          {
+            "label": "50 DMA",
+            "points": 261
+          },
+          {
+            "label": "200 DMA",
+            "points": 261
+          },
+          {
+            "label": "Volume",
+            "points": 261
+          }
+        ],
+        "labels": 0
+      }
+    ]
+  },
+  "max": {
+    "image_path": "charts/LAURUSLABS.max.png",
+    "range": "Max",
+    "captured_at": "2026-10-04T05:00:29.739Z",
+    "active": "Max",
+    "charts": [
+      {
+        "datasets": [
+          {
+            "label": "Price on NSE",
+            "points": 511
+          },
+          {
+            "label": "50 DMA",
+            "points": 511
+          },
+          {
+            "label": "200 DMA",
+            "points": 511
+          },
+          {
+            "label": "Volume",
+            "points": 511
+          }
+        ],
+        "labels": 0
+      }
+    ]
+  }
+}
