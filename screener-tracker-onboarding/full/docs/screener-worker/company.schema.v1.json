@@ -1,0 +1,744 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://boardroomx.local/contracts/screener-company-v1",
+  "title": "Locked Screener company JSON v1",
+  "type": "object",
+  "required": [
+    "contract_version",
+    "company",
+    "source",
+    "data"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "1.0.0"
+    },
+    "company": {
+      "type": "object",
+      "required": [
+        "symbol",
+        "name",
+        "about",
+        "key_points",
+        "key_metrics"
+      ],
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "about": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "key_points": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "key_metrics": {
+          "type": "object",
+          "required": [
+            "Market Cap",
+            "Current Price",
+            "High / Low",
+            "Stock P/E",
+            "Book Value",
+            "Dividend Yield",
+            "ROCE",
+            "ROE",
+            "Face Value"
+          ],
+          "properties": {
+            "Market Cap": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "Current Price": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "High / Low": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "Stock P/E": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "Book Value": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "Dividend Yield": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "ROCE": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "ROE": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "Face Value": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "url",
+        "basis",
+        "fetched_at",
+        "scraper_name",
+        "scraper_version"
+      ],
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "basis": {
+          "enum": [
+            "consolidated",
+            "standalone"
+          ]
+        },
+        "fetched_at": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "scraper_name": {
+          "const": "screener-scraper-pro"
+        },
+        "scraper_version": {
+          "const": "1.0.0"
+        }
+      },
+      "additionalProperties": false
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "analysis",
+        "quarters",
+        "profitLoss",
+        "balanceSheet",
+        "cashFlow",
+        "ratios",
+        "shareholding",
+        "documents",
+        "CAGRs"
+      ],
+      "properties": {
+        "analysis": {
+          "type": "object",
+          "required": [
+            "pros",
+            "cons"
+          ],
+          "properties": {
+            "pros": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            },
+            "cons": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "quarters": {
+          "type": "object",
+          "required": [
+            "headers",
+            "data"
+          ],
+          "properties": {
+            "headers": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            },
+            "data": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "profitLoss": {
+          "type": "object",
+          "required": [
+            "headers",
+            "data"
+          ],
+          "properties": {
+            "headers": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            },
+            "data": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "balanceSheet": {
+          "type": "object",
+          "required": [
+            "headers",
+            "data"
+          ],
+          "properties": {
+            "headers": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            },
+            "data": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "cashFlow": {
+          "type": "object",
+          "required": [
+            "headers",
+            "data"
+          ],
+          "properties": {
+            "headers": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            },
+            "data": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "ratios": {
+          "type": "object",
+          "required": [
+            "headers",
+            "data"
+          ],
+          "properties": {
+            "headers": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            },
+            "data": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "shareholding": {
+          "type": "object",
+          "required": [
+            "quarterly",
+            "yearly"
+          ],
+          "properties": {
+            "quarterly": {
+              "type": "object",
+              "required": [
+                "headers",
+                "data"
+              ],
+              "properties": {
+                "headers": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  }
+                },
+                "data": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": {
+                    "type": "object",
+                    "minProperties": 1,
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "yearly": {
+              "type": "object",
+              "required": [
+                "headers",
+                "data"
+              ],
+              "properties": {
+                "headers": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  }
+                },
+                "data": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": {
+                    "type": "object",
+                    "minProperties": 1,
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "documents": {
+          "type": "object",
+          "required": [
+            "announcements",
+            "annualReports",
+            "creditRatings",
+            "concalls"
+          ],
+          "properties": {
+            "announcements": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "description",
+                  "link"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "link": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "annualReports": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "year",
+                  "source",
+                  "link"
+                ],
+                "properties": {
+                  "year": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "link": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "creditRatings": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "date",
+                  "source",
+                  "link"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "date": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "link": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "concalls": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "month",
+                  "transcript",
+                  "ppt",
+                  "recording"
+                ],
+                "properties": {
+                  "month": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "transcript": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "ppt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "recording": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "CAGRs": {
+          "type": "object",
+          "required": [
+            "Compounded Sales Growth",
+            "Compounded Profit Growth",
+            "Stock Price CAGR",
+            "Return on Equity"
+          ],
+          "properties": {
+            "Compounded Sales Growth": {
+              "type": "object",
+              "required": [
+                "10 Years",
+                "5 Years",
+                "3 Years",
+                "TTM"
+              ],
+              "properties": {
+                "10 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "5 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "3 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "TTM": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                }
+              },
+              "additionalProperties": false
+            },
+            "Compounded Profit Growth": {
+              "type": "object",
+              "required": [
+                "10 Years",
+                "5 Years",
+                "3 Years",
+                "TTM"
+              ],
+              "properties": {
+                "10 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "5 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "3 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "TTM": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                }
+              },
+              "additionalProperties": false
+            },
+            "Stock Price CAGR": {
+              "type": "object",
+              "required": [
+                "10 Years",
+                "5 Years",
+                "3 Years",
+                "1 Year"
+              ],
+              "properties": {
+                "10 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "5 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "3 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "1 Year": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                }
+              },
+              "additionalProperties": false
+            },
+            "Return on Equity": {
+              "type": "object",
+              "required": [
+                "10 Years",
+                "5 Years",
+                "3 Years",
+                "Last Year"
+              ],
+              "properties": {
+                "10 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "5 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "3 Years": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                },
+                "Last Year": {
+                  "type": "string",
+                  "pattern": "^-?\\d+(?:\\.\\d+)?%$"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

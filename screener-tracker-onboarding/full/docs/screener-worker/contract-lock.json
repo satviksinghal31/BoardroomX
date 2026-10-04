@@ -1,0 +1,10 @@
+{
+  "contract_version": "1.0.0",
+  "locked_fields": true,
+  "sample_status": "failed_strict_validation",
+  "files": {
+    "company.schema.v1.json": "068905d6d9b1ae20d2e979170ccfb387fc681fd9e6c10fd2a8b2875f19da52f2",
+    "LAURUSLABS.sample.json": "21ae1a5ce8c3ebcecf2e0b6eb427b3c50aab3843855833b050df66e5087d8e7b",
+    "LAURUSLABS.scraper-original.json": "c7158a5583a7f1253323d36cb5d1efa4b764f3b92d9d2aa51c3ca56cecfdbe9e"
+  }
+}
