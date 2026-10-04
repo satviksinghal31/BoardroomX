@@ -1,0 +1,447 @@
+{
+  "company": "TCS",
+  "collector": "Playwright 1.61.0 / Node.js",
+  "dry_run": true,
+  "db_writes": 0,
+  "elapsed_seconds": 10.54,
+  "sections": [
+    {
+      "section": "quarterly_results",
+      "pass": true,
+      "periods": 13,
+      "rows": 11,
+      "blank_cells": 0,
+      "labels": [
+        "Sales",
+        "Expenses",
+        "Operating Profit",
+        "OPM %",
+        "Other Income",
+        "Interest",
+        "Depreciation",
+        "Profit before tax",
+        "Tax %",
+        "Net Profit",
+        "EPS in Rs"
+      ],
+      "unaligned_rows": 0
+    },
+    {
+      "section": "profit_and_loss",
+      "pass": true,
+      "periods": 13,
+      "rows": 12,
+      "blank_cells": 2,
+      "labels": [
+        "Sales",
+        "Expenses",
+        "Operating Profit",
+        "OPM %",
+        "Other Income",
+        "Interest",
+        "Depreciation",
+        "Profit before tax",
+        "Tax %",
+        "Net Profit",
+        "EPS in Rs",
+        "Dividend Payout %"
+      ],
+      "unaligned_rows": 0
+    },
+    {
+      "section": "balance_sheet",
+      "pass": true,
+      "periods": 12,
+      "rows": 10,
+      "blank_cells": 0,
+      "labels": [
+        "Equity Capital",
+        "Reserves",
+        "Borrowings",
+        "Other Liabilities",
+        "Total Liabilities",
+        "Fixed Assets",
+        "CWIP",
+        "Investments",
+        "Other Assets",
+        "Total Assets"
+      ],
+      "unaligned_rows": 0
+    },
+    {
+      "section": "cash_flows",
+      "pass": true,
+      "periods": 12,
+      "rows": 6,
+      "blank_cells": 0,
+      "labels": [
+        "Cash from Operating Activity",
+        "Cash from Investing Activity",
+        "Cash from Financing Activity",
+        "Net Cash Flow",
+        "Free Cash Flow",
+        "CFO/OP"
+      ],
+      "unaligned_rows": 0
+    },
+    {
+      "section": "ratios",
+      "pass": true,
+      "periods": 12,
+      "rows": 6,
+      "blank_cells": 24,
+      "labels": [
+        "Debtor Days",
+        "Inventory Days",
+        "Days Payable",
+        "Cash Conversion Cycle",
+        "Working Capital Days",
+        "ROCE %"
+      ],
+      "unaligned_rows": 0
+    },
+    {
+      "section": "shareholding_pattern/quarterly",
+      "pass": true,
+      "periods": 12,
+      "rows": 6
+    },
+    {
+      "section": "shareholding_pattern/yearly",
+      "pass": true,
+      "periods": 11,
+      "rows": 6
+    }
+  ],
+  "chart_evidence": [
+    {
+      "range": "1y",
+      "active": "1Yr",
+      "datasets": [
+        {
+          "label": "Price on NSE",
+          "points": 246,
+          "first": {
+            "x": "2025-10-06",
+            "y": "2988.40"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2075.00"
+          }
+        },
+        {
+          "label": "50 DMA",
+          "points": 246,
+          "first": {
+            "x": "2025-10-06",
+            "y": "3088.54"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2216.73"
+          }
+        },
+        {
+          "label": "200 DMA",
+          "points": 246,
+          "first": {
+            "x": "2025-10-06",
+            "y": "3428.13"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2489.64"
+          }
+        },
+        {
+          "label": "Volume",
+          "points": 246,
+          "first": {
+            "x": "2025-10-06",
+            "y": 2303601,
+            "meta": {
+              "delivery": 41
+            }
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": 3634752,
+            "meta": {
+              "delivery": 55
+            }
+          }
+        }
+      ],
+      "response_keys": [
+        "datasets"
+      ]
+    },
+    {
+      "range": "3y",
+      "active": "3Yr",
+      "datasets": [
+        {
+          "label": "Price on NSE",
+          "points": 157,
+          "first": {
+            "x": "2023-10-06",
+            "y": "3621.40"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2075.00"
+          }
+        },
+        {
+          "label": "50 DMA",
+          "points": 157,
+          "first": {
+            "x": "2023-10-06",
+            "y": "3480.82"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2216.73"
+          }
+        },
+        {
+          "label": "200 DMA",
+          "points": 157,
+          "first": {
+            "x": "2023-10-06",
+            "y": "3368.12"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2489.64"
+          }
+        },
+        {
+          "label": "Volume",
+          "points": 157,
+          "first": {
+            "x": "2023-10-06",
+            "y": 2326876,
+            "meta": {
+              "delivery": 53
+            }
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": 14780895,
+            "meta": {
+              "delivery": 55
+            }
+          }
+        }
+      ],
+      "response_keys": [
+        "datasets"
+      ]
+    },
+    {
+      "range": "5y",
+      "active": "5Yr",
+      "datasets": [
+        {
+          "label": "Price on NSE",
+          "points": 261,
+          "first": {
+            "x": "2021-10-08",
+            "y": "3935.65"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2075.00"
+          }
+        },
+        {
+          "label": "50 DMA",
+          "points": 261,
+          "first": {
+            "x": "2021-10-08",
+            "y": "3683.04"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2216.73"
+          }
+        },
+        {
+          "label": "200 DMA",
+          "points": 261,
+          "first": {
+            "x": "2021-10-08",
+            "y": "3268.07"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2489.64"
+          }
+        },
+        {
+          "label": "Volume",
+          "points": 261,
+          "first": {
+            "x": "2021-10-08",
+            "y": 3031973,
+            "meta": {
+              "delivery": 35
+            }
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": 14780895,
+            "meta": {
+              "delivery": 55
+            }
+          }
+        }
+      ],
+      "response_keys": [
+        "datasets"
+      ]
+    },
+    {
+      "range": "max",
+      "active": "Max",
+      "datasets": [
+        {
+          "label": "Price on NSE",
+          "points": 1123,
+          "first": {
+            "x": "2005-04-01",
+            "y": "181.37"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2075.00"
+          }
+        },
+        {
+          "label": "50 DMA",
+          "points": 1123,
+          "first": {
+            "x": "2005-04-01",
+            "y": "181.37"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2216.73"
+          }
+        },
+        {
+          "label": "200 DMA",
+          "points": 1123,
+          "first": {
+            "x": "2005-04-01",
+            "y": "181.37"
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": "2489.64"
+          }
+        },
+        {
+          "label": "Volume",
+          "points": 1123,
+          "first": {
+            "x": "2005-04-01",
+            "y": 7312110,
+            "meta": {
+              "delivery": 39
+            }
+          },
+          "last": {
+            "x": "2026-10-01",
+            "y": 14780895,
+            "meta": {
+              "delivery": 55
+            }
+          }
+        }
+      ],
+      "response_keys": [
+        "datasets"
+      ]
+    }
+  ],
+  "overview_blank_fields": [],
+  "growth_groups": [
+    "Compounded Sales Growth",
+    "Compounded Profit Growth",
+    "Stock Price CAGR",
+    "Return on Equity"
+  ],
+  "browser_errors": [],
+  "network": [
+    {
+      "url": "https://www.screener.in/api/company/3365/chart/?q=Price-DMA50-DMA200-Volume&days=365&consolidated=true",
+      "status": 200
+    },
+    {
+      "url": "https://www.screener.in/api/company/3365/chart/?q=Price-DMA50-DMA200-Volume&days=365&consolidated=true",
+      "status": 200
+    },
+    {
+      "url": "https://www.screener.in/api/company/3365/chart/?q=Price-DMA50-DMA200-Volume&days=1095&consolidated=true",
+      "status": 200
+    },
+    {
+      "url": "https://www.screener.in/api/company/3365/chart/?q=Price-DMA50-DMA200-Volume&days=1825&consolidated=true",
+      "status": 200
+    },
+    {
+      "url": "https://www.screener.in/api/company/3365/chart/?q=Price-DMA50-DMA200-Volume&days=10000&consolidated=true",
+      "status": 200
+    }
+  ],
+  "gaps": [
+    {
+      "issue": "Generic heading selector matched two TCS headings",
+      "status": "fixed",
+      "solution": "Target the company header inside #top"
+    },
+    {
+      "issue": "Locked v2 source metadata expects screener-scraper-pro 1.0.0",
+      "status": "pending",
+      "solution": "Update metadata to identify Playwright collector in the next contract revision; financial table shape already matches"
+    },
+    {
+      "issue": "Default 1-year chart requested twice",
+      "status": "pending",
+      "solution": "Reuse the loaded default 1-year chart rather than clicking 1Yr again"
+    },
+    {
+      "issue": "Railway browser installation and DB/image-storage flow not tested",
+      "status": "outside_this_dry_run",
+      "solution": "Verify Chromium deployment and save/read flow during worker implementation"
+    }
+  ],
+  "status": "collection_pass_contract_metadata_update_needed",
+  "locked_contract_check": {
+    "valid": false,
+    "errors": [
+      {
+        "instancePath": "/source/scraper_name",
+        "schemaPath": "#/properties/source/properties/scraper_name/const",
+        "keyword": "const",
+        "params": {
+          "allowedValue": "screener-scraper-pro"
+        },
+        "message": "must be equal to constant"
+      },
+      {
+        "instancePath": "/source/scraper_version",
+        "schemaPath": "#/properties/source/properties/scraper_version/const",
+        "keyword": "const",
+        "params": {
+          "allowedValue": "1.0.0"
+        },
+        "message": "must be equal to constant"
+      }
+    ]
+  },
+  "collection_status": "pass"
+}

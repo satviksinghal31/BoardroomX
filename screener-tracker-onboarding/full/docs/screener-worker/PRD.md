@@ -119,3 +119,11 @@ Use one worker in one Railway application instance. Resume its saved unfinished 
 | 4 | Implement DB read APIs and Workers screen | Correct counts; current company; stored company inspection with four images and tables. |
 | 5 | Verify full flow | Missing section fails; blank cells pass; bank rows pass; failed saves never count as success; restart resumes; final N/N. |
 | 6 | Deploy and controlled run | Small real batch first, verify DB JSON/images/frontend, then enable full-universe Start. No automatic full scrape during deployment. |
+
+## Playwright-only dry-run recommendation
+
+A new TCS company was collected entirely through Playwright, without the scraper package. See `dry-runs/TCS/REPORT.md`, JSON, and four chart images. Collection passed section-level checks. The current locked v2 metadata still expects the old package, so a collector-metadata revision is required before adopting this as the worker's official JSON.
+
+Recommended implementation: Node.js/JavaScript on the existing Express/Railway stack, with Playwright controlling a local Chromium browser. No Python script or paid Playwright API is needed. One reusable browser collects both tables and images. The worker remains DB-driven and the frontend reads only saved DB results.
+
+This recommendation would replace the package-specific extraction steps in this PRD after the collector choice is confirmed. It is not an additional scraping path. The existing table and chart data shape remains valid; new metadata must identify the actual collector.
