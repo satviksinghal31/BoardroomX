@@ -18,7 +18,8 @@
 | 6 | Failed refresh | Prior successful TCS JSON unchanged. |
 | 7 | Interrupted batch and startup | Running becomes Not completed; no automatic scraping; manual Start creates fresh batch with zero progress. |
 | 8 | UI | Desktop/mobile, slim collapsed rail, progress, disabled Start and bottom failure drawer passed. |
-| 9 | Dependencies | npm audit reports zero vulnerabilities after validator patch. |
+| 9 | Railway production Start → finish | TCS + SBIN completed 2/2; duplicate Start 409; saved v3 JSON and eight readable PNG URLs; live UI Completed with Start enabled. See deployment-qa.json. |
+| 10 | Dependencies | npm audit reports zero vulnerabilities after validator patch. |
 
 ## Manual acceptance cases
 
