@@ -91,22 +91,8 @@ class ResilienceQA(unittest.TestCase):
     def test_bot_page_with_company_heading_does_not_trigger_standalone(self):
         bot='<section id="top"><h1>Verify you are human</h1></section><p>Security challenge</p>'
         s=Session(lambda u,n:response(body=bot if n==1 else self.html.replace('data-consolidated="true"','data-consolidated="false"'),url=u))
-        with self.assertRaises(m.ScrapeError):m.scrape(s,'RELIANCE',pause=0,details=False)
+        with self.assertRaises(m.ScrapeError):m.scrape(s,'RELIANCE',pause=0)
         self.assertEqual(len(s.calls),1)
-    def test_malformed_holder_attributes_do_not_discard_financials(self):
-        def route(u,n):
-            if '/investors/' in u:return response(body=json.dumps({'Person':{'setAttributes':{'data-person-url':17},'Mar 2026':1}}),url=u)
-            return response(body='{}' if '/api/' in u else self.html,url=u)
-        data=m.scrape(Session(route),'RELIANCE',pause=0)
-        self.assertTrue(data['profit_loss']['annual'])
-        self.assertTrue(data['warnings'])
-    def test_malformed_holder_string_url_does_not_discard_financials(self):
-        def route(u,n):
-            if '/investors/' in u:return response(body=json.dumps({'Person':{'setAttributes':{'data-person-url':'http://['},'Mar 2026':1}}),url=u)
-            return response(body='{}' if '/api/' in u else self.html,url=u)
-        data=m.scrape(Session(route),'RELIANCE',pause=0)
-        self.assertTrue(data['profit_loss']['annual'])
-        self.assertTrue(data['warnings'])
     def test_failed_file_refresh_preserves_previous_output(self):
         with tempfile.TemporaryDirectory() as d:
             p=Path(d)/'RELIANCE.json';p.write_text('previous good data')

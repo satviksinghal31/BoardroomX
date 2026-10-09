@@ -1,29 +1,33 @@
-# Release QA — 9 October 2026
+# Page-and-peers scraper review — 9 October 2026
 
-Release: `scrapers/boardroom_screener_scraper.py`, parser 2.1.0. Single-company fetcher; batch integration is intentionally deferred.
+Version 3.0 intentionally removes financial-schedule and individual-shareholder expansion fetching. This simplifies scope; those endpoints were required for clicked details, but need not be fetched for a main-page snapshot. Total borrowings and aggregate shareholding remain intact.
 
-Three independent agents reviewed data correctness, resilience and operations. Findings were reproduced before fixing. Final independent signoffs: data 7/7, resilience 12/12, operations 3/3. With the existing 18 regression tests, all **40 tests pass** in a clean Python 3.12 virtual environment using only declared dependencies. Python 3.9 also passed the agents' local checks. An inactive CI template covers Python 3.9/3.12/3.13. The existing GitHub OAuth credential lacks workflow scope, so GitHub Actions could not be enabled; only local checks are confirmed.
+## Exact request breakdown
 
-Fixed QA findings: unbounded Retry-After waits (controlled abort beyond 60s); challenge pages wrongly triggering fallback; non-atomic refresh writes; malformed holder attributes/URLs aborting financial extraction; ragged growth rows; invalid financial periods qualifying as usable; schedule units failing to inherit lakh units (annual and quarterly); repeated optional server outage requests. A 503 optional-service simulation now makes four requests versus the prior 79; healthy full Reliance makes 27 paced requests. Atomic write, replace, serialization and fsync failure scenarios preserve previous snapshots.
+| Company | Requests | Measured elapsed | Selected view |
+|---|---:|---:|---|
+| RELIANCE | 2: company page + peers | 0.64s | consolidated |
+| HDFCBANK | 2: company page + peers | 0.36s | consolidated |
+| 531494 / NAVKARURB | 3: consolidated check + standalone + peers | 0.49s | standalone |
 
-Earlier exploratory live/browser sample: RELIANCE, HDFCBANK, CARBORUNIV, SHILPAMED, 526299/MPHASIS, ATHERENERG, HESTERBIO and 531494/NAVKARURB. Observed market caps ranged approximately ₹96.5 crore–₹15.8 lakh crore; size labels are illustrative, not AMFI classifications. Saved fixtures reproduce their base tables. Independent browser comparisons had zero mismatches in 4,905 financial cells and 829 headline/growth/peer checks. The sample was selected for variation, not statistically random.
+All three live fetches had zero warnings and zero schedule/investor calls. These single-run timings are not a universe-throughput guarantee. Retries, redirects and optional absence can alter network request counts. Peers already embedded in the initial HTML need no extra request.
 
-Final renamed release live fetch: Reliance consolidated completed with zero warnings. Final Playwright validation matched 701 financial cells and all 93 attachment anchors, confirmed borrowing and named-promoter expansions, and fetched Navkar with real standalone fallback. These checks confirm agreement with displayed Screener data, not audited filing accuracy. Fixtures add synthetic bank/NBFC labels, negative amounts, non-March years, half-year headers, missing/locked values and operational failure scenarios.
+## Sanity and independent review
 
-Benchmark inspection covered MaticAlgos/screener-scraper, VishwaGauravIn/screener-scraper-pro, Na1neeth/openscreener, mayur1064/screenercli and sahiljani/screener-india. Same-fixture parser checks exposed document/detail/source-link gaps in our original implementation and differing null/history/peer behavior in competitors. Those observed gaps are fixed. This is competitive coverage for this scope, not proof of a universal best-in-class ranking or a speed leaderboard.
+- 40 offline tests pass: base financial fixture comparison across eight companies, source/document links and metadata, view selection, malformed growth/periods, units, HTTP/network errors, bounded Retry-After, atomic output, session reuse and explicit request-count tests.
+- An independent agent reviewed spec compliance and code quality, added five page-scope tests and reported no critical/medium findings in its scope.
+- Final Playwright comparison matched 701 financial cells, all 93 document attachment anchors and all 5 document ISO date nodes on Reliance's page. Total borrowings remained in the balance sheet. No detail controls were clicked in this check.
+- Dates remain financial period/period-end, available document ISO/display dates, annual-report year, concall month and UTC extraction timestamp. Missing dates remain null; TTM has no invented end date.
+- Earlier eight-company exploratory browser checks matched 5,734 financial/headline/growth/peer values. The current eight-company fixtures ensure simplification retained the same base values; they are not fresh network tests of all eight issuers.
 
-## Remaining gaps and decisions
+## Deliberate omissions and practical limits
 
-| Gap | Recommendation |
-|---|---|
-| Site HTML/internal endpoint changes, blocks or outages | Unavoidable upstream dependency. Preserve last-good data and alert on warnings/failures in the future caller. Small production monitoring is worthwhile. |
-| Per-call pacing; no aggregate limit across processes | Add shared rate control when implementing batch ingestion. Do not parallelize now. |
-| Full enrichment costs many calls | Daily summary refresh plus less frequent full detail refresh may be sufficient. Choose cadence in ingestion, using the same fetcher. |
-| Optional failures produce partial successful JSON | Inspect warnings/status; retain previously stored optional data. Do not blindly overwrite database sections with unavailable results. |
-| No strict overall call deadline | Current request timeouts/retry limits are sufficient for single-company use. Add caller job deadline when batching; no scheduler here. |
-| Premium/login sections, full announcement archive, document contents | Outside public fetch scope. Preserve links/availability; authenticated ingestion is a separate requirement. |
-| Short consolidated history | Intentional: consolidated wins even if standalone is longer. Warn; never splice views. |
-| Rare issuer structures and new field labels | Existing generic preservation helps, but eight issuers cannot establish universal correctness. Add fixtures when real drift occurs. |
-| lxml optional-parser equivalence not separately certified | Clean release tests use stdlib parser; keep lxml optional. No reason to make it mandatory. |
+Expanded borrowings/other financial breakdowns and named shareholders are removed, not marked missing. Charts, pros/cons, login/premium content, document downloads and a full announcement archive remain excluded. A short consolidated history still wins over a longer standalone history, without mixing views.
 
-No proxy rotation, browser production runtime, cache framework, queue, distributed worker or database integration was added. This fetcher is ready for reviewed single-company use, subject to the upstream limits above; no scraper can promise flawless daily availability.
+Upstream HTML/API changes and blocks remain possible. Peer failures return financials with warnings. Consumers must inspect warnings and retain last-good data. Default fixed delay is 0; sequential requests and server-requested backoff remain. No batch runner or UI is part of this change.
+
+Batch ingestion is paused for scraper review. The old Railway deployment was stopped and old records backed up, but legacy database tables remain; no new universe ingestion or UI was started. CI remains an inactive template because the available OAuth credential lacks workflow scope.
+
+## Compatibility
+
+Parser version 3.0 is a scope/API change: `details`, `--summary-only`, `schedules`, `holders`, `details_requested` and their endpoint parsers/discovery were removed. Main-page financial/document fields retain their names. Consumers should call `fetch_company(symbol)` and use `scope=company_page_and_peers`.

@@ -29,55 +29,45 @@ class Tests(unittest.TestCase):
   self.assertEqual(m.metric_unit('EPS in Rs','profit-loss'),'INR/share')
  def test_default_never_fetches_standalone_when_consolidated_valid(self):
   s=Session(lambda u,k:(200,self.peers if '/peers/' in u else self.html,None))
-  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',details=False,pause=0)
+  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',pause=0)
   self.assertEqual(x['view'],'consolidated');self.assertFalse(any(u.endswith('/RELIANCE/') for u in s.calls))
  def test_fallback_when_consolidated_missing(self):
   s=Session(lambda u,k:(404,'',None) if '/consolidated/' in u else (200,self.peers if '/peers/' in u else self.html.replace('data-consolidated="true"','').replace('Consolidated','Standalone'),None))
-  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',details=False,pause=0)
+  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',pause=0)
   self.assertEqual(x['view'],'standalone')
  def test_sparse_consolidated_history_does_not_fetch_standalone(self):
   html=(FIX/'ATHERENERG.consolidated.html').read_text()
   s=Session(lambda u,k:(200,self.peers if '/peers/' in u else html,None))
-  with patch.object(m.time,'sleep'):x=m.scrape(s,'ATHERENERG',details=False,pause=0)
+  with patch.object(m.time,'sleep'):x=m.scrape(s,'ATHERENERG',pause=0)
   self.assertEqual(len(x['profit_loss']['annual']),1);self.assertEqual(x['view'],'consolidated')
   self.assertFalse(any(u.endswith('/ATHERENERG/') for u in s.calls))
  def test_fallback_when_consolidated_has_no_numeric_financials(self):
   from bs4 import BeautifulSoup
   page=BeautifulSoup(self.html,'html.parser');page.select_one('#profit-loss').decompose()
   s=Session(lambda u,k:(200,str(page),None) if '/consolidated/' in u else (200,self.peers if '/peers/' in u else self.html.replace('data-consolidated="true"','').replace('Consolidated','Standalone'),None))
-  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',details=False,pause=0)
+  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',pause=0)
   self.assertEqual(x['view'],'standalone');self.assertEqual(x['fallback_reason'],'consolidated_has_no_usable_financials')
  def test_http403_is_controlled_and_does_not_fallback(self):
   s=Session(lambda u,k:(403,'Forbidden',None))
   with patch.object(m.time,'sleep'):
-   with self.assertRaises(RuntimeError):m.scrape(s,'RELIANCE',details=False,pause=0)
+   with self.assertRaises(RuntimeError):m.scrape(s,'RELIANCE',pause=0)
   self.assertEqual(len(s.calls),1)
  def test_optional_peers_failure_returns_financials(self):
   s=Session(lambda u,k:(503,'Unavailable',None) if '/api/' in u else (200,self.html,None))
-  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',details=False,pause=0)
+  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',pause=0)
   self.assertTrue(x['profit_loss']['annual']);self.assertIsNone(x['peers']);self.assertTrue(x['warnings'])
  def test_redirect_view_and_canonical_identifier(self):
   s=Session(lambda u,k:(200,self.peers,None) if '/api/' in u else (200,self.html.replace('data-consolidated="true"','').replace('Consolidated','Standalone'),'https://www.screener.in/company/500325/'))
-  with patch.object(m.time,'sleep'):x=m.scrape(s,'500325',details=False,pause=0)
+  with patch.object(m.time,'sleep'):x=m.scrape(s,'500325',pause=0)
   self.assertEqual(x['view'],'standalone');self.assertEqual(x['symbol'],'RELIANCE');self.assertEqual(x['requested_identifier'],'500325');self.assertEqual(x['source_url'],'https://www.screener.in/company/500325/')
- def test_public_details_and_company_id(self):
-  def route(u,k):
-   if '/peers/' in u:return 200,self.peers,None
-   if '/schedules/' in u:return 200,(FIX/'interaction_borrowings.response').read_text(),None
-   if '/investors/' in u:return 200,(FIX/'interaction_shareholders.response').read_text(),None
-   return 200,self.html,None
-  s=Session(route)
-  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',pause=0)
-  group=x['schedules']['balance_sheet']['borrowings'];self.assertEqual(group['periods'][-1]['long_term_borrowings'],270751);self.assertEqual(x['holders']['quarterly']['promoters']['holders'][0]['holdings'][-1]['holding_pct'],11.12)
-  self.assertTrue(all('/2726/' in u for u in s.calls if '/schedules/' in u or '/investors/' in u));self.assertTrue(any('consolidated=' in u for u in s.calls if '/schedules/' in u))
  def test_malformed_optional_peers_do_not_discard_financials(self):
   s=Session(lambda u,k:(200,'<table></table>' if '/peers/' in u else self.html,None))
-  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',details=False,pause=0)
+  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',pause=0)
   self.assertTrue(x['profit_loss']['annual']);self.assertIsNone(x['peers']);self.assertTrue(x['warnings'])
  def test_unexpected_html_is_error_not_standalone_fallback(self):
   s=Session(lambda u,k:(200,'<h1>Verify you are human</h1>',None))
   with patch.object(m.time,'sleep'):
-   with self.assertRaises(RuntimeError):m.scrape(s,'RELIANCE',details=False,pause=0)
+   with self.assertRaises(RuntimeError):m.scrape(s,'RELIANCE',pause=0)
   self.assertEqual(len(s.calls),1)
  def test_preserve_existing_financial_cells_eight_companies(self):
   for sym in ['RELIANCE','HDFCBANK','CARBORUNIV','SHILPAMED','526299','ATHERENERG','HESTERBIO','531494']:

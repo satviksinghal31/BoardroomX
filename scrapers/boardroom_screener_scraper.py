@@ -3,11 +3,11 @@
 
     pip install requests beautifulsoup4
     python boardroom_screener_scraper.py RELIANCE --out out
-    python boardroom_screener_scraper.py 531494 --summary-only
+    python boardroom_screener_scraper.py 531494 --out out
 
 Auto selects usable consolidated financials, otherwise standalone; never merges
-views. Public financial schedules and named shareholders are included by default.
---summary-only skips these extra calls. Charts, pros/cons, login/premium features,
+views. Fetches the company page and, only if needed, its peers table. Expanded
+financial breakdowns, named shareholders, charts, pros/cons, login/premium features
 and attachment downloads are excluded. Optional failures are recorded in warnings.
 
 Library: fetch_company("RELIANCE") or scrape(existing_session, "RELIANCE").
@@ -34,8 +34,8 @@ import requests
 from bs4 import BeautifulSoup
 
 BASE = "https://www.screener.in"
-UA = "Mozilla/5.0 (compatible; screener-scraper/2.0; personal research)"
-PARSER_VERSION = "2.1.0"
+UA = "Mozilla/5.0 (compatible; boardroom-screener-scraper/3.0; personal research)"
+PARSER_VERSION = "3.0.0"
 MAX_RETRY_WAIT = 60
 MONTHS = {m: i for i, m in enumerate(calendar.month_abbr) if m}
 
@@ -300,17 +300,9 @@ def parse_company(html: str, peers_html: str | None = None, source_url: str = BA
     ratios = key_ratios(soup)
     units["key_ratios"] = {k: ("INR crore" if k == "market_cap_cr" else "multiple" if k == "pe"
                               else metric_unit(k, "top", "unknown")) for k in ratios}
-    schedules, holders, features = [], [], []
+    features = []
     for button in soup.select("button[onclick]"):
         call = button.get("onclick", "")
-        match = re.search(r"Company\.showSchedule\('([^']+)',\s*'([^']+)'", call)
-        if match:
-            parent, section = match.groups()
-            schedules.append({"parent": parent, "section": section})
-        match = re.search(r"Company\.showShareholders\('([^']+)',\s*'([^']+)'", call)
-        if match:
-            category, frequency = match.groups()
-            holders.append({"category": category, "frequency": frequency})
         if button.get("data-url"):
             features.append({"name": clean(button.get_text()), "url": urljoin(source_url, button["data-url"]),
                              "status": "not_requested"})
@@ -333,12 +325,12 @@ def parse_company(html: str, peers_html: str | None = None, source_url: str = BA
         "profit_loss": {"annual": tables["profit_loss"], "growth": growth_tables(pl, warnings)},
         "balance_sheet": tables["balance_sheet"], "cash_flow": tables["cash_flow"], "ratios": tables["ratios"],
         "shareholding": {"quarterly": tables["quarterly"], "yearly": tables["yearly"]},
-        "peers": peers_table(peers_html), "documents": documents(soup, source_url),
+        "peers": peers_table(peers_html if peers_html is not None else str(soup.select_one("#peers table") or "")), "documents": documents(soup, source_url),
         "document_scope": {"announcements": "recent", "all_announcements_url": urljoin(source_url, tab["href"]) if tab else None},
         "history": {"annual_period_count": len(dates), "first_period_end": min(dates) if dates else None,
                     "latest_period_end": max(dates) if dates else None, "includes_ttm": any(n["period"] == "TTM" for n in annual)},
         "units": units, "warnings": warnings, "other_features": features,
-        "_view": actual_view, "_schedule_requests": schedules, "_holder_requests": holders,
+        "_view": actual_view,
     }
 
 
@@ -376,7 +368,9 @@ class Client:
     def get(self, url: str, retries: int = 2):
         for attempt in range(retries + 1):
             if self.last_request is not None:
-                time.sleep(max(0, self.pause - (time.monotonic() - self.last_request)))
+                wait = self.pause - (time.monotonic() - self.last_request)
+                if wait > 0:
+                    time.sleep(wait)
             self.last_request = time.monotonic()
             try:
                 r = self.session.get(url, timeout=30)
@@ -429,94 +423,7 @@ class Client:
             return None
 
 
-def detail_json(client, url, warnings):
-    r = client.optional(url, warnings)
-    if r is None:
-        return None
-    try:
-        value = r.json()
-    except ValueError:
-        warnings.append(f"Unavailable or non-JSON detail response: {url}")
-        return None
-    if not isinstance(value, dict) or any(not isinstance(v, dict) for k, v in value.items() if k != "setAttributes"):
-        warnings.append(f"Unexpected detail response shape: {url}")
-        return None
-    return value
-
-
-def add_details(company, client, consolidated: bool):
-    """Only public controls advertised by this company page, using company ID."""
-    requests_ = company.pop("_schedule_requests")
-    holder_requests = company.pop("_holder_requests")
-    cid, warnings = company["company_id"], company["warnings"]
-    company["schedules"], company["holders"] = {}, {}
-    if not cid:
-        if requests_ or holder_requests:
-            warnings.append("Company ID missing; public details unavailable")
-        return
-    for request in requests_:
-        parent, section = request["parent"], request["section"]
-        params = {"parent": parent, "section": section}
-        if consolidated:
-            params["consolidated"] = ""  # Screener's own showSchedule convention.
-        url = f"{BASE}/api/company/{quote(cid, safe='')}/schedules/?{urlencode(params)}"
-        data = detail_json(client, url, warnings)
-        group = {"status": "unavailable" if data is None else "empty" if not data else "ok",
-                 "source_url": url, "units": {}, "labels": {}, "periods": []}
-        periods = {}
-        for name, values in (data or {}).items():
-            if name == "setAttributes":
-                continue
-            key = snake(name)
-            # Keep a visible label and avoid overwriting two normalized names.
-            if key in group["labels"]:
-                key += f"_{len(group['labels']) + 1}"
-            group["labels"][key] = name
-            base_units = company["units"].get("quarterly_results" if section == "quarters" else snake(section), {})
-            if section == "profit-loss":
-                base_units = base_units.get("annual", {})
-            amount_unit = next((u for u in base_units.values() if u in ("INR lakh", "INR crore")), "INR crore")
-            group["units"][key] = metric_unit(name, section, amount_unit)
-            for period, value in values.items():
-                if period != "TTM" and period_end(period) is None:
-                    continue  # Includes presentation-only setAttributes.
-                row = periods.setdefault(period, {"period": period, "period_end": period_end(period)})
-                row[key] = num(str(value)) if value is not None else None
-        for row in periods.values():
-            for key in group["labels"]:
-                row.setdefault(key, None)
-        group["periods"] = sorted(periods.values(), key=lambda row: row["period_end"] or "9999")
-        if data and not group["periods"]:
-            group["status"] = "unavailable"
-            warnings.append(f"No period data in detail response: {url}")
-        company["schedules"].setdefault(snake(section), {})[snake(parent)] = group
-    for request in holder_requests:
-        category, frequency = request["category"], request["frequency"]
-        url = f"{BASE}/api/3/{quote(cid, safe='')}/investors/{quote(category, safe='')}/{quote(frequency, safe='')}/"
-        data = detail_json(client, url, warnings)
-        group = {"status": "unavailable" if data is None else "empty" if not data else "ok", "source_url": url,
-                 "unit": "percent", "holders": []}
-        for name, values in (data or {}).items():
-            if name == "setAttributes":
-                continue
-            attributes = values.get("setAttributes", {})
-            person = attributes.get("data-person-url") if isinstance(attributes, dict) else None
-            if person is not None:
-                try:
-                    valid_person = isinstance(person, str) and urlparse(urljoin(BASE, person)).scheme in ("http", "https")
-                except ValueError:
-                    valid_person = False
-                if not valid_person:
-                    warnings.append(f"Invalid holder profile URL for {name}; omitted")
-                    person = None
-            holdings = [{"period": period, "period_end": period_end(period), "holding_pct": num(str(value)) if value is not None else None}
-                        for period, value in values.items() if period_end(period)]
-            group["holders"].append({"name": name, "profile_url": urljoin(BASE, person) if person else None,
-                                     "holdings": sorted(holdings, key=lambda row: row["period_end"])})
-        company["holders"].setdefault(frequency, {})[category] = group
-
-
-def scrape(session: requests.Session, symbol: str, view: str = "auto", pause: float = 1.0, *, details: bool = True) -> dict:
+def scrape(session: requests.Session, symbol: str, view: str = "auto", pause: float = 0.0) -> dict:
     """Fetch exactly one company; auto stops at the first usable accounting view.
 
     Operational errors (403, exhausted 429/5xx, network failures) are not evidence
@@ -552,40 +459,33 @@ def scrape(session: requests.Session, symbol: str, view: str = "auto", pause: fl
         if view != "auto" and actual_view != view:
             raise NotFound(f"Requested {view} view is unavailable; response is {actual_view}")
         wid = company["warehouse_id"]
-        if wid:
+        if wid and company["peers"] is None:
             peer_url = f"{BASE}/api/company/{quote(wid, safe='')}/peers/"
             peer_response = client.optional(peer_url, company["warnings"])
             company["peers"] = peers_table(peer_response.text) if peer_response is not None else None
             if peer_response is not None and company["peers"] is None:
                 company["warnings"].append("Peers endpoint did not return a usable table")
-        else:
+        elif not wid and company["peers"] is None:
             company["warnings"].append("Warehouse ID missing; peers unavailable")
         if company["peers"]:
             company["units"]["peers"] = {key: "percent" if key.endswith("_pct") else "multiple" if key == "p_e"
                                          else "INR/share" if key == "cmp_rs" else "INR crore" if "rs_cr" in key else "unknown"
                                          for key in company["peers"]["columns"]}
-        if details:
-            add_details(company, client, actual_view == "consolidated")
-        else:
-            company.pop("_schedule_requests")
-            company.pop("_holder_requests")
-            company["schedules"], company["holders"] = {}, {}
-        company["details_requested"] = details
         company["history"]["short_history"] = company["history"]["annual_period_count"] < 5
         if company["history"]["short_history"]:
             company["warnings"].append("Fewer than five annual periods in selected view; accounting views were not mixed")
         return {"symbol": company["profile"]["nse_code"] or company["profile"]["bse_code"] or symbol,
                 "requested_identifier": symbol, "view": actual_view, "source_url": response.url,
                 "requested_url": url, "fallback_reason": fallback_reason if actual_view == "standalone" else None,
-                "scraped_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "parser_version": PARSER_VERSION, **company}
+                "scraped_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "parser_version": PARSER_VERSION, "scope": "company_page_and_peers", **company}
     raise NotFound(f"{symbol}: no {view} company page with usable financial data")
 
 
-def fetch_company(symbol: str, view: str = "auto", *, details: bool = True, pause: float = 1.0) -> dict:
+def fetch_company(symbol: str, view: str = "auto", *, pause: float = 0.0) -> dict:
     """Convenience entry point that owns and closes its requests session."""
     with requests.Session() as session:
         session.headers["User-Agent"] = UA
-        return scrape(session, symbol, view, pause, details=details)
+        return scrape(session, symbol, view, pause)
 
 
 def atomic_write_json(path: Path, data: dict) -> None:
@@ -609,11 +509,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("symbol", help="NSE symbol or numeric BSE code")
     ap.add_argument("--out", default="out", help="output directory")
     ap.add_argument("--view", choices=["auto", "consolidated", "standalone"], default="auto")
-    ap.add_argument("--summary-only", action="store_true", help="skip extra schedule/shareholder calls")
-    ap.add_argument("--pause", type=float, default=1.0, help="minimum seconds between request starts (default 1)")
+    ap.add_argument("--pause", type=float, default=0.0, help="optional minimum seconds between request starts (default 0)")
     args = ap.parse_args(argv)
     try:
-        data = fetch_company(args.symbol, args.view, details=not args.summary_only, pause=args.pause)
+        data = fetch_company(args.symbol, args.view, pause=args.pause)
         out = Path(args.out)
         out.mkdir(parents=True, exist_ok=True)
         path = out / f"{data['requested_identifier']}.json"

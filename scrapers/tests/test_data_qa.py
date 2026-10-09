@@ -19,30 +19,10 @@ def page(periods=("Mar 2026",), metric="Sales", values=("100",), amount="Crores"
             + extra + "</section>")
 
 
-class DetailClient:
-    def optional(self, url, warnings):
-        class Response:
-            def json(self):
-                return {"Domestic Sales": {"Mar 2026": "100"}}
-        return Response()
 
 
 class DataQA(unittest.TestCase):
-    def test_schedule_inherits_selected_section_amount_unit(self):
-        html = page(amount="Lakhs") + "<button onclick=\"Company.showSchedule('Sales', 'profit-loss', this)\"></button>"
-        company = m.parse_company(html)
-        m.add_details(company, DetailClient(), True)
-        self.assertEqual(company["units"]["profit_loss"]["annual"]["sales"], "INR lakh")
-        self.assertEqual(company["schedules"]["profit_loss"]["sales"]["units"]["domestic_sales"], "INR lakh")
 
-    def test_quarter_schedule_inherits_quarterly_amount_unit(self):
-        html = (page(amount="Lakhs").replace("id='profit-loss'", "id='quarters'")
-                + page()
-                + "<button onclick=\"Company.showSchedule('Sales', 'quarters', this)\"></button>")
-        company = m.parse_company(html)
-        m.add_details(company, DetailClient(), True)
-        self.assertEqual(company["units"]["quarterly_results"]["sales"], "INR lakh")
-        self.assertEqual(company["schedules"]["quarters"]["sales"]["units"]["domestic_sales"], "INR lakh")
 
     def test_ragged_hidden_growth_preserves_main_financials_and_warns(self):
         extra = ("<div class='hidden'><table class='ranges-table'>"

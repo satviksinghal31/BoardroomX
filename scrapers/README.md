@@ -1,35 +1,41 @@
 # Boardroom Screener scraper
 
-`boardroom_screener_scraper.py` fetches exactly one company's public Screener data. Python 3.9+, requests and BeautifulSoup; no production browser or batch worker.
+Fetch one company's main Screener page and peer comparison as JSON. Python 3.9+, requests and BeautifulSoup. No production browser.
 
 ```sh
 python -m pip install -r scrapers/requirements.txt
 python scrapers/boardroom_screener_scraper.py RELIANCE --out out
 python scrapers/boardroom_screener_scraper.py 531494 --out out
-python scrapers/boardroom_screener_scraper.py RELIANCE --summary-only
 python -m unittest discover -s scrapers/tests -v
 ```
-
-Library usage:
 
 ```python
 from scrapers.boardroom_screener_scraper import fetch_company, scrape
 company = fetch_company("RELIANCE")
-# scrape(existing_requests_session, "RELIANCE", details=False) reuses a session.
+# Or scrape(existing_requests_session, "RELIANCE") to reuse a session.
 ```
 
-Auto selects usable consolidated financials first; standalone is fetched only on genuine absence/no usable financials. Operational errors do not trigger fallback. Views are never combined. Explicit `--view standalone` or `--view consolidated` is available. Short selected-view histories produce a warning.
+## Requests
 
-Output covers profile/citations, headline ratios, peers, quarterly/annual financials and result-source links, balance sheet, cash flow, historical ratios, both shareholding frequencies, public schedules/named holders, and document attachment URLs with metadata. Charts and pros/cons are excluded. Files themselves are not downloaded. Recent announcements are a recent list, not an archive. Login/premium content is marked unavailable; no credentials are used.
+| Call | Data |
+|---|---|
+| Company page | Profile/citations, headline metrics, quarterly/annual results and source links, balance sheet including total borrowings, cash flow, historical ratios, aggregate shareholding, growth tables, announcements, annual reports, ratings and all concall attachment links |
+| Peers, only if absent from the page HTML | Peer comparison table and median |
 
-Values preserve missing/locked cells as null. Units are per field; percentages are percentage points, not fractions. Bank and NBFC labels are preserved rather than forced into industrial-company labels. `requested_identifier`, canonical `symbol`, selected `view`, source URL, parser version and UTC timestamp support ingestion provenance.
+Normal healthy fetch: two application requests; one if peers are already in the HTML. Standalone fallback can require a third call. Retries and HTTP redirects can add network requests. Document URLs are saved, never downloaded.
 
-Financial-page failures raise `ScrapeError`; CLI returns 1 and preserves the previous file. JSON updates use atomic replacement. Optional failures preserve financials with `warnings`, null peers or detail `status: unavailable`; CLI returns 0 for such partial results. Consumers MUST inspect warnings and detail status before treating a snapshot as complete; do not erase previously ingested optional data because a refresh is unavailable. Serialization rejects non-finite JSON numbers.
+Auto chooses usable consolidated data first, otherwise standalone, without mixing views. Explicit `--view standalone`/`--view consolidated` is available. Short history is reported, not replaced with another accounting view.
 
-Requests are sequential with a default one-second interval within one company call, 30-second per-request timeout and at most two retries. Retry-After seconds and dates are respected; waits over 60 seconds fail immediately so the caller can retry later, never sooner than instructed. Exhausted optional network/server/access failures stop remaining optional HTTP calls for that company. A total call deadline is not implemented.
+Expanded financial breakdowns and individual shareholder names are excluded. Main-page totals remain. Charts, pros/cons and login/premium content are excluded. Recent announcements are a recent list, not an archive; profile commentary may be a preview.
 
-Full Reliance enrichment observed 27 requests, roughly 26 seconds in earlier validation; runtime varies by network and company. `--summary-only` skips schedule/holder calls but retains documents and financial tables. A future daily caller can use summary refreshes daily and full enrichment when needed. Pacing resets per call; callers must control aggregate traffic across companies/processes. No promise of daily full-universe throughput is made. Do not add parallel scraping without a shared rate policy.
+## Dates and reliability
 
-Tests use public saved fixtures and mocked HTTP responses, with no network access. The QA report records browser/live validation, benchmark scope, and remaining limitations.
+Each financial value retains its displayed period and calendar period-end date. TTM has no invented period-end. Documents retain available ISO dates and display dates; annual reports retain their year, concalls their month. Missing dates stay null. UTC `scraped_at` is extraction time, not the market quote timestamp. Units are explicit per field, percentages are percentage points and missing/locked cells stay null.
 
-CI template: `docs/boardroom-screener-scraper/ci-workflow.yml`. To enable it, move it to `.github/workflows/boardroom-screener-scraper.yml` using a GitHub credential with workflow scope.
+No fixed request delay by default; `--pause` is an optional nonnegative interval. Requests remain sequential. Network errors/429/5xx have at most two retries and 30-second request timeouts. Retry-After seconds/dates are respected; waits over 60 seconds fail so the caller can retry later, never sooner. No full-run deadline or batch logic is present.
+
+Main-page failures raise `ScrapeError`; CLI returns 1 and preserves yesterday's file. Optional peers failures keep financials with warnings; callers must inspect warnings. JSON writes replace the destination atomically and reject non-finite numbers.
+
+Version 3.0 removes `details`, `--summary-only`, `schedules`, `holders` and `details_requested`. Existing integrations must use `fetch_company(symbol)`/`scrape(session,symbol)` and read the main-page fields. Output scope is `company_page_and_peers`.
+
+The current QA report is in `docs/boardroom-screener-scraper/QA.md`. The CI workflow template in that directory remains inactive because the existing GitHub credential lacks workflow permission.

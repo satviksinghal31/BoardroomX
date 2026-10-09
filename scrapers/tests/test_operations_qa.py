@@ -46,16 +46,16 @@ class OperationalQA(unittest.TestCase):
         with patch.object(scraper.time, "monotonic", side_effect=lambda: clock[0]), patch.object(scraper.time, "sleep", side_effect=advance):
             return scraper.scrape(session, "RELIANCE", **kwargs)
 
-    def test_full_healthy_call_has_only_advertised_requests_and_paces_starts(self):
+    def test_page_fetch_has_only_required_requests_and_optional_pacing(self):
         clock = [0.0]
         session = FixtureSession(clock)
         result = self.run_scrape(session, clock, pause=1)
-        self.assertEqual(len(session.calls), 27)
-        self.assertEqual(sum("/schedules/" in url for url, _, _ in session.calls), 15)
-        self.assertEqual(sum("/investors/" in url for url, _, _ in session.calls), 10)
-        self.assertEqual([start for _, start, _ in session.calls], list(range(27)))
+        self.assertEqual(len(session.calls), 2)
+        self.assertEqual(sum("/schedules/" in url for url, _, _ in session.calls), 0)
+        self.assertEqual(sum("/investors/" in url for url, _, _ in session.calls), 0)
+        self.assertEqual([start for _, start, _ in session.calls], list(range(2)))
         self.assertTrue(all(kwargs == {"timeout": 30} for _, _, kwargs in session.calls))
-        self.assertTrue(result["details_requested"])
+        self.assertEqual(result["scope"], "company_page_and_peers")
         self.assertEqual(result["warnings"], [])
         self.assertFalse(session.closed)
 
@@ -67,20 +67,20 @@ class OperationalQA(unittest.TestCase):
         self.assertTrue(all("/peers/" in url for url, _, _ in session.calls[1:]))
         self.assertTrue(result["profit_loss"]["annual"])
         self.assertIsNone(result["peers"])
-        self.assertEqual(len(result["warnings"]), 26)
-        self.assertTrue(all(group["status"] == "unavailable" for section in result["schedules"].values() for group in section.values()))
+        self.assertEqual(len(result["warnings"]), 1)
+        self.assertNotIn("schedules", result)
 
     def test_reused_session_has_per_call_pacing_and_is_not_closed(self):
         clock = [0.0]
         session = FixtureSession(clock)
-        first = self.run_scrape(session, clock, pause=1, details=False)
-        second = self.run_scrape(session, clock, pause=1, details=False)
+        first = self.run_scrape(session, clock, pause=1)
+        second = self.run_scrape(session, clock, pause=1)
         self.assertEqual(len(session.calls), 4)
         self.assertEqual([start for _, start, _ in session.calls], [0, 1, 1, 2])
         self.assertFalse(session.closed)
         self.assertIsNot(first, second)
-        self.assertEqual(first["schedules"], {})
-        self.assertEqual(second["holders"], {})
+        self.assertNotIn("schedules", first)
+        self.assertNotIn("holders", second)
 
 
 if __name__ == "__main__":
