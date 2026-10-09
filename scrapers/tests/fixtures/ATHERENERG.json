@@ -1,0 +1,226 @@
+{
+  "quarterly_results": [
+    {
+      "period": "Jun 2025",
+      "period_end": "2025-06-30",
+      "sales": 645,
+      "expenses": 779,
+      "operating_profit": -134,
+      "opm_pct": -21,
+      "other_income": 28,
+      "interest": 24,
+      "depreciation": 48,
+      "profit_before_tax": -178,
+      "tax_pct": 0,
+      "net_profit": -178,
+      "eps_in_rs": -4.79
+    },
+    {
+      "period": "Mar 2026",
+      "period_end": "2026-03-31",
+      "sales": 1175,
+      "expenses": 1244,
+      "operating_profit": -70,
+      "opm_pct": -6,
+      "other_income": 39,
+      "interest": 18,
+      "depreciation": 52,
+      "profit_before_tax": -100,
+      "tax_pct": 0,
+      "net_profit": -100,
+      "eps_in_rs": -2.62
+    },
+    {
+      "period": "Jun 2026",
+      "period_end": "2026-06-30",
+      "sales": 1217,
+      "expenses": 1250,
+      "operating_profit": -33,
+      "opm_pct": -2.7,
+      "other_income": 43,
+      "interest": 22,
+      "depreciation": 39,
+      "profit_before_tax": -51,
+      "tax_pct": 0,
+      "net_profit": -51,
+      "eps_in_rs": -1.33
+    }
+  ],
+  "profit_loss": {
+    "annual": [
+      {
+        "period": "Mar 2026",
+        "period_end": "2026-03-31",
+        "sales": 3672,
+        "expenses": 4080,
+        "operating_profit": -408,
+        "opm_pct": -11,
+        "other_income": 146,
+        "interest": 82,
+        "depreciation": 173,
+        "profit_before_tax": -517,
+        "tax_pct": 0,
+        "net_profit": -517,
+        "eps_in_rs": -13.51,
+        "dividend_payout_pct": 0
+      }
+    ],
+    "growth": {
+      "compounded_sales_growth": {
+        "10_years": null,
+        "5_years": null,
+        "3_years": null,
+        "ttm": null
+      },
+      "compounded_profit_growth": {
+        "10_years": null,
+        "5_years": null,
+        "3_years": null,
+        "ttm": null
+      },
+      "stock_price_cagr": {
+        "10_years": null,
+        "5_years": null,
+        "3_years": null,
+        "1_year": 130
+      },
+      "return_on_equity": {
+        "10_years": null,
+        "5_years": null,
+        "3_years": null,
+        "last_year": null
+      }
+    }
+  },
+  "balance_sheet": [
+    {
+      "period": "Mar 2026",
+      "period_end": "2026-03-31",
+      "equity_capital": null,
+      "reserves": null,
+      "borrowings": null,
+      "other_liabilities": null,
+      "total_liabilities": null,
+      "fixed_assets": null,
+      "cwip": null,
+      "investments": null,
+      "other_assets": null,
+      "total_assets": null
+    }
+  ],
+  "cash_flow": [
+    {
+      "period": "Mar 2026",
+      "period_end": "2026-03-31",
+      "cash_from_operating_activity": null,
+      "cash_from_investing_activity": null,
+      "cash_from_financing_activity": null,
+      "net_cash_flow": null,
+      "free_cash_flow": null,
+      "cfo_op": null
+    }
+  ],
+  "ratios": [
+    {
+      "period": "Mar 2026",
+      "period_end": "2026-03-31",
+      "debtor_days": null,
+      "inventory_days": null,
+      "days_payable": null,
+      "cash_conversion_cycle": null,
+      "working_capital_days": null,
+      "roce_pct": null
+    }
+  ],
+  "shareholding": {
+    "quarterly": [
+      {
+        "period": "Jun 2025",
+        "period_end": "2025-06-30",
+        "promoters": 42.09,
+        "fiis": 24.07,
+        "diis": 24.01,
+        "public": 9.82,
+        "no_of_shareholders": 141409
+      },
+      {
+        "period": "Sep 2025",
+        "period_end": "2025-09-30",
+        "promoters": 41.22,
+        "fiis": 23.61,
+        "diis": 23.6,
+        "public": 11.58,
+        "no_of_shareholders": 141467
+      },
+      {
+        "period": "Dec 2025",
+        "period_end": "2025-12-31",
+        "promoters": 40.86,
+        "fiis": 17.45,
+        "diis": 28.1,
+        "public": 13.58,
+        "no_of_shareholders": 173478
+      },
+      {
+        "period": "Mar 2026",
+        "period_end": "2026-03-31",
+        "promoters": 40.76,
+        "fiis": 17.21,
+        "diis": 28.97,
+        "public": 13.03,
+        "no_of_shareholders": 169887
+      },
+      {
+        "period": "Jun 2026",
+        "period_end": "2026-06-30",
+        "promoters": 40.72,
+        "fiis": 16.23,
+        "diis": 29.28,
+        "public": 13.76,
+        "no_of_shareholders": 229896
+      },
+      {
+        "period": "Jul 2026",
+        "period_end": "2026-07-31",
+        "promoters": 39.58,
+        "fiis": 16.77,
+        "diis": 29.82,
+        "public": 13.82,
+        "no_of_shareholders": 254569
+      }
+    ],
+    "yearly": [
+      {
+        "period": "Mar 2026",
+        "period_end": "2026-03-31",
+        "promoters": 40.76,
+        "fiis": 17.21,
+        "diis": 28.97,
+        "public": 13.03,
+        "no_of_shareholders": 169887
+      },
+      {
+        "period": "Jul 2026",
+        "period_end": "2026-07-31",
+        "promoters": 39.58,
+        "fiis": 16.77,
+        "diis": 29.82,
+        "public": 13.82,
+        "no_of_shareholders": 254569
+      }
+    ]
+  },
+  "key_ratios": {
+    "market_cap_cr": 57023,
+    "price": 1434,
+    "high": 1744,
+    "low": 582,
+    "pe": null,
+    "book_value": null,
+    "dividend_yield_pct": 0.0,
+    "roce_pct": null,
+    "roe_pct": null,
+    "face_value": 1.0
+  },
+  "view": "consolidated"
+}
