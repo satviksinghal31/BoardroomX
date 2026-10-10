@@ -29,6 +29,17 @@ class StandardJsonTests(unittest.TestCase):
         raw={'documents':{'annual_reports':[{'year':2025,'source':'bse','url':'report','links':[{'type':'Report','url':'report'},{'type':'Annex','url':'report'}]}]}}
         lean=m.to_standard_json(raw);self.assertEqual(lean['documents']['annual_reports'][0]['additional_links'],[{'type':'Annex','url':'report'}]);self.assertEqual(m.to_standard_json(lean),lean)
 
+    def test_nonconcall_ai_primary_replaced_or_row_omitted(self):
+        for section in ('annual_reports','credit_ratings','announcements'):
+            for title in ('AI Summary','Document'):
+                raw={'documents':{section:[{'year':2025,'date':None,'date_text':None,'source':'bse','title':title,'url':'ai','links':[{'type':'AI Summary','url':'ai'},{'type':'Attachment','url':'real1'},{'type':'Annex','url':'real2'}]}]}}
+                lean=m.to_standard_json(raw);rows=lean['documents'][section]
+                self.assertEqual(rows[0]['url'],'real1')
+                self.assertEqual(rows[0]['additional_links'],[{'type':'Annex','url':'real2'}])
+                self.assertEqual(m.to_standard_json(lean),lean)
+                raw['documents'][section][0]['links']=[{'type':'AI Summary','url':'ai'}]
+                self.assertEqual(m.to_standard_json(raw)['documents'][section],[])
+
     def test_full_fetch_is_lean_and_validated_with_no_extra_requests(self):
         page=(FIX/'RELIANCE.consolidated.html').read_text();session=Session(lambda u,k:(200,page,None))
         data=m.scrape(session,'RELIANCE');m.validate_company(data)

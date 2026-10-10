@@ -8,7 +8,7 @@ Documents use annual_reports, concalls, credit_ratings and announcements arrays.
 
 ## Verification
 
-76 offline tests pass in Python 3.12 with declared dependencies. Regression coverage includes consolidated-first fallback, no extra requests, malformed responses, irregular duration periods, finite JSON, identity, financial/link preservation, conversion idempotency, duplicate concall months, AI-only rows, atomic output, advisory locking, durable pacing/retry/backoff and preservation of good data after failed refreshes. Independent scraper and ingestion reviews completed.
+77 offline tests pass in Python 3.12 with declared dependencies. Regression coverage includes consolidated-first fallback, no extra requests, malformed responses, irregular duration periods, finite JSON, identity, financial/link preservation, conversion idempotency, duplicate concall months, AI-only rows, atomic output, advisory locking, durable pacing/retry/backoff and preservation of good data after failed refreshes. Independent scraper and ingestion reviews completed.
 
 The ten-company pilot passed identity and exact JSON database roundtrip checks before the full run. The full initial universe is 2,563 active Dhan NSE equity stocks classified EQUITY_SHARE; inactive rows and 350 fund instruments were excluded. One sequential worker starts companies at least two seconds apart, checkpoints every 50, saves immediately and retries partial/failed companies once after the first pass.
 

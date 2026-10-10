@@ -247,6 +247,12 @@ def _standard_documents(raw):
                     else:
                         extra.append(link)
             else:
+                primary_ai = bool(re.search(r'\bai\b.*summary|summary.*\bai\b', item.get('title') or '', re.I)) or any(
+                    link.get('url') == item.get('url') and re.search(r'\bai\b.*summary|summary.*\bai\b', link.get('type') or '', re.I)
+                    for link in item.get('links', []) + item.get('additional_links', []))
+                if primary_ai and not links:
+                    continue
+                primary_url = links[0]['url'] if primary_ai else item.get('url')
                 if section == 'annual_reports':
                     row = {key: item.get(key) for key in ('year', 'url', 'source')}
                 elif section == 'credit_ratings':
@@ -255,8 +261,11 @@ def _standard_documents(raw):
                 else:
                     row = {key: item.get(key) for key in ('date', 'title', 'url')}
                     row['description'] = item.get('description', item.get('detail'))
+                row['url'] = primary_url
+                if section == 'announcements' and primary_ai and re.search(r'\bai\b.*summary|summary.*\bai\b', row['title'] or '', re.I):
+                    row['title'] = links[0]['type']
                 extra = []
-                primary_seen = 'links' not in item
+                primary_seen = 'links' not in item and not primary_ai
                 for link in links:
                     if link['url'] == row['url'] and not primary_seen:
                         primary_seen = True
