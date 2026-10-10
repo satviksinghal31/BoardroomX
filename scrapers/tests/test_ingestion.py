@@ -121,6 +121,34 @@ class IngestionTests(unittest.TestCase):
         ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
         self.assertEqual(calls, ['A']); self.assertEqual(store.control['state'], 'paused')
 
+    def test_unexpected_company_page_pauses_before_next_symbol(self):
+        from boardroom_screener_scraper import ScrapeError
+        previous = payload('A')
+        store = MemoryStore([row('A', data=previous), row('B')]); clock = Clock(); calls = []
+        def fetch(symbol, **kw):
+            calls.append(symbol)
+            raise ScrapeError(f'Unexpected company-page response for https://www.screener.in/company/{symbol}/; financial availability is unknown')
+        ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
+        self.assertEqual(calls, ['A'])
+        self.assertEqual(store.control['state'], 'paused')
+        self.assertEqual(store.rows[0]['data'], previous)
+        self.assertEqual(store.rows[0]['attempts'], 1)
+        self.assertEqual(store.rows[1]['attempts'], 0)
+        self.assertIn('Unexpected company-page response', store.control['error'])
+
+    def test_symbol_specific_scrape_error_retries_without_global_pause(self):
+        from boardroom_screener_scraper import ScrapeError
+        store = MemoryStore([row('A'), row('B')]); clock = Clock(); calls = []
+        def fetch(symbol, **kw):
+            calls.append(symbol)
+            if symbol == 'A': raise ScrapeError('Invalid company JSON: financial period/date structure')
+            return payload(symbol)
+        ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
+        self.assertEqual(calls, ['A', 'B', 'A'])
+        self.assertEqual(store.control['state'], 'completed_with_failures')
+        self.assertEqual(store.rows[0]['attempts'], 2)
+        self.assertEqual(store.rows[1]['status'], 'complete')
+
     def test_progress_counts_unique_remaining_companies(self):
         store = MemoryStore([row(str(i)) for i in range(2563)])
         reports = []; clock = Clock()

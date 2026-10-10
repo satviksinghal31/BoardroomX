@@ -11,6 +11,17 @@ class Session(requests.Session):
   self.calls.append(url);status,body,final=self.routes(url,kwargs);r=requests.Response();r.status_code=status;r._content=body.encode();r.url=final or url;r.encoding='utf8';return r
 class Tests(unittest.TestCase):
  def setUp(self):self.html=(FIX/'RELIANCE.consolidated.html').read_text();self.peers=(FIX/'RELIANCE.peers.html').read_text()
+ def test_duration_suffix_periods_keep_actual_month_end(self):
+  for period, expected in [('Mar 2023 15m','2023-03-31'),('Jun 2015 15m','2015-06-30'),('Mar 2016 9m','2016-03-31'),('Mar 2024 8m','2024-03-31'),('Mar 2015 18m','2015-03-31'),('Feb 2024 12m','2024-02-29')]:
+   with self.subTest(period=period):self.assertEqual(m.period_end(period),expected)
+ def test_malformed_duration_suffix_periods_rejected(self):
+  for period in ['Mar 2023 0m','Mar 2023 -9m','Mar 2023 9months','Mar 2023 9m extra','Mar 2023 1.5m','Foo 2023 15m','Mar 0000 15m','TTM 12m']:
+   with self.subTest(period=period):self.assertIsNone(m.period_end(period))
+ def test_duration_suffix_retained_without_unrecognized_period_warning(self):
+  html='<section id="profit-loss"><table><tr><th></th><th>Mar 2023 15m</th></tr><tr><td>Sales</td><td>42</td></tr></table></section>'
+  data=m.parse_company(html)
+  self.assertEqual(data['profit_loss']['annual'],[{'period':'Mar 2023 15m','period_end':'2023-03-31','sales':42}])
+  self.assertTrue(m.has_financials(data));self.assertFalse(any('Unrecognized table period' in w for w in data['warnings']))
  def test_concall_all_links_and_date(self):
   x=m.parse_company(self.html)['documents']['concalls'];self.assertEqual(x[0]['period'],'Jul 2026');self.assertEqual(sum(len(a['links']) for a in x),67)
  def test_raw_results_absolute_links(self):

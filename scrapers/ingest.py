@@ -15,7 +15,7 @@ LOCK_ID = 728410331
 def blocked(error):
     text = str(error)
     status = getattr(error, 'status', None)
-    return status in (401, 403, 429) or (status is not None and status >= 500) or bool(re.search(r'HTTP (?:401|403|429|5\d\d)|Network error|Retry-After', text, re.I))
+    return status in (401, 403, 429) or (status is not None and status >= 500) or bool(re.search(r'HTTP (?:401|403|429|5\d\d)|Network error|Retry-After|Unexpected company-page response', text, re.I))
 
 
 def assess(data, symbol):

@@ -78,8 +78,8 @@ def snake(s: str) -> str:
 
 
 def period_end(period: str) -> str | None:
-    """'Mar 2024' -> '2024-03-31'. 'TTM' and anything else -> None."""
-    m = re.fullmatch(r"([A-Z][a-z]{2}) (\d{4})", period)
+    """Month-end for 'Mar 2024' or 'Mar 2024 15m'; TTM/invalid -> None."""
+    m = re.fullmatch(r"([A-Z][a-z]{2}) (\d{4})(?: [1-9]\d*m)?", period)
     if not m or m.group(1) not in MONTHS:
         return None
     y, mo = int(m.group(2)), MONTHS[m.group(1)]
