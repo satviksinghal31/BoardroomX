@@ -60,18 +60,6 @@ class ResilienceQA(unittest.TestCase):
         with patch.object(m.time,'monotonic',side_effect=[10,10.25,10.25]):
             c=m.Client(s,1); c.get('a'); c.get('b')
         self.sleep.assert_called_once_with(.75)
-    def test_optional_network_json_and_access_failures_preserve_financials(self):
-        for failure in [requests.ConnectionError('disconnect'),403,429,503,'invalid JSON',json.dumps({'locked':True})]:
-            with self.subTest(failure=failure):
-                def route(u,n):
-                    if '/api/' not in u: return response(body=self.html,url=u)
-                    if isinstance(failure,Exception):return failure
-                    if isinstance(failure,int):return response(failure,url=u)
-                    return response(body=failure,url=u)
-                s=Session(route); data=m.scrape(s,'RELIANCE',pause=0)
-                self.assertTrue(data['profit_loss']['annual'])
-                self.assertTrue(data['warnings'])
-                if failure in (403,429):self.assertEqual(sum('/api/' in u for u,k in s.calls),1 if failure==403 else 3)
     def test_login_redirect_is_error_without_fallback(self):
         s=Session(lambda u,n:response(body=self.html,url='https://www.screener.in/login/'))
         with self.assertRaises(m.ScrapeError):m.scrape(s,'RELIANCE',pause=0)

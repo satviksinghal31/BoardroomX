@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Boardroom company-page snapshot",
+  "description": "Stable main-page JSON; dynamic financial labels are preserved. Scraper also checks exact calendar period-end alignment and finite numbers.",
+  "type": "object",
+  "required": [
+    "symbol",
+    "requested_identifier",
+    "name",
+    "view",
+    "source_url",
+    "requested_url",
+    "scraped_at",
+    "parser_version",
+    "schema_version",
+    "scope",
+    "company_id",
+    "warehouse_id",
+    "fallback_reason",
+    "profile",
+    "key_ratios",
+    "documents",
+    "document_scope",
+    "units",
+    "history",
+    "quarterly_results",
+    "balance_sheet",
+    "cash_flow",
+    "ratios",
+    "warnings",
+    "other_features",
+    "profit_loss",
+    "shareholding"
+  ],
+  "properties": {
+    "symbol": {
+      "type": "string"
+    },
+    "requested_identifier": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "view": {
+      "type": "string",
+      "enum": [
+        "consolidated",
+        "standalone"
+      ]
+    },
+    "source_url": {
+      "type": "string"
+    },
+    "requested_url": {
+      "type": "string"
+    },
+    "scraped_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "parser_version": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "scope": {
+      "type": "string",
+      "const": "company_page"
+    },
+    "company_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "warehouse_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "fallback_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "profile": {
+      "type": "object"
+    },
+    "key_ratios": {
+      "type": "object"
+    },
+    "documents": {
+      "type": "object"
+    },
+    "document_scope": {
+      "type": "object"
+    },
+    "units": {
+      "type": "object"
+    },
+    "history": {
+      "type": "object"
+    },
+    "quarterly_results": {
+      "$ref": "#/$defs/period_table"
+    },
+    "balance_sheet": {
+      "$ref": "#/$defs/period_table"
+    },
+    "cash_flow": {
+      "$ref": "#/$defs/period_table"
+    },
+    "ratios": {
+      "$ref": "#/$defs/period_table"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "other_features": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "profit_loss": {
+      "type": "object",
+      "required": [
+        "annual",
+        "growth"
+      ],
+      "properties": {
+        "annual": {
+          "$ref": "#/$defs/period_table"
+        },
+        "growth": {
+          "type": "object"
+        }
+      }
+    },
+    "shareholding": {
+      "type": "object",
+      "required": [
+        "quarterly",
+        "yearly"
+      ],
+      "properties": {
+        "quarterly": {
+          "$ref": "#/$defs/period_table"
+        },
+        "yearly": {
+          "$ref": "#/$defs/period_table"
+        }
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "period_table": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object",
+        "required": [
+          "period",
+          "period_end"
+        ],
+        "properties": {
+          "period": {
+            "type": "string"
+          },
+          "period_end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "raw_pdf_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

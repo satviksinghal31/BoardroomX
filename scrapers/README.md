@@ -1,41 +1,56 @@
-# Boardroom Screener scraper
+# Boardroom Screener data pipeline
 
-Fetch one company's main Screener page and peer comparison as JSON. Python 3.9+, requests and BeautifulSoup. No production browser.
+One company scraper, one sequential batch runner, one JSON row per stock. No UI, peer fetching, expanded rows, document downloads or weekly scheduler.
+
+## Single-company output
 
 ```sh
 python -m pip install -r scrapers/requirements.txt
 python scrapers/boardroom_screener_scraper.py RELIANCE --out out
-python scrapers/boardroom_screener_scraper.py 531494 --out out
+```
+
+The CLI writes `out/RELIANCE.json`. Library `fetch_company("RELIANCE")` returns the equivalent Python dictionary; `scrape(session, symbol)` reuses a requests session. JSON is produced and validated by code, not by an LLM or skill.
+
+One normal company-page request. A second page request is used only for genuine standalone fallback; retries/redirects may add network requests. Operational errors never trigger accounting-view fallback. Default fixed request delay is zero; server-requested backoff remains.
+
+The output includes identity, source/accounting view, UTC extraction time, profile/citations, headline metrics, full exposed quarterly/annual financial history, balance sheet including total borrowings, cash flow, ratios, aggregate shareholding, growth tables and document URLs/dates. Financial period-end dates and units are explicit. Missing/locked values are null. TTM has no invented date. `scraped_at` is not a market quote timestamp.
+
+`schema_version=1.0.0` identifies the stable structure documented in `company.schema.json`; `parser_version=4.0.0` identifies extraction behavior. Runtime validation checks required keys/types, calendar-aligned periods, finite JSON numbers and usable annual financials. Dynamic company-specific financial labels are preserved. Peers, named shareholders, clicked breakdowns, charts, pros/cons and gated content are excluded; recent announcements are not a full archive.
+
+## Universe ingestion
+
+```sh
+python -m pip install -r scrapers/requirements-ingestion.txt
+# Set SUPABASE_DB_URL privately; do not commit credentials.
+python scrapers/ingest.py seed
+python scrapers/ingest.py pilot
+python scrapers/ingest.py verify-pilot
+python scrapers/ingest.py run
+python scrapers/ingest.py progress
+```
+
+Provision `ingestion.sql` first. Seed freezes active Dhan NSE equity stocks classified EQUITY_SHARE in the existing taxonomy. The initial eligible count is 2,563; funds/inactive instruments are excluded. Universe/identifier issues remain explicit failures, never guessed company substitutions.
+
+Ten representative pilot stocks must pass before the full run. One advisory-locked worker starts at most one company every 2 seconds and reports checkpoints every 50 attempts, without a batch cooldown. Each result is saved immediately and checked for exact JSON equality after database roundtrip. Incomplete/failed companies get at most one second-pass retry. Main required tables missing/empty produce partial status. Known short-history warnings do not prevent completeness.
+
+`boardroom_screener_data` holds one stock row with complete returned JSON, status, attempts, errors and snapshot timestamps. `boardroom_screener_ingestion` is one control row holding progress, pilot gate and pause state. RLS and grants deny public database access. Read-only progress works while the worker holds its lock.
+
+Network/server/access/rate-limit errors pause the universe worker before another company. Inspect the error, wait any durable Retry-After deadline, then use `resume` and `run` (or `pilot` if not verified). Restarted interrupted attempts remain consumed; completed stocks are skipped. Failed refreshes retain prior JSON and its original fetch timestamp.
+
+## Repeat later
+
+```sh
+python scrapers/ingest.py pilot --refresh
+python scrapers/ingest.py verify-pilot
+python scrapers/ingest.py run
+```
+
+An explicit refresh resets processing state while retaining stored JSON. A future weekly scheduler should invoke these same commands, never duplicate scraper logic. No recurring schedule is created for the initial backfill. A skill is optional operator guidance; it is not part of the extraction/storage runtime.
+
+## Tests and deployment
+
+```sh
 python -m unittest discover -s scrapers/tests -v
 ```
 
-```python
-from scrapers.boardroom_screener_scraper import fetch_company, scrape
-company = fetch_company("RELIANCE")
-# Or scrape(existing_requests_session, "RELIANCE") to reuse a session.
-```
-
-## Requests
-
-| Call | Data |
-|---|---|
-| Company page | Profile/citations, headline metrics, quarterly/annual results and source links, balance sheet including total borrowings, cash flow, historical ratios, aggregate shareholding, growth tables, announcements, annual reports, ratings and all concall attachment links |
-| Peers, only if absent from the page HTML | Peer comparison table and median |
-
-Normal healthy fetch: two application requests; one if peers are already in the HTML. Standalone fallback can require a third call. Retries and HTTP redirects can add network requests. Document URLs are saved, never downloaded.
-
-Auto chooses usable consolidated data first, otherwise standalone, without mixing views. Explicit `--view standalone`/`--view consolidated` is available. Short history is reported, not replaced with another accounting view.
-
-Expanded financial breakdowns and individual shareholder names are excluded. Main-page totals remain. Charts, pros/cons and login/premium content are excluded. Recent announcements are a recent list, not an archive; profile commentary may be a preview.
-
-## Dates and reliability
-
-Each financial value retains its displayed period and calendar period-end date. TTM has no invented period-end. Documents retain available ISO dates and display dates; annual reports retain their year, concalls their month. Missing dates stay null. UTC `scraped_at` is extraction time, not the market quote timestamp. Units are explicit per field, percentages are percentage points and missing/locked cells stay null.
-
-No fixed request delay by default; `--pause` is an optional nonnegative interval. Requests remain sequential. Network errors/429/5xx have at most two retries and 30-second request timeouts. Retry-After seconds/dates are respected; waits over 60 seconds fail so the caller can retry later, never sooner. No full-run deadline or batch logic is present.
-
-Main-page failures raise `ScrapeError`; CLI returns 1 and preserves yesterday's file. Optional peers failures keep financials with warnings; callers must inspect warnings. JSON writes replace the destination atomically and reject non-finite numbers.
-
-Version 3.0 removes `details`, `--summary-only`, `schedules`, `holders` and `details_requested`. Existing integrations must use `fetch_company(symbol)`/`scrape(session,symbol)` and read the main-page fields. Output scope is `company_page_and_peers`.
-
-The current QA report is in `docs/boardroom-screener-scraper/QA.md`. The CI workflow template in that directory remains inactive because the existing GitHub credential lacks workflow permission.
+The Dockerfile packages this Python worker for the existing Railway service with one replica. It reads the existing secret database URL, resumes pending work and exits when exhausted. It exposes no website or scrape-trigger endpoint. The old application and old tables/storage were retired. CI remains a template pending GitHub workflow permission.

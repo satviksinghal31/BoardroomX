@@ -6,9 +6,9 @@
     python boardroom_screener_scraper.py 531494 --out out
 
 Auto selects usable consolidated financials, otherwise standalone; never merges
-views. Fetches the company page and, only if needed, its peers table. Expanded
+views. Fetches only the company page. Peer comparisons, expanded
 financial breakdowns, named shareholders, charts, pros/cons, login/premium features
-and attachment downloads are excluded. Optional failures are recorded in warnings.
+and attachment downloads are excluded. Parsing limitations are recorded in warnings.
 
 Library: fetch_company("RELIANCE") or scrape(existing_session, "RELIANCE").
 Financial tables use one node per displayed period, including TTM where present.
@@ -28,14 +28,15 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from email.utils import parsedate_to_datetime
-from urllib.parse import quote, urlencode, urljoin, urlparse
+from urllib.parse import quote, urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
 BASE = "https://www.screener.in"
-UA = "Mozilla/5.0 (compatible; boardroom-screener-scraper/3.0; personal research)"
-PARSER_VERSION = "3.0.0"
+UA = "Mozilla/5.0 (compatible; boardroom-screener-scraper/4.0; personal research)"
+PARSER_VERSION = "4.0.0"
+SCHEMA_VERSION = "1.0.0"
 MAX_RETRY_WAIT = 60
 MONTHS = {m: i for i, m in enumerate(calendar.month_abbr) if m}
 
@@ -214,32 +215,6 @@ def growth_tables(root, warnings=None) -> dict:
     return out
 
 
-def peers_table(html: str | None, classification: dict | None = None) -> dict | None:
-    if not html:
-        return None
-    table = BeautifulSoup(html, PARSER).find("table")
-    if table is None:
-        return None
-    rows = table.find_all("tr")
-    if not rows or len(cells(rows[0])) < 2:
-        return None
-    columns = [snake(c.get_text()) for c in cells(rows[0])]
-    out_rows, median = [], None
-    for tr in rows[1:]:
-        c = cells(tr)
-        if len(c) != len(columns):
-            continue
-        link = c[1].find("a")
-        values = {k: num(x.get_text()) for k, x in zip(columns[2:], c[2:])}
-        if link is not None:
-            m = re.match(r"/company/([^/]+)/", link.get("href", ""))
-            out_rows.append({"rank": int(num(c[0].get_text()) or 0) or None, "name": label(link.get_text()),
-                             "symbol": m.group(1) if m else None, **values})
-        elif clean(c[1].get_text()).startswith("Median"):
-            median = {"label": clean(c[1].get_text()), **values}
-    return {"columns": columns[2:], "peers": out_rows, "median": median}
-
-
 def documents(soup, source_url: str = BASE) -> dict:
     out = {}
     for box in soup.select("#documents .documents"):
@@ -283,7 +258,7 @@ def documents(soup, source_url: str = BASE) -> dict:
     return out
 
 
-def parse_company(html: str, peers_html: str | None = None, source_url: str = BASE) -> dict:
+def parse_company(html: str, source_url: str = BASE) -> dict:
     """Pure page parser; no network calls. Numeric fields preserve existing names."""
     soup = BeautifulSoup(html, PARSER)
     h1, info = soup.select_one("#top h1"), soup.select_one("#company-info")
@@ -325,7 +300,7 @@ def parse_company(html: str, peers_html: str | None = None, source_url: str = BA
         "profit_loss": {"annual": tables["profit_loss"], "growth": growth_tables(pl, warnings)},
         "balance_sheet": tables["balance_sheet"], "cash_flow": tables["cash_flow"], "ratios": tables["ratios"],
         "shareholding": {"quarterly": tables["quarterly"], "yearly": tables["yearly"]},
-        "peers": peers_table(peers_html if peers_html is not None else str(soup.select_one("#peers table") or "")), "documents": documents(soup, source_url),
+        "documents": documents(soup, source_url),
         "document_scope": {"announcements": "recent", "all_announcements_url": urljoin(source_url, tab["href"]) if tab else None},
         "history": {"annual_period_count": len(dates), "first_period_end": min(dates) if dates else None,
                     "latest_period_end": max(dates) if dates else None, "includes_ttm": any(n["period"] == "TTM" for n in annual)},
@@ -350,9 +325,10 @@ except ImportError:  # lxml is optional; the stdlib parser gives the same result
 
 
 class ScrapeError(RuntimeError):
-    def __init__(self, message: str, status: int | None = None):
+    def __init__(self, message: str, status: int | None = None, retry_after: float | None = None):
         super().__init__(message)
         self.status = status
+        self.retry_after = retry_after
 
 
 class NotFound(ScrapeError):
@@ -363,7 +339,6 @@ class Client:
     """One session, sequential paced requests, bounded retries; no global state."""
     def __init__(self, session, pause: float):
         self.session, self.pause, self.last_request = session, pause, None
-        self.optional_blocked = False
 
     def get(self, url: str, retries: int = 2):
         for attempt in range(retries + 1):
@@ -382,8 +357,6 @@ class Client:
             if r.status_code == 404:
                 raise NotFound(f"HTTP 404 for {url}", 404)
             if r.status_code == 429 or 500 <= r.status_code < 600:
-                if attempt == retries:
-                    raise ScrapeError(f"HTTP {r.status_code} for {url}", r.status_code)
                 retry = r.headers.get("Retry-After", "")
                 wait = 2 ** (attempt + 1)
                 if retry.isdigit():
@@ -396,8 +369,10 @@ class Client:
                         wait = max(0, (dt - datetime.now(timezone.utc)).total_seconds())
                     except (ValueError, TypeError, OverflowError):
                         pass
+                if attempt == retries:
+                    raise ScrapeError(f"HTTP {r.status_code} for {url}", r.status_code, wait if retry else None)
                 if wait > MAX_RETRY_WAIT:
-                    raise ScrapeError(f"HTTP {r.status_code}: Retry-After {wait:g}s exceeds this call budget; retry later", r.status_code)
+                    raise ScrapeError(f"HTTP {r.status_code}: Retry-After {wait:g}s exceeds this call budget; retry later", r.status_code, wait)
                 time.sleep(wait)
                 continue
             try:
@@ -406,21 +381,6 @@ class Client:
                 raise ScrapeError(f"HTTP {r.status_code} for {url}", r.status_code) from exc
             return r
         raise ScrapeError(f"Request failed for {url}")
-
-    def optional(self, url: str, warnings: list):
-        if self.optional_blocked:
-            warnings.append(f"Skipped optional endpoint after upstream failure: {url}")
-            return None
-        try:
-            r = self.get(url)
-            if any(path in urlparse(r.url).path for path in ("/register/", "/login/")):
-                raise ScrapeError(f"Login required for {url}", 401)
-            return r
-        except ScrapeError as exc:
-            warnings.append(str(exc))
-            if exc.status is None or exc.status in (401, 403, 429) or exc.status >= 500:
-                self.optional_blocked = True
-            return None
 
 
 def scrape(session: requests.Session, symbol: str, view: str = "auto", pause: float = 0.0) -> dict:
@@ -458,27 +418,67 @@ def scrape(session: requests.Session, symbol: str, view: str = "auto", pause: fl
         actual_view = company.pop("_view") or ("consolidated" if "/consolidated/" in urlparse(response.url).path else "standalone")
         if view != "auto" and actual_view != view:
             raise NotFound(f"Requested {view} view is unavailable; response is {actual_view}")
-        wid = company["warehouse_id"]
-        if wid and company["peers"] is None:
-            peer_url = f"{BASE}/api/company/{quote(wid, safe='')}/peers/"
-            peer_response = client.optional(peer_url, company["warnings"])
-            company["peers"] = peers_table(peer_response.text) if peer_response is not None else None
-            if peer_response is not None and company["peers"] is None:
-                company["warnings"].append("Peers endpoint did not return a usable table")
-        elif not wid and company["peers"] is None:
-            company["warnings"].append("Warehouse ID missing; peers unavailable")
-        if company["peers"]:
-            company["units"]["peers"] = {key: "percent" if key.endswith("_pct") else "multiple" if key == "p_e"
-                                         else "INR/share" if key == "cmp_rs" else "INR crore" if "rs_cr" in key else "unknown"
-                                         for key in company["peers"]["columns"]}
         company["history"]["short_history"] = company["history"]["annual_period_count"] < 5
         if company["history"]["short_history"]:
             company["warnings"].append("Fewer than five annual periods in selected view; accounting views were not mixed")
-        return {"symbol": company["profile"]["nse_code"] or company["profile"]["bse_code"] or symbol,
+        result = {"symbol": company["profile"]["nse_code"] or company["profile"]["bse_code"] or symbol,
                 "requested_identifier": symbol, "view": actual_view, "source_url": response.url,
                 "requested_url": url, "fallback_reason": fallback_reason if actual_view == "standalone" else None,
-                "scraped_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "parser_version": PARSER_VERSION, "scope": "company_page_and_peers", **company}
+                "scraped_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "parser_version": PARSER_VERSION, "scope": "company_page", "schema_version": SCHEMA_VERSION, **company}
+        validate_company(result)
+        return result
     raise NotFound(f"{symbol}: no {view} company page with usable financial data")
+
+
+def validate_company(data: dict) -> None:
+    """Validate the versioned JSON contract without a framework dependency."""
+    required = {"symbol": str, "requested_identifier": str, "name": str,
+                "view": str, "source_url": str, "requested_url": str, "scraped_at": str,
+                "parser_version": str, "schema_version": str, "scope": str, "profile": dict,
+                "key_ratios": dict, "profit_loss": dict, "shareholding": dict,
+                "documents": dict, "document_scope": dict, "units": dict,
+                "history": dict, "warnings": list, "other_features": list,
+                "company_id": (str, type(None)), "warehouse_id": (str, type(None)),
+                "fallback_reason": (str, type(None)),
+                "quarterly_results": (list, type(None)), "balance_sheet": (list, type(None)),
+                "cash_flow": (list, type(None)), "ratios": (list, type(None))}
+    if not isinstance(data, dict) or any(key not in data or not isinstance(data[key], kind) for key, kind in required.items()):
+        raise ScrapeError("Invalid company JSON: required fields/types missing")
+    if (data["schema_version"] != SCHEMA_VERSION or data["scope"] != "company_page"
+            or data["view"] not in ("consolidated", "standalone")
+            or not data["symbol"] or not data["name"]
+            or any(not isinstance(w, str) for w in data["warnings"])):
+        raise ScrapeError("Invalid company JSON: identity, view, scope or warnings")
+    if not isinstance(data["profit_loss"].get("growth"), dict) or "annual" not in data["profit_loss"]:
+        raise ScrapeError("Invalid company JSON: profit_loss structure")
+    if any(key not in data["shareholding"] for key in ("quarterly", "yearly")):
+        raise ScrapeError("Invalid company JSON: shareholding structure")
+    tables = [data[key] for key in ("quarterly_results", "balance_sheet", "cash_flow", "ratios")]
+    tables += [data["profit_loss"]["annual"], data["shareholding"]["quarterly"], data["shareholding"]["yearly"]]
+    for table in tables:
+        if table is None:
+            continue
+        if not isinstance(table, list):
+            raise ScrapeError("Invalid company JSON: financial table type")
+        for row in table:
+            if (not isinstance(row, dict) or not isinstance(row.get("period"), str)
+                    or "period_end" not in row or row["period_end"] != period_end(row["period"])):
+                raise ScrapeError("Invalid company JSON: financial period/date structure")
+            for key, value in row.items():
+                if key in ("period", "period_end"):
+                    continue
+                valid = value is None or (isinstance(value, str) if key == "raw_pdf_url" else type(value) in (int, float))
+                if not valid:
+                    raise ScrapeError("Invalid company JSON: financial metric type")
+    if not has_financials(data):
+        raise ScrapeError("Invalid company JSON: no usable annual financials")
+    try:
+        timestamp = datetime.fromisoformat(data["scraped_at"])
+        if timestamp.tzinfo is None:
+            raise ValueError("scraped_at must include timezone")
+        json.dumps(data, allow_nan=False)
+    except (TypeError, ValueError) as exc:
+        raise ScrapeError(f"Invalid company JSON: {exc}") from exc
 
 
 def fetch_company(symbol: str, view: str = "auto", *, pause: float = 0.0) -> dict:

@@ -1,33 +1,27 @@
-# Page-and-peers scraper review — 9 October 2026
+# Company-page scraper and initial ingestion QA
 
-Version 3.0 intentionally removes financial-schedule and individual-shareholder expansion fetching. This simplifies scope; those endpoints were required for clicked details, but need not be fetched for a main-page snapshot. Total borrowings and aggregate shareholding remain intact.
+Release: parser 4.0.0, JSON schema 1.0.0, scope `company_page`. Normal fetch makes one company-page call; genuine standalone fallback makes a second. Peers, clicked financial breakdowns and named shareholders are removed. Main financial tables, total borrowings, aggregate shareholding, document links and available dates remain.
 
-## Exact request breakdown
+## Checks
 
-| Company | Requests | Measured elapsed | Selected view |
-|---|---:|---:|---|
-| RELIANCE | 2: company page + peers | 0.64s | consolidated |
-| HDFCBANK | 2: company page + peers | 0.36s | consolidated |
-| 531494 / NAVKARURB | 3: consolidated check + standalone + peers | 0.49s | standalone |
+- 61 offline tests pass in a clean Python 3.12 environment with declared dependencies: 42 scraper/contract tests and 19 ingestion tests.
+- Independent scraper review found no remaining critical/medium issues after fixing malformed annual structures and invalid period dates.
+- Independent ingestion review found empty financial arrays wrongly marked complete and block warnings discarded during validation failure. Both were fixed with failing-then-passing regression tests; review signed off.
+- Existing eight-company fixtures preserve financial values, dates, source links, document URLs and unit maps. Prior Playwright main-page checks matched 701 financial cells, 93 attachment URLs and 5 ISO document date nodes. Those browser checks predate removal of peers; removing peers did not change the page parser.
+- Live initial pilot: 10/10 complete Supabase JSON records, identities correct, all schema 1.0.0; RELIANCE,HDFCBANK,CARBORUNIV,SHILPAMED,MPHASIS,ATHERENERG,HESTERBIO,NAVKARURB,SBIN,TCS. Nine consolidated and Navkar standalone. Each JSON was checked for exact database roundtrip equality. Pilot took approximately 23 seconds including pacing and DB writes, and was explicitly verified before enabling the universe run.
 
-All three live fetches had zero warnings and zero schedule/investor calls. These single-run timings are not a universe-throughput guarantee. Retries, redirects and optional absence can alter network request counts. Peers already embedded in the initial HTML need no extra request.
+## Runtime behavior
 
-## Sanity and independent review
+One advisory-locked sequential worker starts one company no faster than every 2 seconds, with progress checkpoints every 50. There is no additional batch cooldown. Failures/partial results get one retry after the first pass. Server backoff is preserved and pauses the run; explicit resume cannot ignore its deadline. Main-page errors never trigger standalone fallback.
 
-- 40 offline tests pass: base financial fixture comparison across eight companies, source/document links and metadata, view selection, malformed growth/periods, units, HTTP/network errors, bounded Retry-After, atomic output, session reuse and explicit request-count tests.
-- An independent agent reviewed spec compliance and code quality, added five page-scope tests and reported no critical/medium findings in its scope.
-- Final Playwright comparison matched 701 financial cells, all 93 document attachment anchors and all 5 document ISO date nodes on Reliance's page. Total borrowings remained in the balance sheet. No detail controls were clicked in this check.
-- Dates remain financial period/period-end, available document ISO/display dates, annual-report year, concall month and UTC extraction timestamp. Missing dates remain null; TTM has no invented end date.
-- Earlier eight-company exploratory browser checks matched 5,734 financial/headline/growth/peer values. The current eight-company fixtures ensure simplification retained the same base values; they are not fresh network tests of all eight issuers.
+Stored snapshots are one row per stock; failed refreshes preserve existing JSON and its timestamp. Pilot gate, attempts, last company start, state and error are durable. Progress is readable while the worker runs, counts unique remaining companies, and estimates time using measured processing durations rather than idle review time.
 
-## Deliberate omissions and practical limits
+The initial universe is 2,563 active Dhan NSE equity stocks classified EQUITY_SHARE. 350 fund instruments and inactive rows are excluded. The full run's coverage is reported separately; pilot success does not establish universe-wide completeness.
 
-Expanded borrowings/other financial breakdowns and named shareholders are removed, not marked missing. Charts, pros/cons, login/premium content, document downloads and a full announcement archive remain excluded. A short consolidated history still wins over a longer standalone history, without mixing views.
+## Cleanup and limits
 
-Upstream HTML/API changes and blocks remain possible. Peer failures return financials with warnings. Consumers must inspect warnings and retain last-good data. Default fixed delay is 0; sequential requests and server-requested backoff remain. No batch runner or UI is part of this change.
+The obsolete deployment was stopped; its three database tables were replaced by the JSON and control tables. The stock universe and unrelated database tables remain. The retired tracked application was deleted after explicit user authorization; no UI was implemented. Old backup JSON and chart storage were retired.
 
-Batch ingestion is paused for scraper review. The old Railway deployment was stopped and old records backed up, but legacy database tables remain; no new universe ingestion or UI was started. CI remains an inactive template because the available OAuth credential lacks workflow scope.
+No skill or LLM is required for extraction: the Python function returns a dictionary and the CLI writes JSON directly. `company.schema.json` describes the stable shape; runtime validation enforces required types, usable annual data, calendar-aligned financial periods and finite JSON numbers.
 
-## Compatibility
-
-Parser version 3.0 is a scope/API change: `details`, `--summary-only`, `schedules`, `holders`, `details_requested` and their endpoint parsers/discovery were removed. Main-page financial/document fields retain their names. Consumers should call `fetch_company(symbol)` and use `scope=company_page_and_peers`.
+Upstream changes/blocks, unavailable issuers, rare financial layouts and identifier differences may still require attention. Missing dates are not invented, short consolidated history is not mixed with standalone, and masked cells remain null. Public main-page coverage excludes premium/login sections and full announcement archives. A future weekly scheduler can call the same scripts; no recurring schedule exists now. CI remains an inactive template pending workflow permission.

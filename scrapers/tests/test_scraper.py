@@ -52,18 +52,10 @@ class Tests(unittest.TestCase):
   with patch.object(m.time,'sleep'):
    with self.assertRaises(RuntimeError):m.scrape(s,'RELIANCE',pause=0)
   self.assertEqual(len(s.calls),1)
- def test_optional_peers_failure_returns_financials(self):
-  s=Session(lambda u,k:(503,'Unavailable',None) if '/api/' in u else (200,self.html,None))
-  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',pause=0)
-  self.assertTrue(x['profit_loss']['annual']);self.assertIsNone(x['peers']);self.assertTrue(x['warnings'])
  def test_redirect_view_and_canonical_identifier(self):
   s=Session(lambda u,k:(200,self.peers,None) if '/api/' in u else (200,self.html.replace('data-consolidated="true"','').replace('Consolidated','Standalone'),'https://www.screener.in/company/500325/'))
   with patch.object(m.time,'sleep'):x=m.scrape(s,'500325',pause=0)
   self.assertEqual(x['view'],'standalone');self.assertEqual(x['symbol'],'RELIANCE');self.assertEqual(x['requested_identifier'],'500325');self.assertEqual(x['source_url'],'https://www.screener.in/company/500325/')
- def test_malformed_optional_peers_do_not_discard_financials(self):
-  s=Session(lambda u,k:(200,'<table></table>' if '/peers/' in u else self.html,None))
-  with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',pause=0)
-  self.assertTrue(x['profit_loss']['annual']);self.assertIsNone(x['peers']);self.assertTrue(x['warnings'])
  def test_unexpected_html_is_error_not_standalone_fallback(self):
   s=Session(lambda u,k:(200,'<h1>Verify you are human</h1>',None))
   with patch.object(m.time,'sleep'):

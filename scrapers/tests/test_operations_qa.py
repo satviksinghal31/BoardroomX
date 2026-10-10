@@ -50,33 +50,23 @@ class OperationalQA(unittest.TestCase):
         clock = [0.0]
         session = FixtureSession(clock)
         result = self.run_scrape(session, clock, pause=1)
-        self.assertEqual(len(session.calls), 2)
+        self.assertEqual(len(session.calls), 1)
         self.assertEqual(sum("/schedules/" in url for url, _, _ in session.calls), 0)
         self.assertEqual(sum("/investors/" in url for url, _, _ in session.calls), 0)
-        self.assertEqual([start for _, start, _ in session.calls], list(range(2)))
+        self.assertEqual([start for _, start, _ in session.calls], list(range(1)))
         self.assertTrue(all(kwargs == {"timeout": 30} for _, _, kwargs in session.calls))
-        self.assertEqual(result["scope"], "company_page_and_peers")
+        self.assertEqual(result["scope"], "company_page")
         self.assertEqual(result["warnings"], [])
         self.assertFalse(session.closed)
 
-    def test_optional_503_budget_preserves_base_and_stops_fanout(self):
-        clock = [0.0]
-        session = FixtureSession(clock, optional_status=503)
-        result = self.run_scrape(session, clock, pause=1)
-        self.assertEqual(len(session.calls), 4)
-        self.assertTrue(all("/peers/" in url for url, _, _ in session.calls[1:]))
-        self.assertTrue(result["profit_loss"]["annual"])
-        self.assertIsNone(result["peers"])
-        self.assertEqual(len(result["warnings"]), 1)
-        self.assertNotIn("schedules", result)
 
     def test_reused_session_has_per_call_pacing_and_is_not_closed(self):
         clock = [0.0]
         session = FixtureSession(clock)
         first = self.run_scrape(session, clock, pause=1)
         second = self.run_scrape(session, clock, pause=1)
-        self.assertEqual(len(session.calls), 4)
-        self.assertEqual([start for _, start, _ in session.calls], [0, 1, 1, 2])
+        self.assertEqual(len(session.calls), 2)
+        self.assertEqual([start for _, start, _ in session.calls], [0, 0])
         self.assertFalse(session.closed)
         self.assertIsNot(first, second)
         self.assertNotIn("schedules", first)
