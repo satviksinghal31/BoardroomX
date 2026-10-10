@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import requests
+from test_scraper import FixtureDatetime
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -43,7 +44,7 @@ class OperationalQA(unittest.TestCase):
     def run_scrape(self, session, clock, **kwargs):
         def advance(seconds):
             clock[0] += seconds
-        with patch.object(scraper.time, "monotonic", side_effect=lambda: clock[0]), patch.object(scraper.time, "sleep", side_effect=advance):
+        with patch.object(scraper, "datetime", FixtureDatetime), patch.object(scraper.time, "monotonic", side_effect=lambda: clock[0]), patch.object(scraper.time, "sleep", side_effect=advance):
             return scraper.scrape(session, "RELIANCE", **kwargs)
 
     def test_page_fetch_has_only_required_requests_and_optional_pacing(self):

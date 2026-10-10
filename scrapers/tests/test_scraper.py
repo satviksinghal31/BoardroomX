@@ -1,16 +1,22 @@
 import importlib.util,json,unittest
 from pathlib import Path
+from datetime import datetime,timezone
 from unittest.mock import patch
 from urllib.parse import urlparse,parse_qs
 import requests
 ROOT=Path(__file__).resolve().parents[1];FIX=Path(__file__).resolve().parent/'fixtures'
 spec=importlib.util.spec_from_file_location('scraper',ROOT/'boardroom_screener_scraper.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+class FixtureDatetime(datetime):
+ @classmethod
+ def now(cls,tz=None):return cls(2026,10,9,tzinfo=timezone.utc)
 class Session(requests.Session):
  def __init__(self,routes):super().__init__();self.routes=routes;self.calls=[]
  def get(self,url,**kwargs):
   self.calls.append(url);status,body,final=self.routes(url,kwargs);r=requests.Response();r.status_code=status;r._content=body.encode();r.url=final or url;r.encoding='utf8';return r
 class Tests(unittest.TestCase):
- def setUp(self):self.html=(FIX/'RELIANCE.consolidated.html').read_text();self.peers=(FIX/'RELIANCE.peers.html').read_text()
+ def setUp(self):
+  clock=patch.object(m,'datetime',FixtureDatetime);clock.start();self.addCleanup(clock.stop)
+  self.html=(FIX/'RELIANCE.consolidated.html').read_text();self.peers=(FIX/'RELIANCE.peers.html').read_text()
  def test_duration_suffix_periods_keep_actual_month_end(self):
   for period, expected in [('Mar 2023 15m','2023-03-31'),('Jun 2015 15m','2015-06-30'),('Mar 2016 9m','2016-03-31'),('Mar 2024 8m','2024-03-31'),('Mar 2015 18m','2015-03-31'),('Feb 2024 12m','2024-02-29')]:
    with self.subTest(period=period):self.assertEqual(m.period_end(period),expected)
@@ -22,6 +28,26 @@ class Tests(unittest.TestCase):
   data=m.parse_company(html)
   self.assertEqual(data['profit_loss']['annual'],[{'period':'Mar 2023 15m','period_end':'2023-03-31','sales':42}])
   self.assertTrue(m.has_financials(data));self.assertFalse(any('Unrecognized table period' in w for w in data['warnings']))
+ def test_real_quarter_only_company_pages_are_preserved_and_validate(self):
+  for symbol,count in [('FELDVR',8),('JISLDVREQS',9)]:
+   with self.subTest(symbol=symbol):
+    page=(FIX/(symbol+'.standalone.html')).read_text()
+    parsed=m.parse_company(page);self.assertIsNone(parsed['profit_loss']['annual']);self.assertEqual(len(parsed['quarterly_results']),count)
+    session=Session(lambda u,k:(200,page,None));data=m.scrape(session,symbol,view='standalone')
+    self.assertEqual(len(session.calls),1);self.assertEqual(data['quarterly_results'],parsed['quarterly_results']);self.assertIsNone(data['profit_loss']['annual']);m.validate_company(data)
+ def test_explicit_quarter_only_consolidated_stays_one_call(self):
+  from bs4 import BeautifulSoup
+  soup=BeautifulSoup((FIX/'FELDVR.standalone.html').read_text(),'html.parser');soup.select_one('#company-info')['data-consolidated']='true';page=str(soup)
+  session=Session(lambda u,k:(200,page,None));data=m.scrape(session,'FELDVR',view='consolidated')
+  self.assertEqual(data['view'],'consolidated');self.assertEqual(len(session.calls),1);self.assertIsNone(data['profit_loss']['annual'])
+ def test_auto_retains_quarter_only_standalone_with_coverage_warning(self):
+  page=(FIX/'FELDVR.standalone.html').read_text()
+  from bs4 import BeautifulSoup
+  soup=BeautifulSoup(page,'html.parser');soup.select_one('#quarters').decompose()
+  session=Session(lambda u,k:(200,str(soup) if '/consolidated/' in u else page,None))
+  data=m.scrape(session,'FELDVR')
+  self.assertEqual(len(session.calls),2);self.assertEqual(data['view'],'standalone');self.assertIsNone(data['profit_loss']['annual']);self.assertEqual(len(data['quarterly_results']),8)
+  self.assertIn('Selected view lacks recent annual or quarterly coverage',data['warnings'])
  def test_concall_all_links_and_date(self):
   x=m.parse_company(self.html)['documents']['concalls'];self.assertEqual(x[0]['period'],'Jul 2026');self.assertEqual(sum(sum(a.get(key) is not None for key in ('transcript_url','presentation_url','recording_url')) + len(a.get('additional_links',[])) for a in x),67)
  def test_raw_results_absolute_links(self):
@@ -46,15 +72,15 @@ class Tests(unittest.TestCase):
   s=Session(lambda u,k:(404,'',None) if '/consolidated/' in u else (200,self.peers if '/peers/' in u else self.html.replace('data-consolidated="true"','').replace('Consolidated','Standalone'),None))
   with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',pause=0)
   self.assertEqual(x['view'],'standalone')
- def test_sparse_consolidated_history_does_not_fetch_standalone(self):
+ def test_young_listing_without_two_annual_years_retains_standalone_with_warning(self):
   html=(FIX/'ATHERENERG.consolidated.html').read_text()
-  s=Session(lambda u,k:(200,self.peers if '/peers/' in u else html,None))
-  with patch.object(m.time,'sleep'):x=m.scrape(s,'ATHERENERG',pause=0)
-  self.assertEqual(len(x['profit_loss']['annual']),1);self.assertEqual(x['view'],'consolidated')
-  self.assertFalse(any(u.endswith('/ATHERENERG/') for u in s.calls))
+  standalone=html.replace('data-consolidated="true"','data-consolidated="false"').replace('Consolidated','Standalone')
+  s=Session(lambda u,k:(200,html if '/consolidated/' in u else standalone,None));data=m.scrape(s,'ATHERENERG')
+  self.assertEqual(len(s.calls),2);self.assertEqual(data['view'],'standalone');self.assertEqual(len(data['profit_loss']['annual']),1)
+  self.assertIn('Selected view lacks recent annual or quarterly coverage',data['warnings'])
  def test_fallback_when_consolidated_has_no_numeric_financials(self):
   from bs4 import BeautifulSoup
-  page=BeautifulSoup(self.html,'html.parser');page.select_one('#profit-loss').decompose()
+  page=BeautifulSoup(self.html,'html.parser');page.select_one('#profit-loss').decompose();page.select_one('#quarters').decompose()
   s=Session(lambda u,k:(200,str(page),None) if '/consolidated/' in u else (200,self.peers if '/peers/' in u else self.html.replace('data-consolidated="true"','').replace('Consolidated','Standalone'),None))
   with patch.object(m.time,'sleep'):x=m.scrape(s,'RELIANCE',pause=0)
   self.assertEqual(x['view'],'standalone');self.assertEqual(x['fallback_reason'],'consolidated_has_no_usable_financials')

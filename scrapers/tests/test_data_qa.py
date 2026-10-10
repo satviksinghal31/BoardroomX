@@ -34,6 +34,28 @@ class DataQA(unittest.TestCase):
         growth = company["profit_loss"]["growth"].get("compounded_sales_growth", {})
         self.assertIsNone(growth.get("3_years"))
 
+    def test_source_empty_table_distinguished_from_absent_or_malformed(self):
+        for section, key in (('quarters','quarterly_results'), ('profit-loss','profit_loss'), ('balance-sheet','balance_sheet'), ('cash-flow','cash_flow'), ('ratios','ratios')):
+            with self.subTest(section=section):
+                empty=m.parse_company('<section id="'+section+'"><table><tr><th></th></tr><tr><td>Sales</td></tr></table></section>')
+                self.assertIn('No reporting periods in source table: '+key,empty['warnings'])
+                absent=m.parse_company('<section id="'+section+'"></section>')
+                self.assertFalse(any(w.startswith('No reporting periods') for w in absent['warnings']))
+                malformed=m.parse_company('<section id="'+section+'"><table><tr><th></th></tr><tr><td>Sales</td><td>42</td></tr></table></section>')
+                self.assertNotIn('No reporting periods in source table: '+key,malformed['warnings'])
+                self.assertIn('Malformed source table header: '+key,malformed['warnings'])
+                bad_period=m.parse_company('<section id="'+section+'"><table><tr><th></th><th>garbage</th></tr><tr><td>Sales</td><td>42</td></tr></table></section>')
+                self.assertIn('Unrecognized table period: garbage',bad_period['warnings'])
+                self.assertFalse(any(w.startswith('No reporting periods') for w in bad_period['warnings']))
+    def test_real_adl_and_dwarkesh_empty_source_sections(self):
+        fixtures=Path(__file__).parent/'fixtures'
+        for symbol, missing in [('ADL',['quarterly_results']),('DWARKESH',['balance_sheet','cash_flow','ratios'])]:
+            with self.subTest(symbol=symbol):
+                data=m.parse_company((fixtures/(symbol+'.financial-sections.html')).read_text())
+                self.assertTrue(m.has_financials(data))
+                self.assertEqual([w for w in data['warnings'] if w.startswith('No reporting periods')],['No reporting periods in source table: '+key for key in missing])
+                for key in missing:self.assertIsNone(data[key])
+
     def test_invalid_annual_period_warns_and_is_not_usable(self):
         company = m.parse_company(page(periods=("garbage",)))
         self.assertFalse(m.has_financials(company))

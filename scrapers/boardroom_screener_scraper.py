@@ -5,7 +5,7 @@
     python boardroom_screener_scraper.py RELIANCE --out out
     python boardroom_screener_scraper.py 531494 --out out
 
-Auto selects usable consolidated financials, otherwise standalone; never merges
+Auto prefers recent consolidated financials, otherwise available standalone; never merges
 views. Fetches only the company page. Peer comparisons, expanded
 financial breakdowns, named shareholders, charts, pros/cons, login/premium features
 and attachment downloads are excluded. Parsing limitations are recorded in warnings.
@@ -26,7 +26,7 @@ import tempfile
 import re
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote, urljoin, urlparse
@@ -337,6 +337,13 @@ def parse_company(html: str, source_url: str = BASE) -> dict:
                "cash-flow": "cash_flow", "ratios": "ratios", "quarterly-shp": "quarterly", "yearly-shp": "yearly"}
     for section, key in mapping.items():
         table = soup.select_one(f"#{section} table")
+        if table is not None and key in ('quarterly_results', 'profit_loss', 'balance_sheet', 'cash_flow', 'ratios'):
+            rows = table.find_all('tr')
+            if not rows or len(cells(rows[0])) < 2:
+                if all(len(cells(row)) <= 1 for row in rows):
+                    warnings.append(f'No reporting periods in source table: {key}')
+                else:
+                    warnings.append(f'Malformed source table header: {key}')
         tables[key] = period_nodes(table, source_url, warnings)
         units[key] = table_units(table, section)
     pl = soup.select_one("#profit-loss")
@@ -345,13 +352,21 @@ def parse_company(html: str, source_url: str = BASE) -> dict:
     ratios = key_ratios(soup)
     units["key_ratios"] = {k: ("INR crore" if k == "market_cap_cr" else "multiple" if k == "pe"
                               else metric_unit(k, "top", "unknown")) for k in ratios}
-    actual_view = "consolidated" if info and info.get("data-consolidated", "").lower() == "true" else None
-    if not actual_view:
-        heading = pl.select_one("p") if pl else None
-        if heading and "Consolidated" in heading.get_text():
-            actual_view = "consolidated"
-        elif info or heading:
-            actual_view = "standalone"
+    flag = info.get('data-consolidated', '').lower() if info else ''
+    actual_view = {'true': 'consolidated', 'false': 'standalone'}.get(flag)
+    if actual_view is None:
+        heading = pl.select_one('p') if pl else None
+        if heading:
+            selected_heading = copy.deepcopy(heading)
+            for switch in selected_heading.select('a'):
+                switch.decompose()
+            text = selected_heading.get_text(' ')
+            if 'Consolidated' in text:
+                actual_view = 'consolidated'
+            elif 'Standalone' in text:
+                actual_view = 'standalone'
+        if actual_view is None and info:
+            actual_view = 'standalone'
     return {
         "name": clean(h1.get_text()) if h1 else None,
         "company_id": info.get("data-company-id") if info else None,
@@ -370,7 +385,48 @@ def has_financials(company: dict) -> bool:
     measurements = {"sales", "revenue", "net_profit", "profit_before_tax", "operating_profit", "financing_profit"}
     return any((row.get("period_end") is not None or row.get("period") == "TTM")
                and any(isinstance(row.get(k), (int, float)) for k in measurements)
-               for row in (company.get("profit_loss") or {}).get("annual") or [])
+               for rows in ((company.get("profit_loss") or {}).get("annual"), company.get("quarterly_results"))
+               for row in rows or [])
+
+
+def _calendar_cutoff(as_of: date, months: int) -> date:
+    year, month = divmod(as_of.year * 12 + as_of.month - 1 - months, 12)
+    month += 1
+    return date(year, month, min(as_of.day, calendar.monthrange(year, month)[1]))
+
+
+def has_recent_financials(company: dict, as_of: date) -> bool:
+    """Two annual years in 24 months plus the latest two consecutive quarters.
+
+    Both quarters must be within 12 months and the newest within 6 months.
+    Calendar cutoffs are inclusive; future dates, TTM, nulls and headers do not
+    qualify. Zero/negative finite revenue or profit measurements do qualify.
+    """
+    measurements = {'sales', 'revenue', 'net_profit', 'profit_before_tax',
+                    'operating_profit', 'financing_profit'}
+    def dates(rows, months):
+        cutoff = _calendar_cutoff(as_of, months)
+        result = set()
+        for row in rows or []:
+            if row.get('period') == 'TTM' or not row.get('period_end'):
+                continue
+            if not any(type(row.get(key)) in (int, float) and math.isfinite(row[key]) for key in measurements):
+                continue
+            try:
+                ended = date.fromisoformat(row['period_end'])
+            except (TypeError, ValueError):
+                continue
+            if period_end(row.get('period', '')) == row['period_end'] and cutoff <= ended <= as_of:
+                result.add(ended)
+        return sorted(result)
+    annual = dates((company.get('profit_loss') or {}).get('annual'), 24)
+    if len({ended.year for ended in annual}) < 2:
+        return False
+    quarters = dates(company.get('quarterly_results'), 12)
+    if len(quarters) < 2 or quarters[-1] < _calendar_cutoff(as_of, 6):
+        return False
+    previous, latest = quarters[-2:]
+    return (latest.year * 12 + latest.month) - (previous.year * 12 + previous.month) == 3
 
 
 # --------------------------------------------------------------------------- network
@@ -441,7 +497,7 @@ class Client:
 
 
 def scrape(session: requests.Session, symbol: str, view: str = "auto", pause: float = 0.0) -> dict:
-    """Fetch exactly one company; auto stops at the first usable accounting view.
+    """Prefer recent consolidated, otherwise available standalone; retain whole views.
 
     Operational errors (403, exhausted 429/5xx, network failures) are not evidence
     consolidated is absent and therefore do not trigger a standalone fetch.
@@ -457,30 +513,57 @@ def scrape(session: requests.Session, symbol: str, view: str = "auto", pause: fl
     encoded = quote(symbol, safe='')
     choices = ["consolidated", "standalone"] if view == "auto" else [view]
     fallback_reason = None
+    first_profile = None
+    available_consolidated = None
+    as_of = datetime.now(timezone.utc).date()
     for requested_view in choices:
         url = f"{BASE}/company/{encoded}/" + ("consolidated/" if requested_view == "consolidated" else "")
         try:
             response = client.get(url)
         except NotFound:
-            fallback_reason = "consolidated_not_found"
+            if requested_view == "consolidated":
+                fallback_reason = "consolidated_not_found"
+            else:
+                fallback_reason = "standalone_not_found"
             continue
         if any(path in urlparse(response.url).path for path in ("/register/", "/login/")):
             raise ScrapeError("Company page requires login", 401)
         company = parse_company(response.text, source_url=response.url)
         if not company["name"] or not company["company_id"]:
             raise ScrapeError(f"Unexpected company-page response for {response.url}; financial availability is unknown")
+        if first_profile is not None and any(first_profile.get(key) and company['profile'].get(key)
+                                             and first_profile[key] != company['profile'][key]
+                                             for key in ('nse_code', 'bse_code')):
+            raise ScrapeError('Identity mismatch between consolidated and standalone company pages')
+        first_profile = company['profile']
         if not has_financials(company):
-            fallback_reason = "consolidated_has_no_usable_financials"
+            if requested_view == 'consolidated':
+                fallback_reason = "consolidated_has_no_usable_financials"
+            else:
+                fallback_reason = "standalone_has_no_usable_financials"
             continue
         actual_view = company.pop("_view") or ("consolidated" if "/consolidated/" in urlparse(response.url).path else "standalone")
         if view != "auto" and actual_view != view:
             raise NotFound(f"Requested {view} view is unavailable; response is {actual_view}")
         result = to_standard_json({"symbol": company["profile"]["nse_code"] or company["profile"]["bse_code"] or symbol,
                 "view": actual_view, "source_url": response.url,
-                "fallback_reason": fallback_reason if actual_view == "standalone" else None,
+                "fallback_reason": fallback_reason,
                 "scraped_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), **company})
         validate_company(result)
+        if view == 'auto' and not has_recent_financials(company, as_of):
+            if requested_view == 'consolidated' and actual_view == 'consolidated':
+                available_consolidated = result
+                fallback_reason = 'consolidated_missing_recent_financials'
+                continue
+            result['warnings'].append('Selected view lacks recent annual or quarterly coverage')
+        if requested_view == 'consolidated' and actual_view == 'standalone' and view == 'auto':
+            result['fallback_reason'] = 'consolidated_unavailable'
         return result
+    if available_consolidated is not None:
+        available_consolidated['fallback_reason'] = fallback_reason
+        available_consolidated['warnings'].append('Standalone unavailable; retained available consolidated financials')
+        available_consolidated['warnings'].append('Selected view lacks recent annual or quarterly coverage')
+        return available_consolidated
     raise NotFound(f"{symbol}: no {view} company page with usable financial data")
 
 
@@ -539,7 +622,7 @@ def validate_company(data: dict) -> None:
                 if not valid:
                     raise ScrapeError("Invalid company JSON: financial metric type")
     if not has_financials(data):
-        raise ScrapeError("Invalid company JSON: no usable annual financials")
+        raise ScrapeError("Invalid company JSON: no usable annual or quarterly financials")
     try:
         timestamp = datetime.fromisoformat(data["scraped_at"])
         if timestamp.tzinfo is None:

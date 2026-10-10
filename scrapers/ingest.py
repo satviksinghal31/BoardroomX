@@ -10,6 +10,8 @@ from pathlib import Path
 
 PILOT = ['RELIANCE', 'HDFCBANK', 'CARBORUNIV', 'SHILPAMED', 'MPHASIS', 'ATHERENERG', 'HESTERBIO', 'NAVKARURB', 'SBIN', 'TCS']
 LOCK_ID = 728410331
+SOURCE_UNAVAILABLE_PREFIX = 'Source data unavailable in selected view: '
+RETRYABLE_SQL = "status<>'complete' and attempts<2 and not (status='partial' and starts_with(coalesce(last_error,''),'" + SOURCE_UNAVAILABLE_PREFIX + "'))"
 
 
 def blocked(error):
@@ -25,9 +27,12 @@ def assess(data, symbol):
     annual = data['profit_loss'].get('annual')
     warnings = data.get('warnings', [])
     if not isinstance(warnings, list) or any(not isinstance(w, str) for w in warnings): raise ValueError('Malformed warnings')
-    significant = [w for w in warnings if not w.startswith('Fewer than five annual periods') and not w.startswith('Login required')]
     missing = [k for k in ('quarterly_results', 'balance_sheet', 'cash_flow', 'ratios') if not data.get(k)]
-    if not isinstance(annual, list) or not annual or any(not isinstance(r, dict) for r in annual): significant.append('Missing or malformed annual financial table')
+    if not annual: missing.append('profit_loss.annual')
+    source_warnings = {'No reporting periods in source table: ' + ('profit_loss' if key == 'profit_loss.annual' else key) for key in missing}
+    significant = [w for w in warnings if w not in source_warnings and not w.startswith('Fewer than five annual periods') and not w.startswith('Login required')]
+    if missing and source_warnings.issubset(warnings) and not significant:
+        return 'partial', SOURCE_UNAVAILABLE_PREFIX + ', '.join(missing)
     if missing: significant.append('Missing financial tables: ' + ', '.join(missing))
     return ('partial', '; '.join(significant)) if significant else ('complete', None)
 
@@ -77,7 +82,9 @@ class Worker:
                     stop = any(blocked(w) for w in fresh.get('warnings', []))
                     if r.get('data') and status != 'complete':
                         previous = to_standard_json(r['data'])
-                        if quality(previous) > quality(fresh): data = previous
+                        selected_standalone = (previous.get('view') == 'consolidated' and fresh.get('view') == 'standalone'
+                                               and fresh.get('fallback_reason') in ('consolidated_missing_recent_financials', 'consolidated_has_no_usable_financials', 'consolidated_not_found', 'consolidated_unavailable'))
+                        if not selected_standalone and quality(previous) > quality(fresh): data = previous
                 except Exception as exc:
                     error = str(exc); stop = stop or blocked(exc); retry_after = getattr(exc, 'retry_after', None)
                     if r.get('data'): status = 'partial'; data = r['data']
@@ -128,7 +135,7 @@ class PostgresStore:
     def recover(self):
         with self.db.transaction(): self.db.execute("update boardroom_screener_data set status=case when data is null then 'failed' else 'partial' end,last_error='Interrupted attempt; attempt already consumed',updated_at=now() where status='fetching'")
     def candidates(self, pilot):
-        rows = self.db.execute("select * from boardroom_screener_data where pilot=%s and status<>'complete' and attempts<2 order by attempts,case symbol " + ' '.join("when '"+v+"' then "+str(i) for i,v in enumerate(PILOT)) + ' else 100 end,symbol limit 1', (pilot,)).fetchall(); self.db.commit(); return rows
+        rows = self.db.execute("select * from boardroom_screener_data where pilot=%s and " + RETRYABLE_SQL + " order by attempts,case symbol " + ' '.join("when '"+v+"' then "+str(i) for i,v in enumerate(PILOT)) + ' else 100 end,symbol limit 1', (pilot,)).fetchall(); self.db.commit(); return rows
     def pilot_rows(self):
         rows = self.db.execute('select * from boardroom_screener_data where pilot').fetchall(); self.db.commit(); return rows
     def begin(self, row, now):
@@ -150,10 +157,10 @@ class PostgresStore:
         result = dict.fromkeys(('pending','fetching','complete','partial','failed'),0)
         result.update({r['status']:r['n'] for r in rows}); result['total']=sum(result.values()); return result
     def remaining_companies(self):
-        value = self.db.execute("select count(*) as n from boardroom_screener_data where status<>'complete' and attempts<2").fetchone()['n']
+        value = self.db.execute("select count(*) as n from boardroom_screener_data where " + RETRYABLE_SQL).fetchone()['n']
         self.db.commit(); return value
     def retry_pending(self):
-        value = self.db.execute("select count(*) as n from boardroom_screener_data where status in ('partial','failed') and attempts<2").fetchone()['n']
+        value = self.db.execute("select count(*) as n from boardroom_screener_data where status in ('partial','failed') and " + RETRYABLE_SQL).fetchone()['n']
         self.db.commit(); return value
     def average_company_seconds(self):
         value = self.db.execute("select coalesce(avg(greatest(2,extract(epoch from (updated_at-last_attempt_at)))),2) as n from boardroom_screener_data where status in ('complete','partial','failed') and attempts>0 and last_attempt_at is not null").fetchone()['n']
@@ -202,8 +209,10 @@ def main(argv=None):
         elif args.command=='verify-pilot': store.verify_pilot()
         elif args.command=='resume': resume(store, time.time())
         elif args.command in ('pilot','run'):
-            from boardroom_screener_scraper import fetch_company
-            Worker(store,fetch_company).run(args.command=='pilot')
+            from boardroom_screener_scraper import requests, UA, scrape
+            with requests.Session() as session:
+                session.headers['User-Agent'] = UA
+                Worker(store, lambda identifier, **options: scrape(session, identifier, **options)).run(args.command=='pilot')
         else: Worker(store,None).report()
     finally: store.close()
 

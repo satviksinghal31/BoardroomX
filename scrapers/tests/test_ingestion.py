@@ -1,6 +1,7 @@
 import copy
 import importlib.util
 import unittest
+from unittest.mock import patch
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1]))
@@ -44,7 +45,7 @@ class MemoryStore:
         for r in self.rows:
             if r['status'] == 'fetching': r['status'] = 'failed'
     def candidates(self, pilot):
-        return sorted([r for r in self.rows if r['pilot'] == pilot and r['status'] != 'complete' and r['attempts'] < 2], key=lambda r: (r['attempts'], r['symbol']))
+        return sorted([r for r in self.rows if r['pilot'] == pilot and r['status'] != 'complete' and r['attempts'] < 2 and not (r['status'] == 'partial' and (r.get('last_error') or '').startswith('Source data unavailable in selected view: '))], key=lambda r: (r['attempts'], r['symbol']))
     def begin(self, row, now):
         row.update(status='fetching', attempts=row['attempts'] + 1)
         self.update_control(last_company_start=now, processed_in_batch=self.control['processed_in_batch'] + 1)
@@ -93,6 +94,22 @@ class IngestionTests(unittest.TestCase):
         ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
         self.assertEqual(calls, ['A', 'B', 'A', 'B']); self.assertEqual(store.rows[0]['data'], payload('A', ['Malformed growth table row']))
         self.assertEqual(store.rows[0]['status'], 'partial')
+    def test_selected_standalone_fallback_replaces_stale_consolidated_despite_fewer_rows(self):
+        for reason in ('consolidated_missing_recent_financials', 'consolidated_has_no_usable_financials', 'consolidated_not_found', 'consolidated_unavailable'):
+            with self.subTest(reason=reason):
+                previous = payload(); previous['view'] = 'consolidated'; previous['source_url'] += 'consolidated/'
+                previous['profit_loss']['annual'] = [dict(previous['profit_loss']['annual'][0], period=f'Mar {year}', period_end=f'{year}-03-31') for year in range(2000, 2012)]
+                fresh = payload(); fresh['balance_sheet'] = None
+                fresh['fallback_reason'] = reason
+                fresh['warnings'] = ['No reporting periods in source table: balance_sheet']
+                self.assertGreater(ingest.quality(previous), ingest.quality(fresh))
+                store = MemoryStore([row(data=previous)]); clock = Clock()
+                ingest.Worker(store, lambda *a, **kw: copy.deepcopy(fresh), clock.time, clock.sleep, lambda x: None).run(False)
+                self.assertEqual(store.rows[0]['data'], fresh)
+                self.assertEqual(store.rows[0]['status'], 'partial')
+                self.assertEqual(store.rows[0]['last_error'], 'Source data unavailable in selected view: balance_sheet')
+                self.assertEqual(store.rows[0]['attempts'], 1)
+
     def test_json_roundtrip_mismatch_stops_worker(self):
         store = MemoryStore([row('A'), row('B')]); clock = Clock()
         store.finish = lambda *args: {'lost': 'data'}
@@ -199,6 +216,109 @@ class IngestionTests(unittest.TestCase):
         self.assertEqual(store.control['state'], 'completed_with_failures')
         self.assertEqual(store.rows[0]['attempts'], 2)
         self.assertEqual(store.rows[1]['status'], 'complete')
+
+    def test_confirmed_source_empty_is_partial_without_same_run_retry(self):
+        store = MemoryStore([row('A'), row('B')]); clock = Clock(); calls = []; reports = []
+        def fetch(symbol, **kw):
+            calls.append(symbol); data = payload(symbol)
+            if symbol == 'A':
+                data['quarterly_results'] = None
+                data['warnings'] = ['No reporting periods in source table: quarterly_results']
+            return data
+        ingest.Worker(store, fetch, clock.time, clock.sleep, reports.append).run(False)
+        self.assertEqual(calls, ['A', 'B'])
+        self.assertEqual(store.rows[0]['status'], 'partial')
+        self.assertEqual(store.rows[0]['attempts'], 1)
+        self.assertIsNone(store.rows[0]['data']['quarterly_results'])
+        self.assertEqual(store.rows[0]['last_error'], 'Source data unavailable in selected view: quarterly_results')
+        self.assertEqual(reports[-1]['remaining'], 0)
+        self.assertEqual(reports[-1]['retry_pending'], 0)
+        self.assertEqual(store.control['state'], 'completed_with_failures')
+        ingest.Worker(store, fetch, clock.time, clock.sleep, reports.append).run(False)
+        self.assertEqual(calls, ['A', 'B'])
+
+    def test_quarter_only_source_empty_annual_is_stored_partial_once(self):
+        for annual in (None, []):
+            with self.subTest(annual=annual):
+                store = MemoryStore([row()]); clock = Clock(); calls = []
+                def fetch(symbol, **kw):
+                    calls.append(symbol); data = payload(symbol)
+                    data['profit_loss']['annual'] = annual
+                    data['warnings'] = ['No reporting periods in source table: profit_loss']
+                    return data
+                ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
+                self.assertEqual(calls, ['TCS'])
+                self.assertEqual(store.rows[0]['status'], 'partial')
+                self.assertEqual(store.rows[0]['attempts'], 1)
+                self.assertEqual(store.rows[0]['data']['quarterly_results'], payload()['quarterly_results'])
+                self.assertEqual(store.rows[0]['data']['profit_loss']['annual'], annual)
+                self.assertEqual(store.rows[0]['last_error'], 'Source data unavailable in selected view: profit_loss.annual')
+
+    def test_quarter_only_annual_without_source_evidence_still_retries(self):
+        store = MemoryStore([row()]); clock = Clock(); calls = []
+        def fetch(symbol, **kw):
+            calls.append(symbol); data = payload(symbol); data['profit_loss']['annual'] = None; return data
+        ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
+        self.assertEqual(calls, ['TCS', 'TCS'])
+        self.assertEqual(store.rows[0]['status'], 'partial')
+        self.assertEqual(store.rows[0]['attempts'], 2)
+        self.assertEqual(store.rows[0]['data']['quarterly_results'], payload()['quarterly_results'])
+        self.assertEqual(store.rows[0]['last_error'], 'Missing financial tables: profit_loss.annual')
+
+    def test_source_empty_with_other_problem_still_retries(self):
+        for warnings in (['No reporting periods in source table: quarterly_results', 'Malformed growth table row'],
+                         ['No reporting periods in source table: balance_sheet']):
+            with self.subTest(warnings=warnings):
+                store = MemoryStore([row()]); clock = Clock(); calls = []
+                def fetch(symbol, **kw):
+                    calls.append(symbol); data = payload(symbol); data['quarterly_results'] = None; data['warnings'] = warnings; return data
+                ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
+                self.assertEqual(calls, ['TCS', 'TCS'])
+                self.assertEqual(store.rows[0]['attempts'], 2)
+                self.assertFalse(store.rows[0]['last_error'].startswith('Source data unavailable in selected view: '))
+
+    def test_explicit_refresh_resets_source_empty_eligibility(self):
+        from contextlib import nullcontext
+        store = MemoryStore([row(status='partial', attempts=1, data=payload(),
+                                 last_error='Source data unavailable in selected view: quarterly_results')])
+        self.assertEqual(store.candidates(False), [])
+        class RefreshDB:
+            def transaction(self): return nullcontext()
+            def execute(self, query):
+                if query.startswith('update boardroom_screener_data'):
+                    for item in store.rows: item.update(status='pending', attempts=0, last_error=None)
+        store.db = RefreshDB()
+        ingest.PostgresStore.refresh(store)
+        self.assertEqual([r['symbol'] for r in store.candidates(False)], ['TCS'])
+        self.assertEqual(store.rows[0]['attempts'], 0)
+        self.assertEqual(store.rows[0]['data'], payload())
+        self.assertFalse(store.control['pilot_verified'])
+
+    def test_main_reuses_and_closes_company_session_on_success_and_error(self):
+        import boardroom_screener_scraper as core
+        for fail in (False, True):
+            with self.subTest(fail=fail):
+                store = MemoryStore([]); store.close = lambda: None
+                class Session:
+                    def __init__(self): self.headers = {}; self.closed = False
+                    def __enter__(self): return self
+                    def __exit__(self, *args): self.closed = True
+                session = Session(); calls = []
+                def scrape(actual_session, symbol, view='auto', pause=0):
+                    calls.append((actual_session, symbol, {'pause': pause})); return payload(symbol)
+                class TestWorker:
+                    def __init__(self, actual_store, fetch): self.fetch = fetch
+                    def run(self, pilot):
+                        self.fetch('A', pause=0); self.fetch('B', pause=0)
+                        if fail: raise RuntimeError('worker failed')
+                with patch.dict(ingest.os.environ, {'SUPABASE_DB_URL': 'offline'}), patch.object(ingest, 'PostgresStore', return_value=store), patch.object(ingest, 'Worker', TestWorker), patch.object(core.requests, 'Session', return_value=session) as make_session, patch.object(core, 'scrape', side_effect=scrape):
+                    if fail:
+                        with self.assertRaisesRegex(RuntimeError, 'worker failed'): ingest.main(['run'])
+                    else: ingest.main(['run'])
+                make_session.assert_called_once_with()
+                self.assertEqual(calls, [(session, 'A', {'pause': 0}), (session, 'B', {'pause': 0})])
+                self.assertEqual(session.headers['User-Agent'], core.UA)
+                self.assertTrue(session.closed)
 
     def test_progress_counts_unique_remaining_companies(self):
         store = MemoryStore([row(str(i)) for i in range(2563)])

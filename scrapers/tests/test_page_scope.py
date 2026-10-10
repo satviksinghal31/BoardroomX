@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 import requests
 from bs4 import BeautifulSoup
+from test_scraper import FixtureDatetime
 
 ROOT = Path(__file__).resolve().parents[1]
 FIX = Path(__file__).resolve().parent / 'fixtures'
@@ -27,6 +28,7 @@ class Session:
 
 class PageScopeTests(unittest.TestCase):
     def setUp(self):
+        clock=patch.object(m,"datetime",FixtureDatetime);clock.start();self.addCleanup(clock.stop)
         self.html = (FIX / 'RELIANCE.consolidated.html').read_text()
 
     def scrape(self, main=None, fallback=None):
@@ -66,6 +68,7 @@ class PageScopeTests(unittest.TestCase):
     def test_empty_financial_fallback_uses_two_requests(self):
         soup = BeautifulSoup(self.html, 'html.parser')
         soup.select_one('#profit-loss').decompose()
+        soup.select_one('#quarters').decompose()
         calls, result = self.scrape(str(soup))
         self.assertEqual(len(calls), 2)
         self.assertEqual(result['fallback_reason'], 'consolidated_has_no_usable_financials')

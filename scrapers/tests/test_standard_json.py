@@ -1,9 +1,12 @@
 """Lean conversion preserves source rows, identity and every non-AI attachment."""
 import copy
 import unittest
-from test_scraper import FIX, Session, m
+from unittest.mock import patch
+from test_scraper import FIX, Session, m, FixtureDatetime
 
 class StandardJsonTests(unittest.TestCase):
+    def setUp(self):
+        clock=patch.object(m,"datetime",FixtureDatetime);clock.start();self.addCleanup(clock.stop)
     def test_legacy_conversion_is_pure_idempotent_and_preserves_identity_financials(self):
         legacy={'symbol':'TCS','company_id':'42','profile':{'website':'https://tcs.com','nse_code':'TCS','bse_code':'532540'},'profit_loss':{'annual':[{'period':'Mar 2025','period_end':'2025-03-31','sales':123}]},'warnings':['Source warning'],'documents':{},'schema_version':'1','parser_version':'4','scope':'old','requested_identifier':'TCS','requested_url':'url','warehouse_id':'99','history':{},'freshness':{},'document_scope':{},'other_features':[]}
         original=copy.deepcopy(legacy); lean=m.to_standard_json(legacy)
