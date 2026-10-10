@@ -4,7 +4,7 @@ Release: parser 4.0.0, JSON schema 1.0.0, scope `company_page`. Normal fetch mak
 
 ## Checks
 
-- 61 offline tests pass in a clean Python 3.12 environment with declared dependencies: 42 scraper/contract tests and 19 ingestion tests.
+- 69 offline tests pass in a clean Python 3.12 environment with declared dependencies: 48 scraper/contract tests and 21 ingestion tests.
 - Independent scraper review found no remaining critical/medium issues after fixing malformed annual structures and invalid period dates.
 - Independent ingestion review found empty financial arrays wrongly marked complete and block warnings discarded during validation failure. Both were fixed with failing-then-passing regression tests; review signed off.
 - Existing eight-company fixtures preserve financial values, dates, source links, document URLs and unit maps. Prior Playwright main-page checks matched 701 financial cells, 93 attachment URLs and 5 ISO document date nodes. Those browser checks predate removal of peers; removing peers did not change the page parser.
@@ -25,3 +25,5 @@ The obsolete deployment was stopped; its three database tables were replaced by 
 No skill or LLM is required for extraction: the Python function returns a dictionary and the CLI writes JSON directly. `company.schema.json` describes the stable shape; runtime validation enforces required types, usable annual data, calendar-aligned financial periods and finite JSON numbers.
 
 Upstream changes/blocks, unavailable issuers, rare financial layouts and identifier differences may still require attention. Missing dates are not invented, short consolidated history is not mixed with standalone, and masked cells remain null. Public main-page coverage excludes premium/login sections and full announcement archives. A future weekly scheduler can call the same scripts; no recurring schedule exists now. CI remains an inactive template pending workflow permission.
+
+Consolidated-first remains unconditional when financials exist. Freshness metadata flags annual data older than 18 calendar months and quarterly data older than 6 calendar months separately from capture completeness. Irregular duration labels (15m, 9m, etc.) retain their original label and now have correct month-end dates. Unexpected company pages pause the worker.

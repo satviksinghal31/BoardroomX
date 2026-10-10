@@ -15,7 +15,9 @@ One normal company-page request. A second page request is used only for genuine 
 
 The output includes identity, source/accounting view, UTC extraction time, profile/citations, headline metrics, full exposed quarterly/annual financial history, balance sheet including total borrowings, cash flow, ratios, aggregate shareholding, growth tables and document URLs/dates. Financial period-end dates and units are explicit. Missing/locked values are null. TTM has no invented date. `scraped_at` is not a market quote timestamp.
 
-`schema_version=1.0.0` identifies the stable structure documented in `company.schema.json`; `parser_version=4.0.0` identifies extraction behavior. Runtime validation checks required keys/types, calendar-aligned periods, finite JSON numbers and usable annual financials. Dynamic company-specific financial labels are preserved. Peers, named shareholders, clicked breakdowns, charts, pros/cons and gated content are excluded; recent announcements are not a full archive.
+`schema_version=1.0.0` identifies the stable structure documented in `company.schema.json`; `parser_version=4.0.1` identifies extraction behavior. Runtime validation checks required keys/types, calendar-aligned periods, finite JSON numbers and usable annual financials. Dynamic company-specific financial labels are preserved. Peers, named shareholders, clicked breakdowns, charts, pros/cons and gated content are excluded; recent announcements are not a full archive.
+
+Consolidated financials remain selected whenever available, even if old. Separate `freshness` metadata flags annual periods older than 18 calendar months or quarterly periods older than 6 calendar months, measured against the extraction date. It includes exact latest dates and ages; missing dates are unknown. Staleness does not change the accounting view or parsing completeness.
 
 ## Universe ingestion
 

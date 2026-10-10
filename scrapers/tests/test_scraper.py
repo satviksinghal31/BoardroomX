@@ -22,6 +22,26 @@ class Tests(unittest.TestCase):
   data=m.parse_company(html)
   self.assertEqual(data['profit_loss']['annual'],[{'period':'Mar 2023 15m','period_end':'2023-03-31','sales':42}])
   self.assertTrue(m.has_financials(data));self.assertFalse(any('Unrecognized table period' in w for w in data['warnings']))
+ def test_freshness_calendar_boundary_and_leap_year(self):
+  def snapshot(as_of, annual, quarterly):
+   return {'scraped_at':as_of+'T00:00:00+00:00','profit_loss':{'annual':[{'period':'Annual','period_end':annual}]},'quarterly_results':[{'period':'Quarter','period_end':quarterly}]}
+  data=snapshot('2024-08-31','2023-02-28','2024-02-29')
+  result=m.freshness_metadata(data)
+  self.assertFalse(result['annual']['stale']);self.assertFalse(result['quarterly']['stale'])
+  self.assertEqual(result['quarterly']['threshold_months'],6)
+  self.assertTrue(m.freshness_metadata(snapshot('2024-09-01','2023-02-28','2024-02-29'))['stale'])
+  self.assertEqual(data['profit_loss']['annual'][0]['period_end'],'2023-02-28')
+ def test_freshness_missing_and_future_dates(self):
+  data={'scraped_at':'2026-10-10T00:00:00+00:00','profit_loss':{'annual':[{'period':'TTM','period_end':'2026-10-10'},{'period':'Future','period_end':'2027-03-31'}]},'quarterly_results':None}
+  result=m.freshness_metadata(data)
+  self.assertEqual(result['annual']['latest_period_end'],'2027-03-31');self.assertLess(result['annual']['age_days'],0)
+  self.assertFalse(result['annual']['stale']);self.assertIsNone(result['quarterly']['stale']);self.assertIsNone(result['stale'])
+  data['profit_loss']['annual']=[{'period':'TTM','period_end':'2026-10-10'}]
+  self.assertIsNone(m.freshness_metadata(data)['annual']['latest_period_end'])
+ def test_scrape_adds_freshness_without_changing_view_or_warnings(self):
+  s=Session(lambda u,k:(200,self.html,None));data=m.scrape(s,'RELIANCE')
+  self.assertEqual(data['freshness'],m.freshness_metadata(data));self.assertEqual(data['view'],'consolidated');self.assertEqual(len(s.calls),1)
+  self.assertFalse(any('stale' in w.lower() for w in data['warnings']))
  def test_concall_all_links_and_date(self):
   x=m.parse_company(self.html)['documents']['concalls'];self.assertEqual(x[0]['period'],'Jul 2026');self.assertEqual(sum(len(a['links']) for a in x),67)
  def test_raw_results_absolute_links(self):

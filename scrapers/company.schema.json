@@ -159,6 +159,10 @@
           "$ref": "#/$defs/period_table"
         }
       }
+    },
+    "freshness": {
+      "type": "object",
+      "description": "Optional snapshot freshness based on scraped_at: annual older than 18 calendar months or quarterly older than 6. Dates, age days, thresholds and stale flags are separate from source completeness; absent dates use null. Does not change selected accounting view."
     }
   },
   "additionalProperties": true,

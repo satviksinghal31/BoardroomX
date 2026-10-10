@@ -25,7 +25,7 @@ import tempfile
 import re
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote, urljoin, urlparse
@@ -35,7 +35,7 @@ from bs4 import BeautifulSoup
 
 BASE = "https://www.screener.in"
 UA = "Mozilla/5.0 (compatible; boardroom-screener-scraper/4.0; personal research)"
-PARSER_VERSION = "4.0.0"
+PARSER_VERSION = "4.0.1"
 SCHEMA_VERSION = "1.0.0"
 MAX_RETRY_WAIT = 60
 MONTHS = {m: i for i, m in enumerate(calendar.month_abbr) if m}
@@ -86,6 +86,36 @@ def period_end(period: str) -> str | None:
     if y < 1:
         return None
     return f"{y:04d}-{mo:02d}-{calendar.monthrange(y, mo)[1]:02d}"
+
+
+def freshness_metadata(data: dict) -> dict:
+    """Pure snapshot enrichment; calendar thresholds never change accounting view.
+
+    Uses the snapshot's scraped_at date, so historical records need no network
+    request. Missing dates yield null stale/age values; TTM is never a dated row.
+    """
+    as_of = datetime.fromisoformat(data['scraped_at']).date()
+    result = {'as_of': as_of.isoformat()}
+    sources = {'annual': ((data.get('profit_loss') or {}).get('annual'), 18),
+               'quarterly': (data.get('quarterly_results'), 6)}
+    for name, (rows, months) in sources.items():
+        index = as_of.year * 12 + as_of.month - 1 - months
+        year, month = divmod(index, 12)
+        month += 1
+        cutoff = date(year, month, min(as_of.day, calendar.monthrange(year, month)[1]))
+        dates = []
+        for row in rows or []:
+            if row.get('period') == 'TTM' or not row.get('period_end'):
+                continue
+            dates.append(date.fromisoformat(row['period_end']))
+        latest = max(dates) if dates else None
+        result[name] = {'latest_period_end': latest.isoformat() if latest else None,
+                        'age_days': (as_of - latest).days if latest else None,
+                        'threshold_months': months, 'cutoff_date': cutoff.isoformat(),
+                        'stale': latest < cutoff if latest else None}
+    flags = [result[name]['stale'] for name in sources]
+    result['stale'] = True if any(flag is True for flag in flags) else None if None in flags else False
+    return result
 
 
 def cells(tr):
@@ -426,6 +456,7 @@ def scrape(session: requests.Session, symbol: str, view: str = "auto", pause: fl
                 "requested_url": url, "fallback_reason": fallback_reason if actual_view == "standalone" else None,
                 "scraped_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "parser_version": PARSER_VERSION, "scope": "company_page", "schema_version": SCHEMA_VERSION, **company}
         validate_company(result)
+        result["freshness"] = freshness_metadata(result)
         return result
     raise NotFound(f"{symbol}: no {view} company page with usable financial data")
 
