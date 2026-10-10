@@ -39,7 +39,7 @@ Ten representative pilot stocks must pass before the full run. One advisory-lock
 
 `boardroom_screener_data` holds one stock row with complete returned JSON, status, attempts, errors and snapshot timestamps. `boardroom_screener_ingestion` is one control row holding progress, pilot gate and pause state. RLS and grants deny public database access. Read-only progress works while the worker holds its lock.
 
-Network/server/access/rate-limit errors pause the universe worker before another company. Inspect the error, wait any durable Retry-After deadline, then use `resume` and `run` (or `pilot` if not verified). Restarted interrupted attempts remain consumed; completed stocks are skipped. Failed refreshes retain prior JSON and its original fetch timestamp.
+Network/server/access/rate-limit errors pause the universe worker before another company. Inspect the error, wait any durable Retry-After deadline, then use `resume` and `run` (or `pilot` if not verified). Restarted interrupted attempts remain consumed; completed stocks are skipped. Every validated fresh response replaces the prior JSON, including partial responses. Fetch or validation failures retain prior JSON and its original fetch timestamp.
 
 ## Repeat later
 

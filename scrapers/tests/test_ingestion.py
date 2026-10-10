@@ -102,7 +102,7 @@ class IngestionTests(unittest.TestCase):
                 fresh = payload(); fresh['balance_sheet'] = None
                 fresh['fallback_reason'] = reason
                 fresh['warnings'] = ['No reporting periods in source table: balance_sheet']
-                self.assertGreater(ingest.quality(previous), ingest.quality(fresh))
+                self.assertGreater(len(previous['profit_loss']['annual']), len(fresh['profit_loss']['annual']))
                 store = MemoryStore([row(data=previous)]); clock = Clock()
                 ingest.Worker(store, lambda *a, **kw: copy.deepcopy(fresh), clock.time, clock.sleep, lambda x: None).run(False)
                 self.assertEqual(store.rows[0]['data'], fresh)
@@ -146,15 +146,16 @@ class IngestionTests(unittest.TestCase):
         self.assertEqual(store.control['state'], 'completed_with_failures')
         self.assertIn('history', old)
 
-    def test_partial_refresh_compares_normalized_legacy_data(self):
+    def test_valid_partial_refresh_replaces_previous_same_view_json(self):
         store = MemoryStore([row(data=legacy_payload())]); clock = Clock(); calls = []
         def fetch(symbol, **kw):
             calls.append(symbol); fresh = payload(symbol); fresh['balance_sheet'] = []; return fresh
         ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
         self.assertEqual(calls, ['TCS', 'TCS'])
-        self.assertEqual(store.rows[0]['data'], payload())
+        expected = payload(); expected['balance_sheet'] = []
+        self.assertEqual(store.rows[0]['data'], expected)
         self.assertEqual(store.rows[0]['status'], 'partial')
-        self.assertIn('balance_sheet', store.rows[0]['last_error'])
+        self.assertEqual(store.rows[0]['last_error'], 'Missing financial tables: balance_sheet')
 
     def test_complete_row_never_fetched(self):
         store = MemoryStore([row(status='complete')]); clock = Clock()

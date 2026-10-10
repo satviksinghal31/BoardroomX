@@ -37,10 +37,6 @@ def assess(data, symbol):
     return ('partial', '; '.join(significant)) if significant else ('complete', None)
 
 
-def quality(data):
-    if not data: return -1
-    return sum(1 for value in data.values() if value is not None) + sum(len(data.get(k) or []) for k in ('quarterly_results', 'balance_sheet', 'cash_flow', 'ratios')) + len((data.get('profit_loss') or {}).get('annual') or []) - len(data.get('warnings') or [])
-
 
 class Worker:
     def __init__(self, store, fetch, clock=time.time, sleep=time.sleep, emit=None):
@@ -80,11 +76,6 @@ class Worker:
                     status, error = assess(fresh, r['symbol'])
                     data = fresh
                     stop = any(blocked(w) for w in fresh.get('warnings', []))
-                    if r.get('data') and status != 'complete':
-                        previous = to_standard_json(r['data'])
-                        selected_standalone = (previous.get('view') == 'consolidated' and fresh.get('view') == 'standalone'
-                                               and fresh.get('fallback_reason') in ('consolidated_missing_recent_financials', 'consolidated_has_no_usable_financials', 'consolidated_not_found', 'consolidated_unavailable'))
-                        if not selected_standalone and quality(previous) > quality(fresh): data = previous
                 except Exception as exc:
                     error = str(exc); stop = stop or blocked(exc); retry_after = getattr(exc, 'retry_after', None)
                     if r.get('data'): status = 'partial'; data = r['data']
