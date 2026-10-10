@@ -48,8 +48,8 @@ class PageScopeTests(unittest.TestCase):
         calls, result = self.scrape()
         self.assertEqual(calls, ['https://www.screener.in/company/RELIANCE/consolidated/'])
         self.assertNotIn('peers', result)
-        self.assertEqual(result['scope'], 'company_page')
-        self.assertEqual(result['schema_version'], m.SCHEMA_VERSION)
+        self.assertNotIn('scope',result)
+        self.assertNotIn('schema_version',result)
 
     def test_embedded_peers_are_excluded_and_do_not_trigger_requests(self):
         soup = BeautifulSoup(self.html, 'html.parser')

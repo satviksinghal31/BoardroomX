@@ -50,6 +50,7 @@ class Worker:
         average = max(2, self.store.average_company_seconds() if hasattr(self.store, 'average_company_seconds') else elapsed / max(1, done))
         self.emit(dict(counts, symbol=symbol, state=c['state'], elapsed_seconds=round(elapsed), batch_number=c['batch_number'], processed_in_batch=c['processed_in_batch'], remaining=remaining, processed=done, retry_pending=retry_pending, measured_seconds_per_company=round(average, 3), eta_basis='Unique remaining companies times measured fetch duration (minimum 2 seconds); idle time excluded and additional retries not guaranteed', eta_seconds=round(remaining * average), cooldown_seconds=0, error=c.get('error')))
     def run(self, pilot):
+        from boardroom_screener_scraper import to_standard_json
         s = self.store
         if not pilot and not s.control['pilot_verified']: raise ValueError('Pilot must be complete and verified before full run')
         if s.control['state'] == 'paused' and s.control.get('error'): raise ValueError('Paused after upstream error; inspect and explicitly resume before retry')
@@ -70,13 +71,17 @@ class Worker:
                     fresh = self.fetch(r['screener_identifier'], pause=0)
                     if isinstance(fresh, dict):
                         stop = any(blocked(w) for w in fresh.get('warnings', []) if isinstance(w, str)) if isinstance(fresh.get('warnings', []), list) else False
+                    fresh = to_standard_json(fresh)
                     status, error = assess(fresh, r['symbol'])
                     data = fresh
                     stop = any(blocked(w) for w in fresh.get('warnings', []))
-                    if r.get('data') and status != 'complete' and quality(r['data']) > quality(fresh): data = r['data']
+                    if r.get('data') and status != 'complete':
+                        previous = to_standard_json(r['data'])
+                        if quality(previous) > quality(fresh): data = previous
                 except Exception as exc:
                     error = str(exc); stop = stop or blocked(exc); retry_after = getattr(exc, 'retry_after', None)
                     if r.get('data'): status = 'partial'; data = r['data']
+                if data is not None: data = to_standard_json(data)
                 returned = s.finish(r, status, data, error, self.clock())
                 if data is not None and returned != data: raise RuntimeError('Stored JSON failed exact roundtrip verification')
                 if stop:
@@ -133,7 +138,9 @@ class PostgresStore:
         row['attempts'] += 1
         self.control.update(last_company_start=now, processed_in_batch=self.control['processed_in_batch']+1)
     def finish(self, row, status, data, error, now):
+        from boardroom_screener_scraper import to_standard_json
         from psycopg.types.json import Jsonb
+        if data is not None: data = to_standard_json(data)
         with self.db.transaction():
             result = self.db.execute('update boardroom_screener_data set status=%s,data=coalesce(%s,data),last_error=%s,fetched_at=case when %s then %s::timestamptz else fetched_at end,updated_at=now() where symbol=%s returning data', (status,Jsonb(data) if data is not None else None,error,data is not None,data.get('scraped_at') if data else None,row['symbol'])).fetchone()['data']
             if data is not None and result != data: raise RuntimeError('Stored JSON failed exact roundtrip verification')

@@ -12,8 +12,8 @@ class CoreScopeTests(unittest.TestCase):
         data=m.scrape(session,'RELIANCE')
         self.assertEqual(session.calls,['https://www.screener.in/company/RELIANCE/consolidated/'])
         self.assertNotIn('peers',data)
-        self.assertEqual(data['scope'],'company_page')
-        self.assertEqual(data['schema_version'],'1.0.0')
+        self.assertNotIn('scope',data)
+        self.assertNotIn('schema_version',data)
         self.assertEqual(json.loads(json.dumps(data,allow_nan=False)),data)
     def test_invalid_json_contract_is_rejected(self):
         with self.assertRaises(m.ScrapeError):m.validate_company({'symbol':'RELIANCE'})

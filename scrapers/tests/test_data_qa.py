@@ -43,7 +43,7 @@ class DataQA(unittest.TestCase):
         company = m.parse_company(page(periods=("Dec 2024", "Dec 2025"), values=("90", "100")))
         self.assertEqual([row["period_end"] for row in company["profit_loss"]["annual"]],
                          ["2024-12-31", "2025-12-31"])
-        self.assertEqual(company["history"]["annual_period_count"], 2)
+        self.assertEqual(len(company["profit_loss"]["annual"]), 2)
         self.assertTrue(m.has_financials(company))
 
     def test_bank_and_nbfc_metric_labels_remain_usable_and_preserved(self):

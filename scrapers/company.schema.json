@@ -1,42 +1,30 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Boardroom company-page snapshot",
-  "description": "Stable main-page JSON; dynamic financial labels are preserved. Scraper also checks exact calendar period-end alignment and finite numbers.",
+  "title": "Boardroom company snapshot",
+  "description": "Lean company and financial data with source URLs, units and parsing warnings. Accounting views are never mixed; financial labels are preserved.",
   "type": "object",
   "required": [
     "symbol",
-    "requested_identifier",
     "name",
     "view",
     "source_url",
-    "requested_url",
     "scraped_at",
-    "parser_version",
-    "schema_version",
-    "scope",
     "company_id",
-    "warehouse_id",
     "fallback_reason",
     "profile",
     "key_ratios",
     "documents",
-    "document_scope",
     "units",
-    "history",
     "quarterly_results",
     "balance_sheet",
     "cash_flow",
     "ratios",
     "warnings",
-    "other_features",
     "profit_loss",
     "shareholding"
   ],
   "properties": {
     "symbol": {
-      "type": "string"
-    },
-    "requested_identifier": {
       "type": "string"
     },
     "name": {
@@ -52,31 +40,11 @@
     "source_url": {
       "type": "string"
     },
-    "requested_url": {
-      "type": "string"
-    },
     "scraped_at": {
       "type": "string",
       "format": "date-time"
     },
-    "parser_version": {
-      "type": "string"
-    },
-    "schema_version": {
-      "type": "string",
-      "const": "1.0.0"
-    },
-    "scope": {
-      "type": "string",
-      "const": "company_page"
-    },
     "company_id": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "warehouse_id": {
       "type": [
         "string",
         "null"
@@ -89,21 +57,275 @@
       ]
     },
     "profile": {
-      "type": "object"
+      "type": "object",
+      "required": [
+        "website",
+        "bse_code",
+        "nse_code"
+      ],
+      "properties": {
+        "website": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bse_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nse_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
     },
     "key_ratios": {
       "type": "object"
     },
     "documents": {
-      "type": "object"
-    },
-    "document_scope": {
-      "type": "object"
+      "type": "object",
+      "required": [
+        "annual_reports",
+        "concalls",
+        "credit_ratings",
+        "announcements"
+      ],
+      "properties": {
+        "annual_reports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "year",
+              "url",
+              "source"
+            ],
+            "properties": {
+              "year": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "source": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "additional_links": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "url"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "concalls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "period",
+              "transcript_url",
+              "presentation_url",
+              "recording_url"
+            ],
+            "properties": {
+              "period": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "transcript_url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "presentation_url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "recording_url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "additional_links": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "url"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "credit_ratings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "date",
+              "date_text",
+              "agency",
+              "url"
+            ],
+            "properties": {
+              "date": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "date_text": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "agency": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "additional_links": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "url"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "announcements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "date",
+              "title",
+              "description",
+              "url"
+            ],
+            "properties": {
+              "date": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "additional_links": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "url"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": true
     },
     "units": {
-      "type": "object"
-    },
-    "history": {
       "type": "object"
     },
     "quarterly_results": {
@@ -122,12 +344,6 @@
       "type": "array",
       "items": {
         "type": "string"
-      }
-    },
-    "other_features": {
-      "type": "array",
-      "items": {
-        "type": "object"
       }
     },
     "profit_loss": {
@@ -159,10 +375,6 @@
           "$ref": "#/$defs/period_table"
         }
       }
-    },
-    "freshness": {
-      "type": "object",
-      "description": "Optional snapshot freshness based on scraped_at: annual older than 18 calendar months or quarterly older than 6. Dates, age days, thresholds and stale flags are separate from source completeness; absent dates use null. Does not change selected accounting view."
     }
   },
   "additionalProperties": true,

@@ -12,7 +12,27 @@ if SPEC:
 
 
 def payload(symbol='TCS', warnings=None):
-    return {'symbol': symbol, 'requested_identifier': symbol, 'requested_url': 'https://www.screener.in/company/'+symbol+'/', 'parser_version': '4.0.0', 'other_features': [], 'company_id': '1', 'warehouse_id': None, 'fallback_reason': None, 'view': 'standalone', 'source_url': 'https://www.screener.in/company/'+symbol+'/', 'scraped_at': '2026-10-09T00:00:00+00:00', 'key_ratios': {}, 'shareholding': {'quarterly': None, 'yearly': None}, 'documents': {}, 'document_scope': {}, 'units': {}, 'history': {}, 'profile': {'nse_code': symbol}, 'name': symbol, 'profit_loss': {'growth': {}, 'annual': [{'period': 'Mar 2025', 'period_end': '2025-03-31', 'net_profit': 1}]}, 'quarterly_results': [{'period': 'Mar 2025', 'period_end': '2025-03-31', 'net_profit': 1}], 'balance_sheet': [{'period': 'Mar 2025', 'period_end': '2025-03-31', 'total_assets': 1}], 'cash_flow': [{'period': 'Mar 2025', 'period_end': '2025-03-31', 'cash_from_operating_activity': 1}], 'ratios': [{'period': 'Mar 2025', 'period_end': '2025-03-31', 'roce_pct': 1}], 'warnings': warnings or [], 'schema_version': '1.0.0', 'scope': 'company_page', 'extra': {'preserved': [1, None]}}
+    return {
+        'symbol': symbol, 'company_id': '1', 'name': symbol,
+        'view': 'standalone', 'source_url': 'https://www.screener.in/company/'+symbol+'/',
+        'scraped_at': '2026-10-09T00:00:00+00:00', 'fallback_reason': None,
+        'profile': {'nse_code': symbol, 'bse_code': None, 'website': None},
+        'key_ratios': {}, 'shareholding': {'quarterly': None, 'yearly': None},
+        'documents': {'annual_reports': [], 'concalls': [], 'credit_ratings': [], 'announcements': []},
+        'units': {}, 'warnings': warnings or [],
+        'profit_loss': {'growth': {}, 'annual': [{'period': 'Mar 2025', 'period_end': '2025-03-31', 'net_profit': 1}]},
+        'quarterly_results': [{'period': 'Mar 2025', 'period_end': '2025-03-31', 'net_profit': 1}],
+        'balance_sheet': [{'period': 'Mar 2025', 'period_end': '2025-03-31', 'total_assets': 1}],
+        'cash_flow': [{'period': 'Mar 2025', 'period_end': '2025-03-31', 'cash_from_operating_activity': 1}],
+        'ratios': [{'period': 'Mar 2025', 'period_end': '2025-03-31', 'roce_pct': 1}],
+    }
+
+
+def legacy_payload(symbol='TCS'):
+    return dict(payload(symbol), requested_identifier=symbol, requested_url='old requested URL',
+                parser_version='4.0.0', schema_version='1.0.0', scope='company_page',
+                warehouse_id='legacy-id', history={'short_history': True}, freshness={'old': True},
+                document_scope={'announcements': 'recent'}, other_features=['old metadata'])
 
 
 class MemoryStore:
@@ -71,7 +91,7 @@ class IngestionTests(unittest.TestCase):
             if calls.count(symbol) == 2: raise RuntimeError('bad page')
             return payload(symbol, ['Malformed growth table row'])
         ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
-        self.assertEqual(calls, ['A', 'B', 'A', 'B']); self.assertEqual(store.rows[0]['data']['extra'], {'preserved': [1, None]})
+        self.assertEqual(calls, ['A', 'B', 'A', 'B']); self.assertEqual(store.rows[0]['data'], payload('A', ['Malformed growth table row']))
         self.assertEqual(store.rows[0]['status'], 'partial')
     def test_json_roundtrip_mismatch_stops_worker(self):
         store = MemoryStore([row('A'), row('B')]); clock = Clock()
@@ -79,8 +99,8 @@ class IngestionTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'roundtrip'):
             ingest.Worker(store, lambda s, **kw: payload(s), clock.time, clock.sleep, lambda x: None).run(False)
         self.assertEqual(store.rows[1]['attempts'], 0)
-    def test_schema_mismatch_rejected(self):
-        data = payload(); data['scope'] = 'company_page_and_peers'
+    def test_required_financial_structure_rejected(self):
+        data = payload(); del data['profit_loss']['growth']
         with self.assertRaises(Exception): ingest.assess(data, 'TCS')
     def test_network_error_pauses_and_preserves_previous_data(self):
         store = MemoryStore([row()]); store.rows[0]['data'] = payload(); clock = Clock()
@@ -88,6 +108,37 @@ class IngestionTests(unittest.TestCase):
         ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
         self.assertEqual(store.control['state'], 'paused')
         self.assertEqual(store.rows[0]['data'], payload())
+    def test_fresh_legacy_payload_normalizes_without_extra_fetches(self):
+        store = MemoryStore([row()]); clock = Clock(); calls = []
+        def fetch(symbol, **kw): calls.append((symbol, kw)); return legacy_payload(symbol)
+        ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
+        self.assertEqual(calls, [('TCS', {'pause': 0})])
+        self.assertEqual(store.rows[0]['data'], payload())
+        self.assertEqual(store.rows[0]['status'], 'complete')
+        self.assertIsNone(store.rows[0]['last_error'])
+
+    def test_failed_refresh_retains_lean_legacy_data_and_failure_status(self):
+        old = legacy_payload(); store = MemoryStore([row(data=old)]); clock = Clock(); calls = []
+        def fetch(symbol, **kw): calls.append(symbol); raise RuntimeError('bad company page')
+        ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
+        self.assertEqual(calls, ['TCS', 'TCS'])
+        self.assertEqual(store.rows[0]['data'], payload())
+        self.assertEqual(store.rows[0]['status'], 'partial')
+        self.assertEqual(store.rows[0]['attempts'], 2)
+        self.assertEqual(store.rows[0]['last_error'], 'bad company page')
+        self.assertEqual(store.control['state'], 'completed_with_failures')
+        self.assertIn('history', old)
+
+    def test_partial_refresh_compares_normalized_legacy_data(self):
+        store = MemoryStore([row(data=legacy_payload())]); clock = Clock(); calls = []
+        def fetch(symbol, **kw):
+            calls.append(symbol); fresh = payload(symbol); fresh['balance_sheet'] = []; return fresh
+        ingest.Worker(store, fetch, clock.time, clock.sleep, lambda x: None).run(False)
+        self.assertEqual(calls, ['TCS', 'TCS'])
+        self.assertEqual(store.rows[0]['data'], payload())
+        self.assertEqual(store.rows[0]['status'], 'partial')
+        self.assertIn('balance_sheet', store.rows[0]['last_error'])
+
     def test_complete_row_never_fetched(self):
         store = MemoryStore([row(status='complete')]); clock = Clock()
         def fetch(*a, **kw): self.fail('Complete row was fetched')

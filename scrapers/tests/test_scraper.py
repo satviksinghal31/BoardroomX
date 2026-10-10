@@ -22,32 +22,12 @@ class Tests(unittest.TestCase):
   data=m.parse_company(html)
   self.assertEqual(data['profit_loss']['annual'],[{'period':'Mar 2023 15m','period_end':'2023-03-31','sales':42}])
   self.assertTrue(m.has_financials(data));self.assertFalse(any('Unrecognized table period' in w for w in data['warnings']))
- def test_freshness_calendar_boundary_and_leap_year(self):
-  def snapshot(as_of, annual, quarterly):
-   return {'scraped_at':as_of+'T00:00:00+00:00','profit_loss':{'annual':[{'period':'Annual','period_end':annual}]},'quarterly_results':[{'period':'Quarter','period_end':quarterly}]}
-  data=snapshot('2024-08-31','2023-02-28','2024-02-29')
-  result=m.freshness_metadata(data)
-  self.assertFalse(result['annual']['stale']);self.assertFalse(result['quarterly']['stale'])
-  self.assertEqual(result['quarterly']['threshold_months'],6)
-  self.assertTrue(m.freshness_metadata(snapshot('2024-09-01','2023-02-28','2024-02-29'))['stale'])
-  self.assertEqual(data['profit_loss']['annual'][0]['period_end'],'2023-02-28')
- def test_freshness_missing_and_future_dates(self):
-  data={'scraped_at':'2026-10-10T00:00:00+00:00','profit_loss':{'annual':[{'period':'TTM','period_end':'2026-10-10'},{'period':'Future','period_end':'2027-03-31'}]},'quarterly_results':None}
-  result=m.freshness_metadata(data)
-  self.assertEqual(result['annual']['latest_period_end'],'2027-03-31');self.assertLess(result['annual']['age_days'],0)
-  self.assertFalse(result['annual']['stale']);self.assertIsNone(result['quarterly']['stale']);self.assertIsNone(result['stale'])
-  data['profit_loss']['annual']=[{'period':'TTM','period_end':'2026-10-10'}]
-  self.assertIsNone(m.freshness_metadata(data)['annual']['latest_period_end'])
- def test_scrape_adds_freshness_without_changing_view_or_warnings(self):
-  s=Session(lambda u,k:(200,self.html,None));data=m.scrape(s,'RELIANCE')
-  self.assertEqual(data['freshness'],m.freshness_metadata(data));self.assertEqual(data['view'],'consolidated');self.assertEqual(len(s.calls),1)
-  self.assertFalse(any('stale' in w.lower() for w in data['warnings']))
  def test_concall_all_links_and_date(self):
-  x=m.parse_company(self.html)['documents']['concalls'];self.assertEqual(x[0]['period'],'Jul 2026');self.assertEqual(sum(len(a['links']) for a in x),67)
+  x=m.parse_company(self.html)['documents']['concalls'];self.assertEqual(x[0]['period'],'Jul 2026');self.assertEqual(sum(sum(a.get(key) is not None for key in ('transcript_url','presentation_url','recording_url')) + len(a.get('additional_links',[])) for a in x),67)
  def test_raw_results_absolute_links(self):
   x=m.parse_company(self.html)['quarterly_results'];self.assertEqual(x[0]['raw_pdf_url'],'https://www.screener.in/company/source/quarter/2726/6/2023/')
  def test_document_metadata(self):
-  x=m.parse_company(self.html)['documents'];self.assertEqual(x['announcements'][0]['date'],'2026-10-07T22:36:04+05:30');self.assertEqual(x['annual_reports'][0]['source'],'bse');self.assertEqual(x['credit_ratings'][0]['date_text'],'30 Sep');self.assertEqual(x['credit_ratings'][0]['source'],'crisil')
+  x=m.parse_company(self.html)['documents'];self.assertEqual(x['announcements'][0]['date'],'2026-10-07T22:36:04+05:30');self.assertEqual(x['annual_reports'][0]['source'],'bse');self.assertEqual(x['credit_ratings'][0]['date_text'],'30 Sep');self.assertEqual(x['credit_ratings'][0]['agency'],'crisil')
  def test_profile_citation_links_and_preview(self):
   x=m.parse_company(self.html)['profile'];self.assertTrue(x['key_points_is_preview']);self.assertTrue(x['references']['key_points'][0]['url'].endswith('#page=169'))
  def test_empty_financials_rejected(self):
@@ -86,7 +66,7 @@ class Tests(unittest.TestCase):
  def test_redirect_view_and_canonical_identifier(self):
   s=Session(lambda u,k:(200,self.peers,None) if '/api/' in u else (200,self.html.replace('data-consolidated="true"','').replace('Consolidated','Standalone'),'https://www.screener.in/company/500325/'))
   with patch.object(m.time,'sleep'):x=m.scrape(s,'500325',pause=0)
-  self.assertEqual(x['view'],'standalone');self.assertEqual(x['symbol'],'RELIANCE');self.assertEqual(x['requested_identifier'],'500325');self.assertEqual(x['source_url'],'https://www.screener.in/company/500325/')
+  self.assertEqual(x['view'],'standalone');self.assertEqual(x['symbol'],'RELIANCE');self.assertEqual(x['source_url'],'https://www.screener.in/company/500325/')
  def test_unexpected_html_is_error_not_standalone_fallback(self):
   s=Session(lambda u,k:(200,'<h1>Verify you are human</h1>',None))
   with patch.object(m.time,'sleep'):

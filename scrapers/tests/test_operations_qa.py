@@ -55,7 +55,7 @@ class OperationalQA(unittest.TestCase):
         self.assertEqual(sum("/investors/" in url for url, _, _ in session.calls), 0)
         self.assertEqual([start for _, start, _ in session.calls], list(range(1)))
         self.assertTrue(all(kwargs == {"timeout": 30} for _, _, kwargs in session.calls))
-        self.assertEqual(result["scope"], "company_page")
+        self.assertNotIn("scope", result)
         self.assertEqual(result["warnings"], [])
         self.assertFalse(session.closed)
 

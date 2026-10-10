@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import calendar
+import copy
 import json
 import math
 import os
@@ -25,7 +26,7 @@ import tempfile
 import re
 import sys
 import time
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote, urljoin, urlparse
@@ -35,8 +36,6 @@ from bs4 import BeautifulSoup
 
 BASE = "https://www.screener.in"
 UA = "Mozilla/5.0 (compatible; boardroom-screener-scraper/4.0; personal research)"
-PARSER_VERSION = "4.0.1"
-SCHEMA_VERSION = "1.0.0"
 MAX_RETRY_WAIT = 60
 MONTHS = {m: i for i, m in enumerate(calendar.month_abbr) if m}
 
@@ -86,36 +85,6 @@ def period_end(period: str) -> str | None:
     if y < 1:
         return None
     return f"{y:04d}-{mo:02d}-{calendar.monthrange(y, mo)[1]:02d}"
-
-
-def freshness_metadata(data: dict) -> dict:
-    """Pure snapshot enrichment; calendar thresholds never change accounting view.
-
-    Uses the snapshot's scraped_at date, so historical records need no network
-    request. Missing dates yield null stale/age values; TTM is never a dated row.
-    """
-    as_of = datetime.fromisoformat(data['scraped_at']).date()
-    result = {'as_of': as_of.isoformat()}
-    sources = {'annual': ((data.get('profit_loss') or {}).get('annual'), 18),
-               'quarterly': (data.get('quarterly_results'), 6)}
-    for name, (rows, months) in sources.items():
-        index = as_of.year * 12 + as_of.month - 1 - months
-        year, month = divmod(index, 12)
-        month += 1
-        cutoff = date(year, month, min(as_of.day, calendar.monthrange(year, month)[1]))
-        dates = []
-        for row in rows or []:
-            if row.get('period') == 'TTM' or not row.get('period_end'):
-                continue
-            dates.append(date.fromisoformat(row['period_end']))
-        latest = max(dates) if dates else None
-        result[name] = {'latest_period_end': latest.isoformat() if latest else None,
-                        'age_days': (as_of - latest).days if latest else None,
-                        'threshold_months': months, 'cutoff_date': cutoff.isoformat(),
-                        'stale': latest < cutoff if latest else None}
-    flags = [result[name]['stale'] for name in sources]
-    result['stale'] = True if any(flag is True for flag in flags) else None if None in flags else False
-    return result
 
 
 def cells(tr):
@@ -245,6 +214,70 @@ def growth_tables(root, warnings=None) -> dict:
     return out
 
 
+REMOVED_FIELDS = {'schema_version', 'parser_version', 'scope', 'requested_identifier',
+                  'requested_url', 'warehouse_id', 'history', 'freshness',
+                  'document_scope', 'other_features', '_view'}
+
+
+def _document_links(item):
+    links = item.get('links', []) + item.get('additional_links', [])
+    return [{'type': link.get('type') or 'document', 'url': link['url']}
+            for link in links if link.get('url') and not re.search(r'\bai\b.*summary|summary.*\bai\b', link.get('type') or '', re.I)]
+
+
+def _standard_documents(raw):
+    out = {key: copy.deepcopy(value) for key, value in raw.items()
+           if key not in ('annual_reports', 'concalls', 'credit_ratings', 'announcements')}
+    for section in ('annual_reports', 'concalls', 'credit_ratings', 'announcements'):
+        out[section] = []
+        for item in raw.get(section, []):
+            links = _document_links(item)
+            if section == 'concalls':
+                row = {key: item.get(key) for key in ('period', 'transcript_url', 'presentation_url', 'recording_url')}
+                if not links and not item.get('links') and not item.get('additional_links') and item.get('url') and not re.search(r'\bai\b.*summary|summary.*\bai\b', item.get('title') or '', re.I) and not any(row[key] for key in ('transcript_url', 'presentation_url', 'recording_url')):
+                    links = [{'type': item.get('title') or 'document', 'url': item['url']}]
+                extra = []
+                for link in links:
+                    kind = link['type'].lower()
+                    target = ('transcript_url' if 'transcript' in kind else 'presentation_url'
+                              if 'ppt' in kind or 'presentation' in kind else 'recording_url'
+                              if any(word in kind for word in ('record', 'audio', 'video')) or kind == 'rec' else None)
+                    if target and row[target] is None:
+                        row[target] = link['url']
+                    else:
+                        extra.append(link)
+            else:
+                if section == 'annual_reports':
+                    row = {key: item.get(key) for key in ('year', 'url', 'source')}
+                elif section == 'credit_ratings':
+                    row = {key: item.get(key) for key in ('date', 'date_text', 'url')}
+                    row['agency'] = item.get('agency', item.get('source'))
+                else:
+                    row = {key: item.get(key) for key in ('date', 'title', 'url')}
+                    row['description'] = item.get('description', item.get('detail'))
+                extra = []
+                primary_seen = 'links' not in item
+                for link in links:
+                    if link['url'] == row['url'] and not primary_seen:
+                        primary_seen = True
+                    else:
+                        extra.append(link)
+            if extra:
+                row['additional_links'] = extra
+            out[section].append(row)
+    return out
+
+
+def to_standard_json(payload: dict) -> dict:
+    """Pure, idempotent conversion of legacy or current snapshots to lean JSON."""
+    result = {key: copy.deepcopy(value) for key, value in payload.items() if key not in REMOVED_FIELDS}
+    result['documents'] = _standard_documents(result.get('documents') or {})
+    if 'warnings' in result:
+        result['warnings'] = [warning for warning in result['warnings']
+                              if not isinstance(warning, str) or not warning.startswith('Fewer than five annual periods')]
+    return result
+
+
 def documents(soup, source_url: str = BASE) -> dict:
     out = {}
     for box in soup.select("#documents .documents"):
@@ -254,15 +287,14 @@ def documents(soup, source_url: str = BASE) -> dict:
         section, items = snake(heading.get_text()), []
         for li in box.select("ul.list-links li"):
             anchors = li.select("a[href]")
-            if not anchors:
+            if not anchors and section != 'concalls':
                 continue
-            a = anchors[0]
+            a = anchors[0] if anchors else None
             links = [{"type": clean(x.get_text()) or x.get("title") or "document",
                       "url": urljoin(source_url, x["href"])} for x in anchors]
-            when, note = li.find("time"), a.find("div")
+            when, note = li.find("time"), a.find("div") if a else None
             source = None
-            source_text = clean(li.get_text(" "))
-            match = re.search(r"\bfrom\s+(\w+)", source_text, re.I)
+            match = re.search(r"\bfrom\s+(\w+)", clean(li.get_text(" ")), re.I)
             if match:
                 source = match.group(1).lower()
             date_text = clean(when.get_text()) if when else None
@@ -272,20 +304,19 @@ def documents(soup, source_url: str = BASE) -> dict:
             if section == "concalls":
                 month = li.find("div", recursive=False)
                 period = clean(month.get_text()) if month else None
-                date_text = period
-            item = {"title": clean(a.find(string=True, recursive=False)) or label(a.get_text()),
+            item = {"title": (clean(a.find(string=True, recursive=False)) or label(a.get_text())) if a else None,
                     "date": when.get("datetime") if when else None,
                     "date_text": date_text, "source": source,
                     "detail": clean(note.get_text()).split(" - ", 1)[-1] if note else None,
-                    "url": urljoin(source_url, a["href"]), "links": links}
+                    "url": urljoin(source_url, a["href"]) if a else None, "links": links}
             if section == "concalls":
-                item.update(period=period, period_end=period_end(period or ""))
+                item['period'] = period
             if section == "annual_reports":
-                year = re.search(r"\b(\d{4})\b", item["title"])
+                year = re.search(r"\b(\d{4})\b", item["title"] or '')
                 item["year"] = int(year.group(1)) if year else None
             items.append(item)
         out[section] = items
-    return out
+    return _standard_documents(out)
 
 
 def parse_company(html: str, source_url: str = BASE) -> dict:
@@ -305,15 +336,6 @@ def parse_company(html: str, source_url: str = BASE) -> dict:
     ratios = key_ratios(soup)
     units["key_ratios"] = {k: ("INR crore" if k == "market_cap_cr" else "multiple" if k == "pe"
                               else metric_unit(k, "top", "unknown")) for k in ratios}
-    features = []
-    for button in soup.select("button[onclick]"):
-        call = button.get("onclick", "")
-        if button.get("data-url"):
-            features.append({"name": clean(button.get_text()), "url": urljoin(source_url, button["data-url"]),
-                             "status": "not_requested"})
-    tab = soup.select_one('#company-announcements-tab a[href]')
-    annual = tables["profit_loss"] or []
-    dates = [n["period_end"] for n in annual if n["period_end"]]
     actual_view = "consolidated" if info and info.get("data-consolidated", "").lower() == "true" else None
     if not actual_view:
         heading = pl.select_one("p") if pl else None
@@ -324,17 +346,13 @@ def parse_company(html: str, source_url: str = BASE) -> dict:
     return {
         "name": clean(h1.get_text()) if h1 else None,
         "company_id": info.get("data-company-id") if info else None,
-        "warehouse_id": info.get("data-warehouse-id") if info else None,
         "profile": profile(soup, source_url), "key_ratios": ratios,
         "quarterly_results": tables["quarterly_results"],
         "profit_loss": {"annual": tables["profit_loss"], "growth": growth_tables(pl, warnings)},
         "balance_sheet": tables["balance_sheet"], "cash_flow": tables["cash_flow"], "ratios": tables["ratios"],
         "shareholding": {"quarterly": tables["quarterly"], "yearly": tables["yearly"]},
         "documents": documents(soup, source_url),
-        "document_scope": {"announcements": "recent", "all_announcements_url": urljoin(source_url, tab["href"]) if tab else None},
-        "history": {"annual_period_count": len(dates), "first_period_end": min(dates) if dates else None,
-                    "latest_period_end": max(dates) if dates else None, "includes_ttm": any(n["period"] == "TTM" for n in annual)},
-        "units": units, "warnings": warnings, "other_features": features,
+        "units": units, "warnings": warnings,
         "_view": actual_view,
     }
 
@@ -448,38 +466,48 @@ def scrape(session: requests.Session, symbol: str, view: str = "auto", pause: fl
         actual_view = company.pop("_view") or ("consolidated" if "/consolidated/" in urlparse(response.url).path else "standalone")
         if view != "auto" and actual_view != view:
             raise NotFound(f"Requested {view} view is unavailable; response is {actual_view}")
-        company["history"]["short_history"] = company["history"]["annual_period_count"] < 5
-        if company["history"]["short_history"]:
-            company["warnings"].append("Fewer than five annual periods in selected view; accounting views were not mixed")
-        result = {"symbol": company["profile"]["nse_code"] or company["profile"]["bse_code"] or symbol,
-                "requested_identifier": symbol, "view": actual_view, "source_url": response.url,
-                "requested_url": url, "fallback_reason": fallback_reason if actual_view == "standalone" else None,
-                "scraped_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "parser_version": PARSER_VERSION, "scope": "company_page", "schema_version": SCHEMA_VERSION, **company}
+        result = to_standard_json({"symbol": company["profile"]["nse_code"] or company["profile"]["bse_code"] or symbol,
+                "view": actual_view, "source_url": response.url,
+                "fallback_reason": fallback_reason if actual_view == "standalone" else None,
+                "scraped_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), **company})
         validate_company(result)
-        result["freshness"] = freshness_metadata(result)
         return result
     raise NotFound(f"{symbol}: no {view} company page with usable financial data")
 
 
 def validate_company(data: dict) -> None:
-    """Validate the versioned JSON contract without a framework dependency."""
-    required = {"symbol": str, "requested_identifier": str, "name": str,
-                "view": str, "source_url": str, "requested_url": str, "scraped_at": str,
-                "parser_version": str, "schema_version": str, "scope": str, "profile": dict,
-                "key_ratios": dict, "profit_loss": dict, "shareholding": dict,
-                "documents": dict, "document_scope": dict, "units": dict,
-                "history": dict, "warnings": list, "other_features": list,
-                "company_id": (str, type(None)), "warehouse_id": (str, type(None)),
+    """Validate the lean JSON contract without a framework dependency."""
+    required = {"symbol": str, "name": str, "view": str, "source_url": str,
+                "scraped_at": str, "profile": dict, "key_ratios": dict,
+                "profit_loss": dict, "shareholding": dict, "documents": dict,
+                "units": dict, "warnings": list, "company_id": (str, type(None)),
                 "fallback_reason": (str, type(None)),
                 "quarterly_results": (list, type(None)), "balance_sheet": (list, type(None)),
                 "cash_flow": (list, type(None)), "ratios": (list, type(None))}
     if not isinstance(data, dict) or any(key not in data or not isinstance(data[key], kind) for key, kind in required.items()):
         raise ScrapeError("Invalid company JSON: required fields/types missing")
-    if (data["schema_version"] != SCHEMA_VERSION or data["scope"] != "company_page"
-            or data["view"] not in ("consolidated", "standalone")
+    if (data["view"] not in ("consolidated", "standalone")
             or not data["symbol"] or not data["name"]
             or any(not isinstance(w, str) for w in data["warnings"])):
         raise ScrapeError("Invalid company JSON: identity, view, scope or warnings")
+    for section, fields in {'annual_reports': ('year', 'url', 'source'),
+                            'concalls': ('period', 'transcript_url', 'presentation_url', 'recording_url'),
+                            'credit_ratings': ('date', 'date_text', 'agency', 'url'),
+                            'announcements': ('date', 'title', 'description', 'url')}.items():
+        rows = data['documents'].get(section)
+        if not isinstance(rows, list):
+            raise ScrapeError('Invalid company JSON: document section structure')
+        for row in rows:
+            if not isinstance(row, dict) or any(key not in row for key in fields):
+                raise ScrapeError('Invalid company JSON: document row structure')
+            for key in fields:
+                value = row[key]
+                if value is not None and (type(value) is not int if key == 'year' else not isinstance(value, str)):
+                    raise ScrapeError('Invalid company JSON: document value type')
+            extra = row.get('additional_links', [])
+            if not isinstance(extra, list) or any(not isinstance(link, dict) or not isinstance(link.get('type'), str)
+                                                or not isinstance(link.get('url'), str) for link in extra):
+                raise ScrapeError('Invalid company JSON: document attachment structure')
     if not isinstance(data["profit_loss"].get("growth"), dict) or "annual" not in data["profit_loss"]:
         raise ScrapeError("Invalid company JSON: profit_loss structure")
     if any(key not in data["shareholding"] for key in ("quarterly", "yearly")):
@@ -546,7 +574,7 @@ def main(argv: list[str] | None = None) -> int:
         data = fetch_company(args.symbol, args.view, pause=args.pause)
         out = Path(args.out)
         out.mkdir(parents=True, exist_ok=True)
-        path = out / f"{data['requested_identifier']}.json"
+        path = out / f"{args.symbol.strip().upper()}.json"
         atomic_write_json(path, data)
         print(f"OK {data['symbol']} ({data['view']}) -> {path}; {len(data['warnings'])} warnings")
         return 0
